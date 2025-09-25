@@ -75,23 +75,32 @@ export function SignInForm() {
   // --- Form submission handler from old code ---
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(null); // Clear previous errors
+    setError(null);
     const formData = new FormData(e.target as HTMLFormElement);
-    // The 'flow' state is now correctly synced with the URL
     formData.set("flow", flow);
 
-    signIn("password", formData).catch((error) => {
-      // Clean up the error message for better display
-      setError(error.message.replace("Invalid credentials: ", ""));
-    });
+    signIn("password", formData)
+      .then(() => {
+        // ✅ SUCCESS: Explicitly navigate to the dashboard
+        navigate("/");
+      })
+      .catch((error) => {
+        // Clean up the error message for better display
+        setError(error.message.replace("Invalid credentials: ", ""));
+      });
   };
 
   // --- Google sign-in handler ---
   const handleGoogleSignIn = () => {
-    setError(null); // Clear previous errors
-    signIn("google").catch((error) => {
-      setError(error.message);
-    });
+    setError(null);
+    signIn("google")
+      .then(() => {
+        // ✅ SUCCESS: Explicitly navigate to the dashboard
+        navigate("/");
+      })
+      .catch((error) => {
+        setError(error.message);
+      });
   };
 
   return (
