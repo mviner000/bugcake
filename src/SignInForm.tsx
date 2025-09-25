@@ -13,6 +13,7 @@ interface Testimonial {
   image: string;
 }
 
+
 export function SignInForm() {
   // --- Logic from old code ---
   const { signIn } = useAuthActions();
@@ -24,6 +25,13 @@ export function SignInForm() {
   // --- NEW: React Router hooks for routing ---
   const location = useLocation();
   const navigate = useNavigate();
+
+    
+  // 🆕 Get the path to redirect to after successful sign-in
+  // If they were trying to access a page like /sheet/123, location.state.from will contain it.
+  // Default to "/" (dashboard).
+  const from = location.state?.from?.pathname || "/";
+
 
   // The 'flow' state is now determined by the URL path
   const [flow, setFlow] = useState<"signIn" | "signUp">("signIn");
@@ -81,8 +89,8 @@ export function SignInForm() {
 
     signIn("password", formData)
       .then(() => {
-        // ✅ SUCCESS: Explicitly navigate to the dashboard
-        navigate("/");
+        // ✅ SUCCESS: Navigate to the calculated 'from' path (or "/")
+        navigate(from, { replace: true }); 
       })
       .catch((error) => {
         // Clean up the error message for better display
@@ -95,8 +103,8 @@ export function SignInForm() {
     setError(null);
     signIn("google")
       .then(() => {
-        // ✅ SUCCESS: Explicitly navigate to the dashboard
-        navigate("/");
+        // ✅ SUCCESS: Navigate to the calculated 'from' path (or "/")
+        navigate(from, { replace: true });
       })
       .catch((error) => {
         setError(error.message);
