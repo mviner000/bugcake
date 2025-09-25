@@ -1,3 +1,5 @@
+// AuthToggle.tsx
+
 interface AuthToggleProps {
   flow: "signIn" | "signUp";
   onFlowChange: (flow: "signIn" | "signUp") => void;

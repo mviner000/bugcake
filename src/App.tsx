@@ -1,10 +1,9 @@
 // src/App.tsx
 
 import { Authenticated, Unauthenticated } from "convex/react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import { DetailPage } from "./sheet/detail-page";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-
 import { Header } from "./Header";
 import { SignInForm } from "./SignInForm";
 import { Dashboard } from "./Dashboard";
@@ -14,8 +13,8 @@ import { RBACPage } from "./rbac-page";
 export default function App() {
   return (
     <BrowserRouter>
-      <Header />
       <Authenticated>
+        <Header />
         <Routes>
           {/* Main dashboard route */}
           <Route path="/" element={<Dashboard />} />
@@ -28,7 +27,13 @@ export default function App() {
         </Routes>
       </Authenticated>
       <Unauthenticated>
-        <SignInForm />
+        {/* --- CHANGED: Added routes for unauthenticated users --- */}
+        <Routes>
+          <Route path="/signin" element={<SignInForm />} />
+          <Route path="/signup" element={<SignInForm />} />
+          {/* Redirect any other unauthenticated path to the sign-in page */}
+          <Route path="*" element={<Navigate to="/signin" />} />
+        </Routes>
       </Unauthenticated>
     </BrowserRouter>
   );
