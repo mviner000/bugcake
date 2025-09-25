@@ -5,10 +5,10 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 
 import { DetailPage } from "./sheet/detail-page";
 import { Header } from "./Header";
-import { SignInForm } from "./SignInForm";
 import { Dashboard } from "./Dashboard";
 import { ProfilePage } from "./ProfilePage";
 import { RBACPage } from "./rbac-page";
+import { SignInForm } from "./components/auth/SignInForm";
 
 function UnauthenticatedRoutes() {
   const location = useLocation();
