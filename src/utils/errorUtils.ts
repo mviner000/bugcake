@@ -5,6 +5,7 @@
  */
 const ERROR_MESSAGE_MAP: Record<string, string> = {
   // Authentication errors
+  'InvalidAccountId': 'Not found in database',
   'InvalidSecret': 'Invalid email or password. Please check your credentials and try again.',
   'Invalid credentials': 'Invalid email or password. Please check your credentials and try again.',
   'User not found': 'No account found with this email address.',

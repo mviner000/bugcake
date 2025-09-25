@@ -1,3 +1,5 @@
+// src/components/auth/Illustration.tsx
+
 import { useState, useEffect } from "react";
 
 // Define a type for our testimonial data
