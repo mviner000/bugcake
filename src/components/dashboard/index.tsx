@@ -2,14 +2,11 @@
 
 import React from "react"; // Needed for useState
 import {
-  Search,
-  Menu,
   MoreVertical as MoreVert,
   LucideView as GridView,
   Shirt as Sort,
   Folder,
   UsersIcon,
-  Loader2, // Added for loading state in the button
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 // Use both useQuery and useMutation
