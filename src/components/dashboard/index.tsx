@@ -1,5 +1,6 @@
 // src/Dashboard.tsx
 
+import React from "react"; // Needed for useState
 import {
   Search,
   Menu,
@@ -8,20 +9,61 @@ import {
   Shirt as Sort,
   Folder,
   UsersIcon,
+  Loader2, // Added for loading state in the button
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "convex/react";
-import { api } from "../convex/_generated/api";
+// Use both useQuery and useMutation
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { CreateNewSheetModal } from "./CreateNewSheetModal";
+
+// Import the new modal component
+
+
+// Define a type for the data returned by listSheets for better type safety
+type Sheet = {
+    _id: string;
+    _creationTime: number;
+    name: string;
+    type: string;
+    owner: string;
+    last_opened_at: number;
+    created_at: number;
+    updated_at: number;
+    shared: boolean;
+    isPublic?: boolean;
+    requestable?: boolean;
+    testCaseType?: "functionality" | "altTextAriaLabel";
+    // Properties that might be joined/added in the Convex query
+    ownerName: string;
+    isOwnedByMe: boolean;
+    hasPermissions: boolean;
+    permissions?: { status: string; userEmail: string; level: string }[];
+};
+
+// Define the shape of the form data for the mutation
+interface NewSheetFormData {
+  name: string;
+  type: "sheet" | "doc" | "pdf" | "folder" | "other";
+  testCaseType: "functionality" | "altTextAriaLabel";
+}
+
 
 export function Dashboard() {
-  const sheets = useQuery(api.myFunctions.listSheets);
+  const sheets = useQuery(api.myFunctions.listSheets) as Sheet[] | undefined;
   const navigate = useNavigate();
+  
+  // State to control the modal
+  const [isModalOpen, setIsModalOpen] = React.useState(false); 
+
+  // Get the Convex mutation to create a new sheet
+  const createSheet = useMutation(api.myFunctions.createSheet); 
 
   if (sheets === undefined) {
     return (
@@ -62,9 +104,29 @@ export function Dashboard() {
   const handleFileClick = (sheetId: string) => {
     void navigate(`/sheet/${sheetId}`);
   };
+  
+  // Function to handle the form submission from the modal
+  const handleCreateSheet = async (data: NewSheetFormData) => {
+    try {
+      // Call the Convex mutation. The backend will handle the 'owner' (logged-in user)
+      // and timestamps (created_at, updated_at, last_opened_at).
+      const newSheetId = await createSheet({
+        name: data.name,
+        type: data.type,
+        testCaseType: data.testCaseType,
+        shared: false, // Defaulting shared to false on creation
+      });
+      // Navigate to the newly created sheet
+      void navigate(`/sheet/${newSheetId}`); 
+    } catch (error) {
+      console.error("Failed to create new sheet:", error);
+      // In a real app, you'd show a toast notification here
+    }
+  };
+
 
   const renderSheetList = (
-    sheetList: typeof sheets,
+    sheetList: Sheet[] | undefined,
     isFirstSection = false,
   ) => {
     if (!sheetList || sheetList.length === 0) {
@@ -174,40 +236,14 @@ export function Dashboard() {
 
   return (
     <TooltipProvider>
+      {/* The new modal component */}
+      <CreateNewSheetModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleCreateSheet}
+      />
+      
       <div className="bg-gray-50 min-h-screen font-sans">
-        {/* Header */}
-        <header className="bg-white border-b border-gray-200 px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Menu className="w-6 h-6 text-gray-600 cursor-pointer" />
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-green-600 rounded flex items-center justify-center">
-                  <div className="w-5 h-5 bg-white rounded-sm"></div>
-                </div>
-                <span className="text-xl text-gray-700 font-normal">
-                  Sheets
-                </span>
-              </div>
-            </div>
-
-            <div className="flex-1 max-w-2xl mx-8">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search"
-                  className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-lg border-0 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white font-medium text-sm cursor-pointer">
-                A
-              </div>
-            </div>
-          </div>
-        </header>
 
         {/* Main Content */}
         <main className="p-6">
@@ -215,7 +251,7 @@ export function Dashboard() {
           <section className="mb-8">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-normal text-gray-800">
-                Start a new spreadsheet
+                Start a new checklist
               </h2>
               <div className="flex items-center space-x-2">
                 <span className="text-blue-600 hover:underline cursor-pointer text-sm">
@@ -226,8 +262,11 @@ export function Dashboard() {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {/* Blank spreadsheet card */}
-              <div className="flex flex-col items-center p-4 bg-white rounded-lg border border-gray-200 cursor-pointer hover:shadow-md transition-shadow">
+              {/* Blank sheet card - Add onClick to open the modal */}
+              <div 
+                className="flex flex-col items-center p-4 bg-white rounded-lg border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => setIsModalOpen(true)}
+              >
                 <div className="w-16 h-16 mb-3 flex items-center justify-center">
                   <div className="relative w-12 h-12">
                     <div className="absolute inset-0 bg-red-500 rounded-full opacity-80"></div>
@@ -240,11 +279,11 @@ export function Dashboard() {
                   </div>
                 </div>
                 <span className="text-sm text-gray-700 text-center">
-                  Blank spreadsheet
+                  New sheet
                 </span>
               </div>
 
-              {/* To-do list card */}
+              {/* Functionality card */}
               <div className="flex flex-col items-center p-4 bg-white rounded-lg border border-gray-200 cursor-pointer hover:shadow-md transition-shadow">
                 <div className="w-16 h-16 mb-3 bg-green-600 rounded flex items-center justify-center">
                   <div className="w-10 h-10 bg-white rounded-sm flex flex-col justify-center p-1">
@@ -254,11 +293,11 @@ export function Dashboard() {
                   </div>
                 </div>
                 <span className="text-sm text-gray-700 text-center">
-                  To-do list
+                  Functionality
                 </span>
               </div>
 
-              {/* Annual budget card */}
+              {/* Usability card */}
               <div className="flex flex-col items-center p-4 bg-white rounded-lg border border-gray-200 cursor-pointer hover:shadow-md transition-shadow">
                 <div className="w-16 h-16 mb-3 bg-white border border-gray-300 rounded flex items-center justify-center">
                   <div className="w-10 h-10 flex flex-col justify-center p-1">
@@ -269,11 +308,11 @@ export function Dashboard() {
                   </div>
                 </div>
                 <span className="text-sm text-gray-700 text-center">
-                  Annual budget
+                  Usability
                 </span>
               </div>
 
-              {/* Monthly budget card */}
+              {/* Responsive card */}
               <div className="flex flex-col items-center p-4 bg-white rounded-lg border border-gray-200 cursor-pointer hover:shadow-md transition-shadow">
                 <div className="w-16 h-16 mb-3 bg-slate-700 rounded flex items-center justify-center">
                   <div className="w-10 h-8 flex items-end justify-center space-x-1">
@@ -283,11 +322,11 @@ export function Dashboard() {
                   </div>
                 </div>
                 <span className="text-sm text-gray-700 text-center">
-                  Monthly budget
+                  Responsive
                 </span>
               </div>
 
-              {/* Google Finance Investment card */}
+              {/* Compatibility card */}
               <div className="flex flex-col items-center p-4 bg-white rounded-lg border border-gray-200 cursor-pointer hover:shadow-md transition-shadow">
                 <div className="w-16 h-16 mb-3 bg-blue-600 rounded flex items-center justify-center">
                   <div className="w-10 h-10 bg-white rounded-sm flex flex-col justify-center p-1">
@@ -296,11 +335,11 @@ export function Dashboard() {
                   </div>
                 </div>
                 <span className="text-sm text-gray-700 text-center">
-                  Google Finance Invest...
+                  Compatibility
                 </span>
               </div>
 
-              {/* Annual Calendar card */}
+              {/* Accessibility card */}
               <div className="flex flex-col items-center p-4 bg-white rounded-lg border border-gray-200 cursor-pointer hover:shadow-md transition-shadow">
                 <div className="w-16 h-16 mb-3 bg-teal-800 rounded flex items-center justify-center">
                   <div className="w-10 h-10 grid grid-cols-7 gap-px p-1">
@@ -313,7 +352,7 @@ export function Dashboard() {
                   </div>
                 </div>
                 <span className="text-sm text-gray-700 text-center">
-                  Annual Calendar
+                  Accessibility
                 </span>
               </div>
             </div>
@@ -323,9 +362,9 @@ export function Dashboard() {
           <section>
             {!sheets || sheets.length === 0 ? (
               <div className="text-center py-12">
-                <div className="text-gray-500 mb-4">No spreadsheets found</div>
+                <div className="text-gray-500 mb-4">No sheets found</div>
                 <div className="text-sm text-gray-400">
-                  Create your first spreadsheet to get started
+                  Create your first sheets to get started
                 </div>
               </div>
             ) : (

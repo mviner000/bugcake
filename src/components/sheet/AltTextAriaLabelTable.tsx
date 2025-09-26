@@ -1,19 +1,19 @@
-// src/sheet/FunctionalityTestCasesTable.tsx
+// src/sheet/AltTextAriaLabelTable.tsx
 
-import { Doc } from "../../convex/_generated/dataModel";
+import { Doc } from "convex/_generated/dataModel";
+import { api } from "../../../convex/_generated/api";
 import { useMutation } from "convex/react";
-import { api } from "../../convex/_generated/api";
 import React, { useState, useRef, useCallback } from "react";
 
-interface FunctionalityTestCasesTableProps {
-  testCases: Doc<"functionalityTestCases">[];
+interface AltTextAriaLabelTableProps {
+  testCases: Doc<"altTextAriaLabelTestCases">[];
 }
 
-export function FunctionalityTestCasesTable({
+export function AltTextAriaLabelTable({
   testCases,
-}: FunctionalityTestCasesTableProps) {
+}: AltTextAriaLabelTableProps) {
   const updateRowHeight = useMutation(
-    api.myFunctions.updateFunctionalityTestCaseRowHeight,
+    api.myFunctions.updateAltTextAriaLabelTestCaseRowHeight,
   );
   const [resizing, setResizing] = useState<string | null>(null);
   const [startY, setStartY] = useState(0);
@@ -97,10 +97,7 @@ export function FunctionalityTestCasesTable({
               TC ID
             </th>
             <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              TC Level
-            </th>
-            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              Scenarios
+              Persona
             </th>
             <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
               Module
@@ -109,27 +106,36 @@ export function FunctionalityTestCasesTable({
               Sub Module
             </th>
             <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              Test Case Title
+              Page Section
             </th>
             <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              Pre Conditions
+              Images/Icons
             </th>
             <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              Test Steps
+              Remarks
             </th>
             <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              Expected Results
+              Alt Text/Aria Label
             </th>
             <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              Testing
+              SE Implementation
+            </th>
+            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
+              Actual Results
+            </th>
+            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
+              Testing Status
+            </th>
+            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
+              Jira User Story
             </th>
           </tr>
         </thead>
         <tbody>
           {testCases.length === 0 ? (
             <tr>
-              <td colSpan={10} className="text-center py-4 text-gray-500">
-                No functionality test cases found.
+              <td colSpan={12} className="text-center py-4 text-gray-500">
+                No Alt Text / Aria Label test cases found.
               </td>
             </tr>
           ) : (
@@ -144,10 +150,7 @@ export function FunctionalityTestCasesTable({
                   {testCase._id}
                 </td>
                 <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase.level}
-                </td>
-                <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase.scenario}
+                  {testCase.persona}
                 </td>
                 <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
                   {testCase.module ?? "N/A"}
@@ -156,19 +159,28 @@ export function FunctionalityTestCasesTable({
                   {testCase.subModule ?? "N/A"}
                 </td>
                 <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase.title}
+                  {testCase.pageSection ?? "N/A"}
                 </td>
                 <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase.preConditions ?? "N/A"}
+                  {testCase.imagesIcons ?? "N/A"}
                 </td>
                 <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase.steps}
+                  {testCase.remarks ?? "N/A"}
                 </td>
                 <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase.expectedResults}
+                  {testCase.altTextAriaLabel ?? "N/A"}
                 </td>
                 <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase.status}
+                  {testCase.seImplementation}
+                </td>
+                <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
+                  {testCase.actualResults ?? "N/A"}
+                </td>
+                <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
+                  {testCase.testingStatus}
+                </td>
+                <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
+                  {testCase.jiraUserStory ?? "N/A"}
                 </td>
                 {/* Row resize handle */}
                 <div

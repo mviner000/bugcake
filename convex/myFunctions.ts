@@ -412,3 +412,57 @@ export const updateUserVerificationStatus = mutation({
     };
   },
 });
+
+export const createSheet = mutation({
+  args: {
+    name: v.string(),
+    type: v.union(
+      v.literal("sheet"),
+      v.literal("doc"),
+      v.literal("pdf"),
+      v.literal("folder"),
+      v.literal("other"),
+    ),
+    testCaseType: v.union(
+      v.literal("functionality"),
+      v.literal("altTextAriaLabel"),
+    ),
+    shared: v.boolean(),
+    // Optional fields you might add later
+    isPublic: v.optional(v.boolean()),
+    requestable: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    // 1. Authenticate and identify the user
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Unauthorized: You must be logged in to create a sheet.");
+    }
+
+    // We must normalize the ID to ensure it's a valid Doc<"users"> ID
+    const normalizedUserId = ctx.db.normalizeId("users", userId);
+    if (!normalizedUserId) {
+      throw new Error("Invalid user session.");
+    }
+
+    const now = Date.now();
+
+    // 2. Insert the new document into the 'sheets' table
+    const sheetId = await ctx.db.insert("sheets", {
+      name: args.name,
+      type: args.type,
+      owner: normalizedUserId, // Automatically set the owner to the logged-in user
+      last_opened_at: now,
+      created_at: now,
+      updated_at: now,
+      shared: args.shared,
+      testCaseType: args.testCaseType,
+      // Use defaults for optional fields if not provided
+      isPublic: args.isPublic ?? false,
+      requestable: args.requestable ?? false,
+    });
+
+    // 3. Return the ID of the new sheet for the frontend to navigate
+    return sheetId;
+  },
+});

@@ -1,57 +1,45 @@
-// src/App.tsx
-
 import { Authenticated, Unauthenticated } from "convex/react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 
-import { DetailPage } from "./sheet/detail-page";
-import { Header } from "./Header";
-import { Dashboard } from "./Dashboard";
-import { ProfilePage } from "./ProfilePage";
-import { RBACPage } from "./rbac-page";
+import { DetailPage } from "./components/sheet/detail-page";
+import { Header } from "./components/navbar/Header";
+import { Dashboard } from "./components/dashboard";
+import { ProfilePage } from "./components/profile/ProfilePage";
 import { SignInForm } from "./components/auth/SignInForm";
 import { NotFound } from "./components/NotFound";
+import { RBACPage } from "./components/rbac/rbac-page";
 
 function UnauthenticatedRoutes() {
-  // const location = useLocation();
-
-  // If the user tries to access the dashboard or any other protected route while unauthenticated,
-  // we record the path and redirect them to /signin.
-  // The 'from' state can be used later to send them back after sign-in.
-  // const state = { from: location };
+  const location = useLocation();
+  const state = { from: location };
 
   return (
     <Routes>
       <Route path="/signin" element={<SignInForm />} />
       <Route path="/signup" element={<SignInForm />} />
-      {/* Show 404 page for any other unauthenticated route */}
-      <Route path="*" element={<NotFound />} />
+      {/* If the user is unauthenticated, redirect them to sign-in, preserving the original path */}
+      <Route path="*" element={<Navigate to="/signin" state={state} replace />} />
     </Routes>
   );
 }
 
-// 🆕 New component to handle authenticated redirection
-function AuthenticationGuard() {
-  const location = useLocation();
-  
-  // Use 'state.from' to redirect to the page they originally wanted (e.g., /sheet/123)
-  // or default to the dashboard ("/").
-  const from = location.state?.from?.pathname || "/";
-  
-  // If the user is on /signin or /signup while *authenticated*, redirect them to the dashboard.
-  if (location.pathname === "/signin" || location.pathname === "/signup") {
-    return <Navigate to={from} replace />;
-  }
-  
-  // Otherwise, render the app's protected routes normally.
+// This component handles all routes for authenticated users.
+function AuthenticatedRoutes() {
   return (
     <>
       <Header />
       <Routes>
+        {/* 🆕 If an authenticated user tries to go to sign-in or sign-up, redirect to the dashboard. */}
+        <Route path="/signin" element={<Navigate to="/" replace />} />
+        <Route path="/signup" element={<Navigate to="/" replace />} />
+
+        {/* The main application routes for authenticated users */}
         <Route path="/" element={<Dashboard />} />
         <Route path="/sheet/:sheetId" element={<DetailPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/rbac" element={<RBACPage />} />
-        {/* 404 page for authenticated users */}
+
+        {/* A 404 page for any route that doesn't exist */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>
@@ -62,11 +50,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <Authenticated>
-        {/* Use the guard component for all authenticated routes */}
-        <AuthenticationGuard />
+        <AuthenticatedRoutes />
       </Authenticated>
       <Unauthenticated>
-        {/* Use the routes component for all unauthenticated routes */}
         <UnauthenticatedRoutes />
       </Unauthenticated>
     </BrowserRouter>

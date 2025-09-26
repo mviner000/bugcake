@@ -5,9 +5,10 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "convex/react";
 
-import { UserProfileDropdown } from "@/components/user-profile-dropdown";
+
 import { Skeleton } from "@/components/ui/skeleton"; // Assuming you have a Skeleton component
-import { api } from "../convex/_generated/api";
+import { api } from "../../../convex/_generated/api";
+import { UserProfileDropdown } from "./user-profile-dropdown";
 
 export function Header() {
   const { isAuthenticated, isLoading } = useConvexAuth();

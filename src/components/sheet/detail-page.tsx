@@ -1,7 +1,7 @@
 // src/sheet/detail-page.tsx
 
 import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
+import { api } from "../../../convex/_generated/api";
 import { useNavigate, useParams } from "react-router-dom";
 
 // Component imports

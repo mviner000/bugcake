@@ -1,19 +1,19 @@
-// src/sheet/AltTextAriaLabelTable.tsx
+// src/sheet/FunctionalityTestCasesTable.tsx
 
-import { Doc } from "../../convex/_generated/dataModel";
+import { Doc } from "convex/_generated/dataModel";
+import { api } from "../../../convex/_generated/api";
 import { useMutation } from "convex/react";
-import { api } from "../../convex/_generated/api";
 import React, { useState, useRef, useCallback } from "react";
 
-interface AltTextAriaLabelTableProps {
-  testCases: Doc<"altTextAriaLabelTestCases">[];
+interface FunctionalityTestCasesTableProps {
+  testCases: Doc<"functionalityTestCases">[];
 }
 
-export function AltTextAriaLabelTable({
+export function FunctionalityTestCasesTable({
   testCases,
-}: AltTextAriaLabelTableProps) {
+}: FunctionalityTestCasesTableProps) {
   const updateRowHeight = useMutation(
-    api.myFunctions.updateAltTextAriaLabelTestCaseRowHeight,
+    api.myFunctions.updateFunctionalityTestCaseRowHeight,
   );
   const [resizing, setResizing] = useState<string | null>(null);
   const [startY, setStartY] = useState(0);
@@ -97,7 +97,10 @@ export function AltTextAriaLabelTable({
               TC ID
             </th>
             <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              Persona
+              TC Level
+            </th>
+            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
+              Scenarios
             </th>
             <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
               Module
@@ -106,36 +109,27 @@ export function AltTextAriaLabelTable({
               Sub Module
             </th>
             <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              Page Section
+              Test Case Title
             </th>
             <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              Images/Icons
+              Pre Conditions
             </th>
             <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              Remarks
+              Test Steps
             </th>
             <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              Alt Text/Aria Label
+              Expected Results
             </th>
             <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              SE Implementation
-            </th>
-            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              Actual Results
-            </th>
-            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              Testing Status
-            </th>
-            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              Jira User Story
+              Testing
             </th>
           </tr>
         </thead>
         <tbody>
           {testCases.length === 0 ? (
             <tr>
-              <td colSpan={12} className="text-center py-4 text-gray-500">
-                No Alt Text / Aria Label test cases found.
+              <td colSpan={10} className="text-center py-4 text-gray-500">
+                No functionality test cases found.
               </td>
             </tr>
           ) : (
@@ -150,7 +144,10 @@ export function AltTextAriaLabelTable({
                   {testCase._id}
                 </td>
                 <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase.persona}
+                  {testCase.level}
+                </td>
+                <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
+                  {testCase.scenario}
                 </td>
                 <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
                   {testCase.module ?? "N/A"}
@@ -159,28 +156,19 @@ export function AltTextAriaLabelTable({
                   {testCase.subModule ?? "N/A"}
                 </td>
                 <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase.pageSection ?? "N/A"}
+                  {testCase.title}
                 </td>
                 <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase.imagesIcons ?? "N/A"}
+                  {testCase.preConditions ?? "N/A"}
                 </td>
                 <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase.remarks ?? "N/A"}
+                  {testCase.steps}
                 </td>
                 <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase.altTextAriaLabel ?? "N/A"}
+                  {testCase.expectedResults}
                 </td>
                 <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase.seImplementation}
-                </td>
-                <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase.actualResults ?? "N/A"}
-                </td>
-                <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase.testingStatus}
-                </td>
-                <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase.jiraUserStory ?? "N/A"}
+                  {testCase.status}
                 </td>
                 {/* Row resize handle */}
                 <div
