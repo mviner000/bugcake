@@ -9,21 +9,22 @@ import { Dashboard } from "./Dashboard";
 import { ProfilePage } from "./ProfilePage";
 import { RBACPage } from "./rbac-page";
 import { SignInForm } from "./components/auth/SignInForm";
+import { NotFound } from "./components/NotFound";
 
 function UnauthenticatedRoutes() {
-  const location = useLocation();
+  // const location = useLocation();
 
   // If the user tries to access the dashboard or any other protected route while unauthenticated,
   // we record the path and redirect them to /signin.
   // The 'from' state can be used later to send them back after sign-in.
-  const state = { from: location };
+  // const state = { from: location };
 
   return (
     <Routes>
       <Route path="/signin" element={<SignInForm />} />
       <Route path="/signup" element={<SignInForm />} />
-      {/* 🆕 Redirect any other unauthenticated path to sign-in */}
-      <Route path="*" element={<Navigate to="/signin" state={state} replace />} />
+      {/* Show 404 page for any other unauthenticated route */}
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }
@@ -50,8 +51,8 @@ function AuthenticationGuard() {
         <Route path="/sheet/:sheetId" element={<DetailPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/rbac" element={<RBACPage />} />
-        {/* Fallback for protected routes */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* 404 page for authenticated users */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </>
   );
