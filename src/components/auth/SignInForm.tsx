@@ -170,7 +170,7 @@ export function SignInForm() {
                           type="email"
                           disabled={isSubmitting || isGoogleLoading}
                           placeholder=""
-                          className="w-full px-4 py-3 bg-orange-50 border-0 rounded-lg text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-orange-500 disabled:opacity-50"
+                          className="h-[50px] w-full px-4 py-3 bg-orange-50 border-0 rounded-lg text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-orange-500 disabled:opacity-50"
                         />
                       </FormControl>
                       <FormMessage className="text-sm text-red-600" />
@@ -194,7 +194,7 @@ export function SignInForm() {
                             type={showPassword ? "text" : "password"}
                             disabled={isSubmitting || isGoogleLoading}
                             placeholder="••••••••••••"
-                            className="w-full px-4 py-3 bg-orange-50 border-0 rounded-lg text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-orange-500 pr-12 disabled:opacity-50"
+                            className="h-[50px] w-full px-4 py-3 bg-orange-50 border-0 rounded-lg text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-orange-500 pr-12 disabled:opacity-50"
                           />
                           <button
                             type="button"
@@ -213,7 +213,7 @@ export function SignInForm() {
 
                 {/* Forgot Password (only show on sign-in) */}
                 {flow === 'signIn' && (
-                  <div className="text-right">
+                  <div className="text-left">
                     <a href="#" className="text-sm text-gray-600 hover:text-gray-800">
                       Forgot Password?
                     </a>
@@ -232,7 +232,7 @@ export function SignInForm() {
                   loading={isSubmitting}
                   loadingText={flow === "signIn" ? "Signing in..." : "Creating account..."}
                   spinnerColor="white"
-                  className="w-full bg-gray-900 hover:bg-gray-800 text-white py-3 rounded-full text-base font-medium"
+                  className="mt-1 h-[64px] w-full bg-gray-900 hover:bg-gray-800 text-white py-3 rounded-full text-base font-medium"
                 >
                   {flow === "signIn" ? "Sign in" : "Sign up"}
                 </LoadingButton>
@@ -254,13 +254,13 @@ export function SignInForm() {
                   loadingText="Connecting to Google..."
                   spinnerColor="white"
                   onClick={handleGoogleSignIn}
-                  className="w-full bg-gray-900 hover:bg-gray-800 text-white border-gray-900 py-3 rounded-full text-base font-medium"
+                  className="w-full h-[64px] bg-gray-900 hover:bg-gray-800 text-white border-gray-900 py-3 rounded-full text-base font-medium"
                 >
                   Sign in with Google
                 </LoadingButton>
 
                 {/* Dynamic Sign Up/In Link */}
-                <div className="text-center mt-8">
+                <div className="text-center">
                   <p className="text-gray-600 mb-4">
                     {flow === "signIn"
                       ? "Doesn't have an account?"

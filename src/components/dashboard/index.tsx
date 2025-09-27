@@ -259,98 +259,140 @@ export function Dashboard() {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {/* Blank sheet card - Add onClick to open the modal */}
-              <div 
+              <div
                 className="flex flex-col items-center p-4 bg-white rounded-lg border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
                 onClick={() => setIsModalOpen(true)}
               >
                 <div className="w-16 h-16 mb-3 flex items-center justify-center">
-                  <div className="relative w-12 h-12">
-                    <div className="absolute inset-0 bg-red-500 rounded-full opacity-80"></div>
-                    <div className="absolute top-1 left-1 right-1 bottom-1 bg-yellow-400 rounded-full opacity-80"></div>
-                    <div className="absolute top-2 left-2 right-2 bottom-2 bg-green-500 rounded-full opacity-80"></div>
-                    <div className="absolute top-3 left-3 right-3 bottom-3 bg-blue-500 rounded-full opacity-80"></div>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-white text-xl font-light">+</span>
-                    </div>
-                  </div>
+                  <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="8" width="36" height="32" rx="4" fill="#f3f4f6" stroke="#d1d5db" strokeWidth="2" />
+                    <rect x="10" y="12" width="28" height="2" rx="1" fill="#9ca3af" />
+                    <rect x="10" y="16" width="20" height="2" rx="1" fill="#d1d5db" />
+                    <rect x="10" y="20" width="24" height="2" rx="1" fill="#d1d5db" />
+                    <circle cx="32" cy="32" r="10" fill="#10b981" />
+                    <path d="M28 32h8M32 28v8" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
                 </div>
-                <span className="text-sm text-gray-700 text-center">
-                  New sheet
-                </span>
+                <span className="text-sm text-gray-700 text-center">Create New</span>
               </div>
 
-              {/* Functionality card */}
               <div className="flex flex-col items-center p-4 bg-white rounded-lg border border-gray-200 cursor-pointer hover:shadow-md transition-shadow">
-                <div className="w-16 h-16 mb-3 bg-green-600 rounded flex items-center justify-center">
-                  <div className="w-10 h-10 bg-white rounded-sm flex flex-col justify-center p-1">
-                    <div className="h-1 bg-gray-300 rounded mb-1"></div>
-                    <div className="h-1 bg-gray-300 rounded mb-1"></div>
-                    <div className="h-1 bg-gray-300 rounded"></div>
-                  </div>
+                <div className="w-16 h-16 mb-3 flex items-center justify-center">
+                  <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="4" y="4" width="40" height="40" rx="6" fill="#059669" />
+                    <circle cx="24" cy="24" r="8" fill="none" stroke="white" strokeWidth="2" />
+                    <circle cx="24" cy="16" r="2" fill="white" />
+                    <circle cx="24" cy="32" r="2" fill="white" />
+                    <circle cx="16" cy="24" r="2" fill="white" />
+                    <circle cx="32" cy="24" r="2" fill="white" />
+                    <circle cx="18.3" cy="18.3" r="1.5" fill="white" />
+                    <circle cx="29.7" cy="29.7" r="1.5" fill="white" />
+                    <circle cx="29.7" cy="18.3" r="1.5" fill="white" />
+                    <circle cx="18.3" cy="29.7" r="1.5" fill="white" />
+                    <text x="24" y="28" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">
+                      FN
+                    </text>
+                  </svg>
                 </div>
-                <span className="text-sm text-gray-700 text-center">
-                  Functionality
-                </span>
+                <span className="text-sm text-gray-700 text-center">Functionality</span>
               </div>
 
-              {/* Usability card */}
               <div className="flex flex-col items-center p-4 bg-white rounded-lg border border-gray-200 cursor-pointer hover:shadow-md transition-shadow">
-                <div className="w-16 h-16 mb-3 bg-white border border-gray-300 rounded flex items-center justify-center">
-                  <div className="w-10 h-10 flex flex-col justify-center p-1">
-                    <div className="h-1 bg-gray-400 rounded mb-1"></div>
-                    <div className="h-1 bg-gray-300 rounded mb-1"></div>
-                    <div className="h-1 bg-gray-300 rounded mb-1"></div>
-                    <div className="h-1 bg-gray-200 rounded"></div>
-                  </div>
+                <div className="w-16 h-16 mb-3 flex items-center justify-center">
+                  <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="4" y="4" width="40" height="40" rx="6" fill="white" stroke="#d1d5db" strokeWidth="2" />
+                    <circle cx="18" cy="16" r="4" fill="#6b7280" />
+                    <path d="M12 28c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="#6b7280" strokeWidth="2" fill="none" />
+                    <rect x="28" y="12" width="12" height="2" rx="1" fill="#9ca3af" />
+                    <rect x="28" y="16" width="8" height="2" rx="1" fill="#d1d5db" />
+                    <rect x="28" y="20" width="10" height="2" rx="1" fill="#d1d5db" />
+                    <path
+                      d="M32 32l2-2 4 4"
+                      stroke="#10b981"
+                      strokeWidth="2"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
                 </div>
-                <span className="text-sm text-gray-700 text-center">
-                  Usability
-                </span>
+                <span className="text-sm text-gray-700 text-center">Usability</span>
               </div>
 
-              {/* Responsive card */}
               <div className="flex flex-col items-center p-4 bg-white rounded-lg border border-gray-200 cursor-pointer hover:shadow-md transition-shadow">
-                <div className="w-16 h-16 mb-3 bg-slate-700 rounded flex items-center justify-center">
-                  <div className="w-10 h-8 flex items-end justify-center space-x-1">
-                    <div className="w-2 h-3 bg-orange-400 rounded-sm"></div>
-                    <div className="w-2 h-5 bg-orange-400 rounded-sm"></div>
-                    <div className="w-2 h-2 bg-orange-400 rounded-sm"></div>
-                  </div>
+                <div className="w-16 h-16 mb-3 flex items-center justify-center">
+                  <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="4" y="4" width="40" height="40" rx="6" fill="#374151" />
+                    {/* Desktop */}
+                    <rect x="10" y="12" width="16" height="10" rx="1" fill="#f97316" opacity="0.9" />
+                    <rect x="10" y="23" width="16" height="1" rx="0.5" fill="#f97316" opacity="0.9" />
+                    {/* Tablet */}
+                    <rect x="28" y="10" width="8" height="12" rx="1" fill="#f97316" opacity="0.7" />
+                    <circle cx="32" cy="20" r="0.5" fill="#374151" />
+                    {/* Mobile */}
+                    <rect x="38" y="14" width="4" height="8" rx="1" fill="#f97316" opacity="0.5" />
+                    <circle cx="40" cy="20" r="0.3" fill="#374151" />
+                    <text x="24" y="36" textAnchor="middle" fill="white" fontSize="6" fontWeight="bold">
+                      RESPONSIVE
+                    </text>
+                  </svg>
                 </div>
-                <span className="text-sm text-gray-700 text-center">
-                  Responsive
-                </span>
+                <span className="text-sm text-gray-700 text-center">Responsive</span>
               </div>
 
-              {/* Compatibility card */}
               <div className="flex flex-col items-center p-4 bg-white rounded-lg border border-gray-200 cursor-pointer hover:shadow-md transition-shadow">
-                <div className="w-16 h-16 mb-3 bg-blue-600 rounded flex items-center justify-center">
-                  <div className="w-10 h-10 bg-white rounded-sm flex flex-col justify-center p-1">
-                    <div className="text-xs text-blue-600 font-medium">ABC</div>
-                    <div className="text-xs text-gray-400">$123</div>
-                  </div>
+                <div className="w-16 h-16 mb-3 flex items-center justify-center">
+                  <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="4" y="4" width="40" height="40" rx="6" fill="#2563eb" />
+                    {/* Browser window */}
+                    <rect x="8" y="10" width="32" height="24" rx="2" fill="white" />
+                    <rect x="8" y="10" width="32" height="4" rx="2" fill="#e5e7eb" />
+                    <circle cx="12" cy="12" r="1" fill="#ef4444" />
+                    <circle cx="16" cy="12" r="1" fill="#f59e0b" />
+                    <circle cx="20" cy="12" r="1" fill="#10b981" />
+                    {/* Content */}
+                    <rect x="12" y="18" width="8" height="2" rx="1" fill="#3b82f6" />
+                    <rect x="12" y="22" width="12" height="1" rx="0.5" fill="#6b7280" />
+                    <rect x="12" y="25" width="10" height="1" rx="0.5" fill="#6b7280" />
+                    {/* Checkmark */}
+                    <path
+                      d="M28 20l2 2 4-4"
+                      stroke="#10b981"
+                      strokeWidth="2"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <text x="24" y="42" textAnchor="middle" fill="white" fontSize="6" fontWeight="bold">
+                      COMPAT
+                    </text>
+                  </svg>
                 </div>
-                <span className="text-sm text-gray-700 text-center">
-                  Compatibility
-                </span>
+                <span className="text-sm text-gray-700 text-center">Compatibility</span>
               </div>
 
-              {/* Accessibility card */}
               <div className="flex flex-col items-center p-4 bg-white rounded-lg border border-gray-200 cursor-pointer hover:shadow-md transition-shadow">
-                <div className="w-16 h-16 mb-3 bg-teal-800 rounded flex items-center justify-center">
-                  <div className="w-10 h-10 grid grid-cols-7 gap-px p-1">
-                    {Array.from({ length: 28 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="w-1 h-1 bg-teal-300 rounded-full"
-                      ></div>
-                    ))}
-                  </div>
+                <div className="w-16 h-16 mb-3 flex items-center justify-center">
+                  <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="4" y="4" width="40" height="40" rx="6" fill="#0f766e" />
+                    {/* Accessibility person icon */}
+                    <circle cx="24" cy="14" r="3" fill="white" />
+                    <path
+                      d="M24 18v12M18 22l6-2 6 2M20 30l4 6M28 30l-4 6"
+                      stroke="white"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    {/* Screen reader lines */}
+                    <path d="M8 8l4 4M40 8l-4 4" stroke="#14b8a6" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M8 40l4-4M40 40l-4-4" stroke="#14b8a6" strokeWidth="2" strokeLinecap="round" />
+                    <text x="24" y="42" textAnchor="middle" fill="white" fontSize="5" fontWeight="bold">
+                      A11Y
+                    </text>
+                  </svg>
                 </div>
-                <span className="text-sm text-gray-700 text-center">
-                  Accessibility
-                </span>
+                <span className="text-sm text-gray-700 text-center">Accessibility</span>
               </div>
             </div>
           </section>
