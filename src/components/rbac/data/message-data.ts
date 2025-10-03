@@ -1,0 +1,173 @@
+// src/data/message-data.ts
+
+export interface Message {
+  id: number;
+  sender: 'user' | 'other';
+  senderName: string;
+  avatarUrl: string;
+  text: string;
+  timestamp: Date;
+}
+
+export const STATIC_MESSAGES: Message[] = [
+  {
+    id: 1,
+    sender: 'other',
+    senderName: "System Admin",
+    avatarUrl: "https://i.pravatar.cc/150?img=60",
+    text: "Hello! We've received your verification request and are currently reviewing your documents. This process usually takes 1-2 business days.",
+    timestamp: new Date(Date.now() - 3600000),
+  },
+  {
+    id: 2,
+    sender: 'other',
+    senderName: "System Admin",
+    avatarUrl: "https://i.pravatar.cc/150?img=60",
+    text: "Your ID document seems to be blurry. Please re-upload a clearer image in your profile settings.",
+    timestamp: new Date(Date.now() - 600000),
+  },
+  {
+    id: 3,
+    sender: 'other',
+    senderName: "System Admin",
+    avatarUrl: "https://i.pravatar.cc/150?img=60",
+    text: "All documents look good so far. We'll send a final notification once your status is updated. Hang tight!",
+    timestamp: new Date(Date.now() - 5000),
+  },
+  {
+    id: 4,
+    sender: 'other',
+    senderName: "You",
+    avatarUrl: "https://i.pravatar.cc/150?img=3",
+    text: "Thanks for the update! I'll upload a clearer photo right away.",
+    timestamp: new Date(Date.now() - 300000),
+  },
+  {
+    id: 5,
+    sender: 'other',
+    senderName: "System Admin",
+    avatarUrl: "https://i.pravatar.cc/150?img=60",
+    text: "We've received your new upload. Much better, thank you!",
+    timestamp: new Date(Date.now() - 240000),
+  },
+  {
+    id: 6,
+    sender: 'other',
+    senderName: "You",
+    avatarUrl: "https://i.pravatar.cc/150?img=3",
+    text: "Glad that worked. Do you know when I'll get approved?",
+    timestamp: new Date(Date.now() - 180000),
+  },
+  {
+    id: 7,
+    sender: 'other',
+    senderName: "System Admin",
+    avatarUrl: "https://i.pravatar.cc/150?img=60",
+    text: "Usually within 24 hours. We'll notify you as soon as it's completed.",
+    timestamp: new Date(Date.now() - 150000),
+  },
+  {
+    id: 8,
+    sender: 'other',
+    senderName: "You",
+    avatarUrl: "https://i.pravatar.cc/150?img=3",
+    text: "Perfect, thank you!",
+    timestamp: new Date(Date.now() - 120000),
+  },
+  {
+    id: 9,
+    sender: 'other',
+    senderName: "System Admin",
+    avatarUrl: "https://i.pravatar.cc/150?img=60",
+    text: "While we wait, please ensure your profile details are complete.",
+    timestamp: new Date(Date.now() - 110000),
+  },
+  {
+    id: 10,
+    sender: 'other',
+    senderName: "You",
+    avatarUrl: "https://i.pravatar.cc/150?img=3",
+    text: "Got it, I'll double-check everything now.",
+    timestamp: new Date(Date.now() - 100000),
+  },
+  {
+    id: 11,
+    sender: 'other',
+    senderName: "System Admin",
+    avatarUrl: "https://i.pravatar.cc/150?img=60",
+    text: "Great! Having accurate info speeds up the process.",
+    timestamp: new Date(Date.now() - 90000),
+  },
+  {
+    id: 12,
+    sender: 'other',
+    senderName: "You",
+    avatarUrl: "https://i.pravatar.cc/150?img=3",
+    text: "Profile updated ✅",
+    timestamp: new Date(Date.now() - 80000),
+  },
+  {
+    id: 13,
+    sender: 'other',
+    senderName: "System Admin",
+    avatarUrl: "https://i.pravatar.cc/150?img=60",
+    text: "Thanks for confirming. You're all set on our end.",
+    timestamp: new Date(Date.now() - 70000),
+  },
+  {
+    id: 14,
+    sender: 'other',
+    senderName: "You",
+    avatarUrl: "https://i.pravatar.cc/150?img=3",
+    text: "Appreciate the help 🙌",
+    timestamp: new Date(Date.now() - 60000),
+  },
+  {
+    id: 15,
+    sender: 'other',
+    senderName: "System Admin",
+    avatarUrl: "https://i.pravatar.cc/150?img=60",
+    text: "You're very welcome. Do you have any other questions?",
+    timestamp: new Date(Date.now() - 50000),
+  },
+  {
+    id: 16,
+    sender: 'other',
+    senderName: "You",
+    avatarUrl: "https://i.pravatar.cc/150?img=3",
+    text: "Nope, that's all. Just waiting for approval now.",
+    timestamp: new Date(Date.now() - 40000),
+  },
+  {
+    id: 17,
+    sender: 'other',
+    senderName: "System Admin",
+    avatarUrl: "https://i.pravatar.cc/150?img=60",
+    text: "Alright, we'll ping you as soon as it's ready.",
+    timestamp: new Date(Date.now() - 30000),
+  },
+  {
+    id: 18,
+    sender: 'other',
+    senderName: "You",
+    avatarUrl: "https://i.pravatar.cc/150?img=3",
+    text: "Cool, thanks again!",
+    timestamp: new Date(Date.now() - 20000),
+  },
+  {
+    id: 19,
+    sender: 'other',
+    senderName: "System Admin",
+    avatarUrl: "https://i.pravatar.cc/150?img=60",
+    text: "Anytime! Have a great day 🎉",
+    timestamp: new Date(Date.now() - 10000),
+  },
+  {
+    id: 20,
+    sender: 'other',
+    senderName: "You",
+    avatarUrl: "https://i.pravatar.cc/150?img=3",
+    text: "You too! 👋",
+    timestamp: new Date(),
+  },
+];

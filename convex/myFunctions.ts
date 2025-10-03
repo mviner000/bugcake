@@ -571,3 +571,50 @@ export const resolveSupportMessage = mutation({
     return { success: true, message: "Support message has been marked as resolved." };
   },
 });
+
+/**
+ * Retrieves support messages for a specific user.
+ * This is intended for an admin to view a user's support ticket history.
+ */
+export const listSupportMessagesByUserId = query({
+  args: {
+    targetUserId: v.id("users"), // The ID of the user whose messages to fetch
+  },
+  handler: async (ctx, args) => {
+    // 1. Check if the logged-in user is a super_admin
+    const loggedInUserId = await getAuthUserId(ctx);
+    if (!loggedInUserId) {
+      throw new Error("Authentication required.");
+    }
+
+    const loggedInUser = await ctx.db.get(loggedInUserId);
+    if (loggedInUser?.role !== "super_admin") {
+      throw new Error("Access denied. Only super administrators can view support messages.");
+    }
+    
+    // 2. Fetch all support messages for the target user, ordered by creation time
+    const supportMessages = await ctx.db
+      .query("supportMessages")
+      .filter((q) => q.eq(q.field("userId"), args.targetUserId))
+      .order("asc")
+      .collect();
+      
+    // 3. Get sender details
+    const targetUser = await ctx.db.get(args.targetUserId);
+
+    // --- START: New Fallback Logic ---
+    // Determine the display name: Use name, fallback to email, then "Unknown User"
+    const displayName = targetUser?.name || targetUser?.email || "Unknown User";
+    // --- END: New Fallback Logic ---
+
+
+    return {
+      supportMessages,
+      targetUser: {
+          // Use the determined displayName
+          name: displayName, 
+          image: targetUser?.image || "/placeholder.svg",
+      }
+    };
+  },
+});

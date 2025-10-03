@@ -1,7 +1,7 @@
 // src/rbac-page.tsx
 
 import { useState } from "react";
-import { Search, Edit, Check, X, Shield } from "lucide-react";
+import { Search, Edit, Check, X, Shield, MessageSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +39,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Doc } from "convex/_generated/dataModel";
+import { MessageModal, UserSummary } from ".//MessageModal";
 
 export function RBACPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -46,26 +47,19 @@ export function RBACPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [errorMessage, setErrorMessage] = useState("");
+  const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
+  const [targetUserForMessage, setTargetUserForMessage] = useState<UserSummary | null>(null);
 
-  // Get current user profile to check role
   const currentUser = useQuery(api.myFunctions.getMyProfile);
-
-  // Use the mutation hook
-  const updateUserStatus = useMutation(
-    api.myFunctions.updateUserVerificationStatus,
-  );
-
-  // Check if current user is super_admin
+  const updateUserStatus = useMutation(api.myFunctions.updateUserVerificationStatus);
   const isSuperAdmin = currentUser?.role === "super_admin";
 
   const handleUpdateStatus = (
     user: Doc<"users">,
     newStatus: "approved" | "declined" | "pending",
   ) => {
-    // Clear any previous error messages
     setErrorMessage("");
 
-    // Double check on frontend (backend will also validate)
     if (!isSuperAdmin) {
       setErrorMessage(
         "Access denied. Only super administrators can update user verification status.",
@@ -83,10 +77,18 @@ export function RBACPage() {
       });
   };
 
-  // Dynamically fetch all users from Convex
+
+  const handleOpenMessageModal = (user: Doc<"users">) => {
+      setTargetUserForMessage({
+          _id: user._id,
+          // *** CHANGE HERE ***
+          name: user.name || user.email || "Unknown User"
+      });
+      setIsMessageModalOpen(true);
+  };
+
   const allUsers = useQuery(api.myFunctions.listAllUsers);
 
-  // Show a loading state if the data is not yet available
   if (allUsers === undefined || currentUser === undefined) {
     return <div>Loading...</div>;
   }
@@ -136,7 +138,6 @@ export function RBACPage() {
     return <Badge variant="outline">USER</Badge>;
   };
 
-  // Pagination logic
   const totalUsers = filteredUsers.length;
   const totalPages = Math.ceil(totalUsers / pageSize);
   const paginatedUsers = filteredUsers.slice(
@@ -145,132 +146,127 @@ export function RBACPage() {
   );
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-2xl font-semibold">
-                Role Based Access Control
-              </CardTitle>
-              <CardDescription className="text-muted-foreground">
-                Enables you to personalize your experience in managing accounts
-                in your organization, adjusting preferences, and configuring
-                application features seamlessly.
-              </CardDescription>
-            </div>
-            {currentUser && (
-              <div className="flex items-center gap-2">
-                <Shield className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">
-                  Your Role:
-                </span>
-                {getRoleBadge(currentUser.role)}
+    <>
+      <div className="container mx-auto p-6 max-w-7xl">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-2xl font-semibold">
+                  Role Based Access Control
+                </CardTitle>
+                <CardDescription className="text-muted-foreground">
+                  Enables you to personalize your experience in managing accounts
+                  in your organization, adjusting preferences, and configuring
+                  application features seamlessly.
+                </CardDescription>
               </div>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="users" className="w-full">
-            <TabsList className="grid w-full max-w-[200px]">
-              <TabsTrigger value="users" className="text-sm">
-                Users
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="users" className="space-y-6">
-              {/* Access Control Warning */}
-              {!isSuperAdmin && (
-                <Alert className="border-amber-200 bg-amber-50">
-                  <Shield className="h-4 w-4 text-amber-600" />
-                  <AlertDescription className="text-amber-800">
-                    <strong>Limited Access:</strong> Only Super Administrators
-                    can approve or decline user verification requests. You can
-                    view user information but cannot modify verification status.
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {/* Error Message */}
-              {errorMessage && (
-                <Alert variant="destructive">
-                  <AlertDescription>{errorMessage}</AlertDescription>
-                </Alert>
-              )}
-
-              {/* Search and Filter Controls */}
-              <div className="flex gap-4 items-center">
-                <div className="relative flex-1 max-w-sm">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input
-                    placeholder="Search"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
+              {currentUser && (
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
+                    Your Role:
+                  </span>
+                  {getRoleBadge(currentUser.role)}
                 </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Status: All" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Status: All</SelectItem>
-                    <SelectItem value="approved">Approved</SelectItem>
-                    <SelectItem value="declined">Declined</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="users" className="w-full">
+              <TabsList className="grid w-full max-w-[200px]">
+                <TabsTrigger value="users" className="text-sm">
+                  Users
+                </TabsTrigger>
+              </TabsList>
 
-              {/* Users Table */}
-              <div className="border rounded-lg">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="font-semibold">Name</TableHead>
-                      <TableHead className="font-semibold">
-                        Email Address
-                      </TableHead>
-                      <TableHead className="font-semibold">
-                        Contact Number
-                      </TableHead>
-                      <TableHead className="font-semibold">Role</TableHead>
-                      <TableHead className="font-semibold">Status</TableHead>
-                      <TableHead className="font-semibold">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedUsers.map((user) => (
-                      <TableRow key={user._id} className="hover:bg-muted/50">
-                        <TableCell className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage
-                              src={user.image || "/placeholder.svg"}
-                              alt={user.name}
-                            />
-                            <AvatarFallback>
-                              {user.name
-                                ?.split(" ")
-                                .map((n) => n[0])
-                                .join("")}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium">{user.name}</span>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {user.email}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {user.phone}
-                        </TableCell>
-                        <TableCell>{getRoleBadge(user.role)}</TableCell>
-                        <TableCell>
-                          {user.verificationStatus &&
-                            getStatusBadge(user.verificationStatus)}
-                        </TableCell>
-                        <TableCell>
-                          {user.verificationStatus === "pending" &&
-                          isSuperAdmin ? (
+              <TabsContent value="users" className="space-y-6">
+                {!isSuperAdmin && (
+                  <Alert className="border-amber-200 bg-amber-50">
+                    <Shield className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-amber-800">
+                      <strong>Limited Access:</strong> Only Super Administrators
+                      can approve or decline user verification requests. You can
+                      view user information but cannot modify verification status.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {errorMessage && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{errorMessage}</AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="flex gap-4 items-center">
+                  <div className="relative flex-1 max-w-sm">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                      placeholder="Search"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Status: All" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Status: All</SelectItem>
+                      <SelectItem value="approved">Approved</SelectItem>
+                      <SelectItem value="declined">Declined</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="border rounded-lg">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead className="font-semibold">Name</TableHead>
+                        <TableHead className="font-semibold">
+                          Email Address
+                        </TableHead>
+                        <TableHead className="font-semibold">
+                          Contact Number
+                        </TableHead>
+                        <TableHead className="font-semibold">Role</TableHead>
+                        <TableHead className="font-semibold">Status</TableHead>
+                        <TableHead className="font-semibold">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedUsers.map((user) => (
+                        <TableRow key={user._id} className="hover:bg-muted/50">
+                          <TableCell className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage
+                                src={user.image || "/placeholder.svg"}
+                                alt={user.name}
+                              />
+                              <AvatarFallback>
+                                {user.name
+                                  ?.split(" ")
+                                  .map((n) => n[0])
+                                  .join("")}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">{user.name}</span>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {user.email}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {user.phone}
+                          </TableCell>
+                          <TableCell>{getRoleBadge(user.role)}</TableCell>
+                          <TableCell>
+                            {user.verificationStatus &&
+                              getStatusBadge(user.verificationStatus)}
+                          </TableCell>
+                          <TableCell>
                             <div className="flex gap-2">
                               <TooltipProvider>
                                 <Tooltip>
@@ -278,145 +274,162 @@ export function RBACPage() {
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className="h-8 w-8 p-0 border border-green-500 hover:bg-green-50"
-                                      onClick={() =>
-                                        handleUpdateStatus(user, "approved")
-                                      }
+                                      className="h-8 w-8 p-0 border border-blue-500 hover:bg-blue-50"
+                                      onClick={() => handleOpenMessageModal(user)}
                                     >
-                                      <Check className="h-4 w-4 text-green-500" />
-                                      <span className="sr-only">
-                                        Approve user
-                                      </span>
+                                      <MessageSquare className="h-4 w-4 text-blue-500" />
+                                      <span className="sr-only">View messages</span>
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Approve user</p>
+                                    <p>View messages</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-8 w-8 p-0 border border-red-500 hover:bg-red-50"
-                                      onClick={() =>
-                                        handleUpdateStatus(user, "declined")
-                                      }
-                                    >
-                                      <X className="h-4 w-4 text-red-500" />
-                                      <span className="sr-only">
-                                        Decline user
-                                      </span>
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Decline user</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </div>
-                          ) : user.verificationStatus === "pending" &&
-                            !isSuperAdmin ? (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="flex gap-2">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-8 w-8 p-0 border border-gray-300 opacity-50 cursor-not-allowed"
-                                      disabled
-                                    >
-                                      <Check className="h-4 w-4 text-gray-400" />
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-8 w-8 p-0 border border-gray-300 opacity-50 cursor-not-allowed"
-                                      disabled
-                                    >
-                                      <X className="h-4 w-4 text-gray-400" />
-                                    </Button>
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Super Admin access required</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ) : (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 w-8 p-0"
-                                    disabled={!isSuperAdmin}
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                    <span className="sr-only">Edit user</span>
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>
-                                    {isSuperAdmin
-                                      ? "Edit user"
-                                      : "Super Admin access required"}
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
 
-              {/* Pagination */}
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">
-                  {`Showing ${paginatedUsers.length} of ${totalUsers} users`}
+                              {user.verificationStatus === "pending" && isSuperAdmin ? (
+                                <>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="h-8 w-8 p-0 border border-green-500 hover:bg-green-50"
+                                          onClick={() => handleUpdateStatus(user, "approved")}
+                                        >
+                                          <Check className="h-4 w-4 text-green-500" />
+                                          <span className="sr-only">Approve user</span>
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Approve user</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="h-8 w-8 p-0 border border-red-500 hover:bg-red-50"
+                                          onClick={() => handleUpdateStatus(user, "declined")}
+                                        >
+                                          <X className="h-4 w-4 text-red-500" />
+                                          <span className="sr-only">Decline user</span>
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Decline user</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                </>
+                              ) : user.verificationStatus === "pending" && !isSuperAdmin ? (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="flex gap-2">
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="h-8 w-8 p-0 border border-gray-300 opacity-50 cursor-not-allowed"
+                                          disabled
+                                        >
+                                          <Check className="h-4 w-4 text-gray-400" />
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="h-8 w-8 p-0 border border-gray-300 opacity-50 cursor-not-allowed"
+                                          disabled
+                                        >
+                                          <X className="h-4 w-4 text-gray-400" />
+                                        </Button>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Super Admin access required</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              ) : (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 w-8 p-0"
+                                        disabled={!isSuperAdmin}
+                                      >
+                                        <Edit className="h-4 w-4" />
+                                        <span className="sr-only">Edit user</span>
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>
+                                        {isSuperAdmin ? "Edit user" : "Super Admin access required"}
+                                      </p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setCurrentPage((prev) => Math.max(1, prev - 1))
-                    }
-                    disabled={currentPage === 1}
-                  >
-                    Previous
-                  </Button>
-                  {Array.from({ length: totalPages }, (_, i) => (
+
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    {`Showing ${paginatedUsers.length} of ${totalUsers} users`}
+                  </div>
+                  <div className="flex items-center gap-2">
                     <Button
-                      key={i + 1}
-                      variant={currentPage === i + 1 ? "default" : "outline"}
+                      variant="outline"
                       size="sm"
-                      onClick={() => setCurrentPage(i + 1)}
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.max(1, prev - 1))
+                      }
+                      disabled={currentPage === 1}
                     >
-                      {i + 1}
+                      Previous
                     </Button>
-                  ))}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage((prev) => prev + 1)}
-                    disabled={currentPage === totalPages}
-                  >
-                    Next
-                  </Button>
+                    {Array.from({ length: totalPages }, (_, i) => (
+                      <Button
+                        key={i + 1}
+                        variant={currentPage === i + 1 ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(i + 1)}
+                      >
+                        {i + 1}
+                      </Button>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((prev) => prev + 1)}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
-    </div>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
+
+      <MessageModal
+        isOpen={isMessageModalOpen}
+        onClose={() => setIsMessageModalOpen(false)}
+        targetUser={targetUserForMessage}
+      />
+    </>
   );
 }
