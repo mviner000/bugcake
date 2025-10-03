@@ -1,4 +1,4 @@
-// src/components/VerificationStatusPage.tsx
+// src/components/auth/VerificationStatusPage.tsx
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,8 @@ import { ContactSupportModal } from "./ContactSupportModal";
 
 type VerificationStatusPageProps = {
   status: "pending" | "approved" | "declined" | undefined;
-  userEmail?: string; // Add email prop
+  userEmail?: string;
+  onSignOut?: () => void; // Add onSignOut to props
 };
 
 /**
@@ -22,7 +23,7 @@ const getStatusConfig = (email: string) => ({
     descriptionPrefix: "Your email: ",
     email: email,
     descriptionSuffix: " is pending approval. We're buzzing with excitement to check it out. You'll receive an email once we're done.",
-    showButton: false,
+    showContactSupportButton: false, // Be explicit for clarity
   },
   declined: {
     image: "/declined-bee.png",
@@ -32,11 +33,11 @@ const getStatusConfig = (email: string) => ({
     descriptionPrefix: "Your email: ",
     email: email,
     descriptionSuffix: " is declined! If you believe this is a mistake, please don't hesitate to get in touch with our support team.",
-    showButton: true,
+    showContactSupportButton: true, // Be explicit for clarity
   },
 });
 
-export function VerificationStatusPage({ status, userEmail }: VerificationStatusPageProps) {
+export function VerificationStatusPage({ status, userEmail, onSignOut }: VerificationStatusPageProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Display a simple loading message while the status is being fetched
@@ -83,16 +84,29 @@ export function VerificationStatusPage({ status, userEmail }: VerificationStatus
               </p>
             </div>
 
-            {/* Conditional Button */}
-            {content.showButton && (
+            {/* Action Buttons Section - Vertically Stacked */}
+            <div className="flex flex-col gap-4">
+              {/* Conditional Contact Support Button */}
+              {content.showContactSupportButton && (
+                <Button
+                  size="xl"
+                  onClick={() => setIsModalOpen(true)}
+                  className="bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-full transition-colors duration-200 text-2xl"
+                >
+                  Contact Support
+                </Button>
+              )}
+
+              {/* Sign Out Button (always shown for pending/declined) */}
               <Button
                 size="xl"
-                onClick={() => setIsModalOpen(true)}
-                className="bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-full transition-colors duration-200 text-2xl"
+                variant="outline"
+                onClick={onSignOut}
+                className="font-semibold rounded-full text-2xl border-2"
               >
-                Contact Support
+                Use a Different Account
               </Button>
-            )}
+            </div>
           </div>
         </div>
       </div>

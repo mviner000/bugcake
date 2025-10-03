@@ -2,8 +2,9 @@
 
 import { Authenticated, Unauthenticated, useQuery } from "convex/react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { useAuthActions } from "@convex-dev/auth/react"; // Import useAuthActions
 
-import { api } from "../convex/_generated/api"; // Ensure API path is correct
+import { api } from "../convex/_generated/api";
 
 // Import your components
 import { DetailPage } from "./components/sheet/detail-page";
@@ -38,6 +39,7 @@ function UnauthenticatedRoutes() {
 function AuthenticatedApp() {
   const user = useQuery(api.myFunctions.getMyProfile);
   const status = user?.verificationStatus;
+  const { signOut } = useAuthActions(); // Get the signOut function
 
   // Show a loading state while fetching the user's profile
   if (status === undefined) {
@@ -68,14 +70,17 @@ function AuthenticatedApp() {
   // For 'pending' or 'declined' users, only allow access to the status page.
   return (
     <Routes>
-      <Route path="/status" 
+      <Route
+        path="/status"
         element={
-          <VerificationStatusPage 
-            status={user?.verificationStatus} 
+          <VerificationStatusPage
+            status={user?.verificationStatus}
             userEmail={user?.email}
-          />} 
+            onSignOut={signOut} // Pass signOut as a prop
+          />
+        }
       />
-      
+
       {/* Any other URL will redirect them back to their status page */}
       <Route path="*" element={<Navigate to="/status" replace />} />
     </Routes>
