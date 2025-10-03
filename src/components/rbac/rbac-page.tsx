@@ -38,8 +38,97 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { Doc } from "convex/_generated/dataModel";
-import { MessageModal, UserSummary } from ".//MessageModal"; // [cite: 99]
+import { Doc, Id } from "convex/_generated/dataModel";
+import { MessageModal, UserSummary } from ".//MessageModal"; 
+
+// =========================================================================
+// NEW COMPONENT: MessageActionButton
+// This component fetches the unseen count for a specific user and displays the badge.
+// =========================================================================
+interface MessageActionButtonProps {
+    user: Doc<"users">;
+    handleOpenMessageModal: (user: Doc<"users">) => void;
+    isSuperAdmin: boolean;
+}
+
+const MessageActionButton: React.FC<MessageActionButtonProps> = ({ 
+    user, 
+    handleOpenMessageModal, 
+    isSuperAdmin 
+}) => {
+    // Fetch the unseen message count specifically for this user's messages
+    // The query is skipped if the current user is not a Super Admin
+    const unseenCount = useQuery(api.myFunctions.getUnseenMessageCountForUser, 
+        isSuperAdmin ? { targetUserId: user._id as Id<"users"> } : "skip" 
+    );
+
+    // Render the basic button without a count/badge if not Super Admin or while loading
+    if (!isSuperAdmin || unseenCount === undefined) {
+      return (
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8 p-0 border border-blue-500 hover:bg-blue-50"
+                        onClick={() => handleOpenMessageModal(user)}
+                    >
+                        <MessageSquare className="h-4 w-4 text-blue-500" />
+                        <span className="sr-only">View messages</span>
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>View messages</p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+      );
+    }
+    
+    // Render button with badge logic for Super Admin
+    return (
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <div className="relative">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0 border border-blue-500 hover:bg-blue-50"
+                            onClick={() => handleOpenMessageModal(user)}
+                        >
+                            <MessageSquare className="h-4 w-4 text-blue-500" />
+                            <span className="sr-only">View messages</span>
+                        </Button>
+                        
+                        {/* Conditional Badge Display for unread count */}
+                        {unseenCount > 0 && (
+                            <Badge
+                                variant="destructive"
+                                // Position the badge over the top-right of the button
+                                className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center rounded-full text-xs"
+                            >
+                                {/* Display 9+ for larger counts */}
+                                {unseenCount > 9 ? '9+' : unseenCount}
+                            </Badge>
+                        )}
+                    </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>
+                        View messages 
+                        {unseenCount > 0 ? ` (${unseenCount} new)` : ''}
+                    </p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+    );
+}
+
+// =========================================================================
+// RBACPage Component 
+// =========================================================================
 
 export function RBACPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -51,6 +140,7 @@ export function RBACPage() {
   const [targetUserForMessage, setTargetUserForMessage] = useState<UserSummary | null>(null);
 
   const currentUser = useQuery(api.myFunctions.getMyProfile);
+  
   const updateUserStatus = useMutation(api.myFunctions.updateUserVerificationStatus);
   const isSuperAdmin = currentUser?.role === "super_admin";
 
@@ -87,6 +177,7 @@ export function RBACPage() {
       });
       setIsMessageModalOpen(true);
   };
+  
 
   const allUsers = useQuery(api.myFunctions.listAllUsers);
 
@@ -169,7 +260,7 @@ export function RBACPage() {
                   {getRoleBadge(currentUser.role)}
                 </div>
               )}
-  
+ 
             </div>
           </CardHeader>
           <CardContent>
@@ -208,13 +299,13 @@ export function RBACPage() {
                       placeholder="Search"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                  
+                    
                       className="pl-10"
                     />
                   </div>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="w-[180px]">
-                 
+         
                       <SelectValue placeholder="Status: All" />
                     </SelectTrigger>
                     <SelectContent>
@@ -258,7 +349,7 @@ export function RBACPage() {
                                 alt={user.name}
                               />
                               <AvatarFallback>
-        
+    
                                 {user.name
                                   ?.split(" ")
                                   .map((n) => n[0])
@@ -275,7 +366,7 @@ export function RBACPage() {
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {user.phone}
-                      
+            
                           </TableCell>
                           <TableCell>{getRoleBadge(user.role)}</TableCell>
                           <TableCell>
@@ -285,83 +376,65 @@ export function RBACPage() {
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
-   
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-      
-                                    <Button
-                                      variant="outline"
-                                
-                                      size="sm"
-                                      className="h-8 w-8 p-0 border border-blue-500 hover:bg-blue-50"
-                                      onClick={() => handleOpenMessageModal(user)}
-           
-                                    >
-                                      <MessageSquare className="h-4 w-4 text-blue-500" />
-                                 
-                                      <span className="sr-only">View messages</span>
-                                    </Button>
-                                  </TooltipTrigger>
-                       
-                                  <TooltipContent>
-                                    <p>View messages</p>
-                                  </TooltipContent>
-                  
-                                </Tooltip>
-                              </TooltipProvider>
+    
+                              {/* Use the new component here which handles the red count badge */}
+                              <MessageActionButton 
+                                  user={user} 
+                                  handleOpenMessageModal={handleOpenMessageModal} 
+                                  isSuperAdmin={isSuperAdmin}
+                              />
+                              {/* ------------------------------------------- */}
 
                               {user.verificationStatus === "pending" && isSuperAdmin ?
                               (
                                 <>
                                   <TooltipProvider>
-                                  
+             
                                     <Tooltip>
                                       <TooltipTrigger asChild>
                                         <Button
-                   
-                                          variant="outline"
+                                           variant="outline"
                                           size="sm"
-                                   
+                                         
                                           className="h-8 w-8 p-0 border border-green-500 hover:bg-green-50"
                                           onClick={() => handleUpdateStatus(user, "approved")}
                                         >
-   
+    
                                           <Check className="h-4 w-4 text-green-500" />
                                           <span className="sr-only">Approve user</span>
              
                                         </Button>
                                       </TooltipTrigger>
-                                   
+                                       
                                       <TooltipContent>
                                         <p>Approve user</p>
                                       </TooltipContent>
-                  
+              
                                     </Tooltip>
                                   </TooltipProvider>
                                   <TooltipProvider>
-              
+             
                                     <Tooltip>
                                       <TooltipTrigger asChild>
-                                       
+                                        
                                         <Button
                                           variant="outline"
                                           size="sm"
-               
+             
                                           className="h-8 w-8 p-0 border border-red-500 hover:bg-red-50"
                                           onClick={() => handleUpdateStatus(user, "declined")}
-                       
+                         
                                         >
                                           <X className="h-4 w-4 text-red-500" />
-                                     
+             
                                           <span className="sr-only">Decline user</span>
                                         </Button>
                                       </TooltipTrigger>
-               
+              
                                       <TooltipContent>
                                         <p>Decline user</p>
-                                    
                                       </TooltipContent>
+                          
                                     </Tooltip>
                                   </TooltipProvider>
                             
@@ -370,38 +443,37 @@ export function RBACPage() {
                               (
                                 <TooltipProvider>
                                   <Tooltip>
-                                  
+             
                                     <TooltipTrigger asChild>
                                       <div className="flex gap-2">
                                         <Button
-                 
-                                          variant="outline"
+                                           variant="outline"
                                           size="sm"
-                                 
+                                          
                                           className="h-8 w-8 p-0 border border-gray-300 opacity-50 cursor-not-allowed"
                                           disabled
                                         >
-   
+    
                                           <Check className="h-4 w-4 text-gray-400" />
                                         </Button>
-                 
+             
                                         <Button
                                           variant="outline"
-                                   
                                           size="sm"
+                                         
                                           className="h-8 w-8 p-0 border border-gray-300 opacity-50 cursor-not-allowed"
                                           disabled
-   
+    
                                           >
-                                          <X className="h-4 w-4 text-gray-400" />
-                 
+                                            <X className="h-4 w-4 text-gray-400" />
+             
                                         </Button>
                                       </div>
                                     </TooltipTrigger>
-   
+    
                                     <TooltipContent>
                                       <p>Super Admin access required</p>
-                          
+                           
                                     </TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
@@ -409,29 +481,28 @@ export function RBACPage() {
                               ) : (
                                 <TooltipProvider>
                                   <Tooltip>
-                          
+             
                                     <TooltipTrigger asChild>
                                       <Button
                                         variant="ghost"
-           
+             
                                         size="sm"
                                         className="h-8 w-8 p-0"
-                             
+                                        
                                         disabled={!isSuperAdmin}
                                       >
                                         <Edit className="h-4 w-4" />
-        
+          
                                         <span className="sr-only">Edit user</span>
                                       </Button>
-                            
                                     </TooltipTrigger>
-                                    <TooltipContent>
+                                     <TooltipContent>
                                       <p>
-                  
+             
                                         {isSuperAdmin ? "Edit user" : "Super Admin access required"}
                                       </p>
                                     </TooltipContent>
-                    
+                          
                                   </Tooltip>
                                 </TooltipProvider>
                               )}
@@ -448,7 +519,7 @@ export function RBACPage() {
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-muted-foreground">
                     {`Showing ${paginatedUsers.length} of ${totalUsers} users`}
-       
+        
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -459,12 +530,12 @@ export function RBACPage() {
                         setCurrentPage((prev) => Math.max(1, prev - 1))
                       }
                       disabled={currentPage === 1}
-      
-                      >
+     
+                    >
                       Previous
                     </Button>
                     {Array.from({ length: totalPages }, (_, i) => (
-                 
+             
                       <Button
                         key={i + 1}
                         variant={currentPage === i + 1 ? "default" : "outline"}
@@ -477,12 +548,12 @@ export function RBACPage() {
                     ))}
                     <Button
                       variant="outline"
-              
+             
                       size="sm"
                       onClick={() => setCurrentPage((prev) => prev + 1)}
                       disabled={currentPage === totalPages}
                     >
-                    
+           
                       Next
                     </Button>
                   </div>

@@ -676,7 +676,6 @@ export const listSupportMessagesByUserId = query({
 
     // --- START: Seener Logic FIX: Collect ALL unique admins who have viewed the thread ---
 
-    const messageIds = supportMessages.map((m) => m._id);
     const seenAdminIds = new Set<Id<"users">>();
 
     if (supportMessages.length > 0) {
@@ -729,5 +728,56 @@ export const listSupportMessagesByUserId = query({
       // RETURN THE ARRAY OF SEEN ADMINS
       seenByAdmins: seenByAdmins, 
     };
+  },
+});
+
+/**
+ * Calculates the number of support messages sent by a specific user (userId)
+ * that the currently logged-in super_admin has NOT marked as seen.
+ * * NOTE: This assumes 'supportMessages' has a 'senderId' field indexed.
+ */
+export const getUnseenMessageCountForUser = query({
+  args: {
+    targetUserId: v.id("users"), // The user who sent the messages
+  },
+  handler: async (ctx, args) => {
+    // 1. Authorization Check (Only super_admin should calculate this)
+    const adminUserId = await getAuthUserId(ctx); // Assuming getAuthUserId exists
+    const adminUser = adminUserId ? await ctx.db.get(adminUserId) : null;
+    if (adminUser?.role !== "super_admin") {
+      return 0;
+    }
+    
+    // 2. Find all messages from the target user
+    const userMessages = await ctx.db
+      .query("supportMessages")
+      // IMPORTANT: Adjust this filter if your message table structure is different.
+      // Assuming 'senderId' stores the user._id and is indexed for performance.
+      .filter((q) => q.eq(q.field("userId"), args.targetUserId)) 
+      .collect();
+
+    let unseenCount = 0;
+
+    // 3. Check which messages this specific admin has not seen
+    const checks = userMessages.map(async (message) => {
+      // Check if a view record exists for this message by the current admin
+      const hasBeenSeen = await ctx.db
+        .query("messageViews")
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("messageId"), message._id),
+            q.eq(q.field("adminId"), adminUserId),
+          ),
+        )
+        .first(); 
+
+      // If 'hasBeenSeen' is null, the message is unseen by this admin
+      return hasBeenSeen === null;
+    });
+
+    const results = await Promise.all(checks);
+    unseenCount = results.filter(isUnseen => isUnseen).length;
+
+    return unseenCount;
   },
 });
