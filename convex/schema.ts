@@ -279,4 +279,22 @@ export default defineSchema({
   })
     .index("by_userId", ["userId"]) // To find all messages from a user
     .index("by_isResolved", ["isResolved"]), // To find all unresolved messages
+
+
+  /**
+   * Message Views.
+   * Tracks which admin has seen which support message.
+   * A single message can have multiple view records (one for each admin).
+   */
+  messageViews: defineTable({
+    messageId: v.id("supportMessages"), // The message that was viewed
+    adminId: v.id("users"),           // The ID of the super_admin who viewed it
+    viewedAt: v.number(),             // Timestamp of the view
+  })
+    // 1. Index to efficiently check if *a specific admin* has viewed *a specific message*
+    .index("byMessageAndAdmin", ["messageId", "adminId"])
+    // 2. Index to efficiently fetch all views for a message (e.g., to get a count)
+    .index("byMessageId", ["messageId"]),
+
+    
 });

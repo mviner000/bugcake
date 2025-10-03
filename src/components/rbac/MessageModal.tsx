@@ -12,16 +12,32 @@ import {
 } from "@/components/ui/dialog";
 import { formatDistanceToNowStrict } from "date-fns";
 
-// [New Imports for Convex]
-import { useQuery } from "convex/react";
+// [Tooltip Imports]
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+// [Convex Imports]
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Doc } from "convex/_generated/dataModel";
+import { Id } from "convex/_generated/dataModel";
 
 // [Types]
 export interface UserSummary {
-  _id: Doc<"users">["_id"]; // Use Convex ID type
+  _id: Id<"users">; // Use Convex ID type
   name: string;
+  email: string; // MUST BE PRESENT for the Tooltip to work
+  image?: string;
 }
+
+interface FetchedUserDetails extends UserSummary {
+    email: string; // Ensure email is present
+}
+
 
 interface MessageModalProps {
   isOpen: boolean;
@@ -42,7 +58,7 @@ const MessageBubble = ({ message, senderName, senderAvatar }: MessageBubbleProps
   const bubbleClass = message.isResolved
     ? "bg-green-100 text-green-800 rounded-tl-none border border-green-300"
     : "bg-gray-100 text-gray-800 rounded-tl-none";
-  
+
   const avatar = (
     <Avatar className="h-8 w-8 min-w-[32px]">
       <AvatarImage src={senderAvatar} alt={senderName} />
@@ -70,10 +86,10 @@ const MessageBubble = ({ message, senderName, senderAvatar }: MessageBubbleProps
             </p>
             {/* Display Resolution Status */}
             {message.isResolved && (
-                <div className="flex items-center gap-1 mt-2 text-xs text-green-600 font-medium">
-                    <CheckCircle className="h-3 w-3" />
-                    Resolved 
-                </div>
+              <div className="flex items-center gap-1 mt-2 text-xs text-green-600 font-medium">
+                <CheckCircle className="h-3 w-3" />
+                Resolved
+              </div>
             )}
           </div>
           <p className={`text-xs text-muted-foreground mt-1 text-left`}>
@@ -95,22 +111,44 @@ export function MessageModal({ isOpen, onClose, targetUser }: MessageModalProps)
     targetUser ? { targetUserId: targetUser._id } : "skip",
   );
 
+  // Use a TypeScript directive to ignore the type error for the string literal
+  // @ts-ignore
+  const markMessageAsSeen = useMutation("myFunctions:markMessageAsSeen"); 
+  
   const isLoading = queryResult === undefined;
   const displayedMessages = queryResult?.supportMessages || [];
-  const userDetails = queryResult?.targetUser;
   
-  // Scroll to bottom when modal opens or messages change
+  // Get the details of the user who is the subject of the thread (the sender)
+  const targetUserDetails = queryResult?.targetUser as (FetchedUserDetails | null);
+  
+  // Get the array of seen admins from the query result
+  const seenByAdmins = (queryResult?.seenByAdmins || []) as FetchedUserDetails[];
+  
+  // Get the ID of the last message in the list
+  const lastMessageId = displayedMessages.length > 0 
+    ? displayedMessages[displayedMessages.length - 1]._id 
+    : null;
+
+  // Scroll to bottom and mark the message as seen when the modal opens
   useEffect(() => {
     if (!isOpen) return;
-    // Scroll only if messages have loaded
+
+    // Scroll to bottom
     if (!isLoading && messagesEndRef.current) {
-      // Use a timeout to ensure the dialog has fully rendered
       const timer = setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
+      
+      // Attempt to mark the last message as seen by the current admin
+      if (lastMessageId) {
+        // The mutation function is called with its correct arguments
+        markMessageAsSeen({ messageId: lastMessageId })
+          .catch(err => console.error("Failed to mark message as seen:", err));
+      }
+      
       return () => clearTimeout(timer);
     }
-  }, [isOpen, isLoading, displayedMessages.length]); // Re-scroll on new messages
+  }, [isOpen, isLoading, displayedMessages.length, lastMessageId, markMessageAsSeen]);
 
   // Early return if no target user is set
   if (!targetUser) {
@@ -118,51 +156,96 @@ export function MessageModal({ isOpen, onClose, targetUser }: MessageModalProps)
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg h-[80vh] flex flex-col p-0">
-        <DialogHeader className="p-6 pb-4 border-b">
-          <DialogTitle className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-muted-foreground hover:bg-transparent"
-              onClick={onClose}
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
+    <TooltipProvider>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-lg h-[80vh] flex flex-col p-0">
+          <DialogHeader className="p-6 pb-4 border-b">
+            <DialogTitle className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:bg-transparent"
+                onClick={onClose}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
               <span>Messages with {targetUser.name}</span>
-          </DialogTitle>
-        </DialogHeader>
+            </DialogTitle>
+          </DialogHeader>
 
-        <div
-          // Scrollable chat container
-          className="flex-1 overflow-y-auto p-6 space-y-4"
-        >
-          {isLoading ? (
-            <div className="flex justify-center items-center h-full">
-              <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
-            </div>
-          ) : (
-            displayedMessages.length === 0 ? (
-              <div className="flex justify-center items-center h-full text-muted-foreground">
-                No support messages found for this user.
+          <div
+            // Scrollable chat container
+            className="flex-1 overflow-y-auto p-6 space-y-4"
+          >
+            {isLoading ? (
+              <div className="flex justify-center items-center h-full">
+                <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
               </div>
             ) : (
-              displayedMessages.map((message) => (
-                <MessageBubble 
-                    key={message._id} 
+              displayedMessages.length === 0 ? (
+                <div className="flex justify-center items-center h-full text-muted-foreground">
+                  No support messages found for this user.
+                </div>
+              ) : (
+                displayedMessages.map((message) => (
+                  <MessageBubble
+                    key={message._id}
                     message={message}
                     // The sender for a support ticket is always the target user
-                    senderName={userDetails?.name || "Support User"}
-                    senderAvatar={userDetails?.image || "/placeholder.svg"}
-                />
-              ))
-            )
-          )}
-          {/* Ref to scroll to the bottom */}
-          <div ref={messagesEndRef} />
-        </div>
-      </DialogContent>
-    </Dialog>
+                    senderName={targetUserDetails?.name || "Support User"}
+                    senderAvatar={targetUserDetails?.image || "/placeholder.svg"}
+                  />
+                ))
+              )
+            )}
+            
+            {/* Static "Seen by" Element (All Admins as Seener) */}
+            {/* Condition: Messages loaded, there are messages, AND we have at least one seen admin */}
+            {!isLoading && displayedMessages.length > 0 && seenByAdmins.length > 0 && (
+              <div className="flex justify-end items-center mt-2 pr-2 text-xs text-muted-foreground">
+                <span className="mr-1">seen by:</span>
+                
+                {/* Mapped Avatars for Multiple Seen Admins (Stacked display) */}
+                <div className="flex -space-x-2 rtl:space-x-reverse">
+                    {seenByAdmins.map((admin, index) => (
+                        <Tooltip key={admin._id}>
+                            <TooltipTrigger asChild>
+                                <Avatar 
+                                    className="h-4 w-4 border-2 border-white"
+                                    // Use zIndex for proper stacking (latest on top if needed)
+                                    style={{ zIndex: seenByAdmins.length - index }} 
+                                >
+                                    <AvatarImage 
+                                        src={admin.image || "/placeholder.svg"} 
+                                        alt={admin.name} 
+                                    />
+                                    <AvatarFallback className="text-[10px] bg-purple-500 text-white">
+                                        {/* Use first letter of the admin's name */}
+                                        {admin.name.substring(0, 1).toUpperCase()} 
+                                    </AvatarFallback>
+                                </Avatar>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p className="text-sm font-semibold">
+                                    {admin.name} (Admin)
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    {admin.email} 
+                                </p>
+                            </TooltipContent>
+                        </Tooltip>
+                    ))}
+                </div>
+                {/* ----------------------------------------------- */}
+
+              </div>
+            )}
+
+            {/* Ref to scroll to the bottom */}
+            <div ref={messagesEndRef} />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </TooltipProvider>
   );
 }

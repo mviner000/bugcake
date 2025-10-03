@@ -39,7 +39,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Doc } from "convex/_generated/dataModel";
-import { MessageModal, UserSummary } from ".//MessageModal";
+import { MessageModal, UserSummary } from ".//MessageModal"; // [cite: 99]
 
 export function RBACPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -59,7 +59,6 @@ export function RBACPage() {
     newStatus: "approved" | "declined" | "pending",
   ) => {
     setErrorMessage("");
-
     if (!isSuperAdmin) {
       setErrorMessage(
         "Access denied. Only super administrators can update user verification status.",
@@ -81,8 +80,10 @@ export function RBACPage() {
   const handleOpenMessageModal = (user: Doc<"users">) => {
       setTargetUserForMessage({
           _id: user._id,
-          // *** CHANGE HERE ***
-          name: user.name || user.email || "Unknown User"
+          // Ensure we pass email for the "seen by" tooltip in MessageModal
+          name: user.name || user.email || "Unknown User",
+          email: user.email || "N/A", 
+          image: user.image
       });
       setIsMessageModalOpen(true);
   };
@@ -101,7 +102,6 @@ export function RBACPage() {
       statusFilter === "all" || user.verificationStatus === statusFilter;
     return matchesSearch && matchesStatus;
   });
-
   const getStatusBadge = (status: string) => {
     if (status === "approved") {
       return (
@@ -144,7 +144,6 @@ export function RBACPage() {
     (currentPage - 1) * pageSize,
     currentPage * pageSize,
   );
-
   return (
     <>
       <div className="container mx-auto p-6 max-w-7xl">
@@ -170,6 +169,7 @@ export function RBACPage() {
                   {getRoleBadge(currentUser.role)}
                 </div>
               )}
+  
             </div>
           </CardHeader>
           <CardContent>
@@ -177,6 +177,7 @@ export function RBACPage() {
               <TabsList className="grid w-full max-w-[200px]">
                 <TabsTrigger value="users" className="text-sm">
                   Users
+   
                 </TabsTrigger>
               </TabsList>
 
@@ -195,37 +196,44 @@ export function RBACPage() {
                 {errorMessage && (
                   <Alert variant="destructive">
                     <AlertDescription>{errorMessage}</AlertDescription>
+         
                   </Alert>
                 )}
 
                 <div className="flex gap-4 items-center">
                   <div className="relative flex-1 max-w-sm">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+      
                     <Input
                       placeholder="Search"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
+                  
                       className="pl-10"
                     />
                   </div>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="w-[180px]">
+                 
                       <SelectValue placeholder="Status: All" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Status: All</SelectItem>
                       <SelectItem value="approved">Approved</SelectItem>
+     
                       <SelectItem value="declined">Declined</SelectItem>
                       <SelectItem value="pending">Pending</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
+     
                 <div className="border rounded-lg">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/50">
                         <TableHead className="font-semibold">Name</TableHead>
+ 
                         <TableHead className="font-semibold">
                           Email Address
                         </TableHead>
@@ -233,188 +241,248 @@ export function RBACPage() {
                           Contact Number
                         </TableHead>
                         <TableHead className="font-semibold">Role</TableHead>
+                        
                         <TableHead className="font-semibold">Status</TableHead>
                         <TableHead className="font-semibold">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
+            
                       {paginatedUsers.map((user) => (
                         <TableRow key={user._id} className="hover:bg-muted/50">
                           <TableCell className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
-                              <AvatarImage
+   
+                            <AvatarImage
                                 src={user.image || "/placeholder.svg"}
                                 alt={user.name}
                               />
                               <AvatarFallback>
+        
                                 {user.name
                                   ?.split(" ")
                                   .map((n) => n[0])
+     
                                   .join("")}
                               </AvatarFallback>
                             </Avatar>
+             
                             <span className="font-medium">{user.name}</span>
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {user.email}
+   
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {user.phone}
+                      
                           </TableCell>
                           <TableCell>{getRoleBadge(user.role)}</TableCell>
                           <TableCell>
                             {user.verificationStatus &&
+               
                               getStatusBadge(user.verificationStatus)}
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
+   
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
+      
                                     <Button
                                       variant="outline"
+                                
                                       size="sm"
                                       className="h-8 w-8 p-0 border border-blue-500 hover:bg-blue-50"
                                       onClick={() => handleOpenMessageModal(user)}
+           
                                     >
                                       <MessageSquare className="h-4 w-4 text-blue-500" />
+                                 
                                       <span className="sr-only">View messages</span>
                                     </Button>
                                   </TooltipTrigger>
+                       
                                   <TooltipContent>
                                     <p>View messages</p>
                                   </TooltipContent>
+                  
                                 </Tooltip>
                               </TooltipProvider>
 
-                              {user.verificationStatus === "pending" && isSuperAdmin ? (
+                              {user.verificationStatus === "pending" && isSuperAdmin ?
+                              (
                                 <>
                                   <TooltipProvider>
+                                  
                                     <Tooltip>
                                       <TooltipTrigger asChild>
                                         <Button
+                   
                                           variant="outline"
                                           size="sm"
+                                   
                                           className="h-8 w-8 p-0 border border-green-500 hover:bg-green-50"
                                           onClick={() => handleUpdateStatus(user, "approved")}
                                         >
+   
                                           <Check className="h-4 w-4 text-green-500" />
                                           <span className="sr-only">Approve user</span>
+             
                                         </Button>
                                       </TooltipTrigger>
+                                   
                                       <TooltipContent>
                                         <p>Approve user</p>
                                       </TooltipContent>
+                  
                                     </Tooltip>
                                   </TooltipProvider>
                                   <TooltipProvider>
+              
                                     <Tooltip>
                                       <TooltipTrigger asChild>
+                                       
                                         <Button
                                           variant="outline"
                                           size="sm"
+               
                                           className="h-8 w-8 p-0 border border-red-500 hover:bg-red-50"
                                           onClick={() => handleUpdateStatus(user, "declined")}
+                       
                                         >
                                           <X className="h-4 w-4 text-red-500" />
+                                     
                                           <span className="sr-only">Decline user</span>
                                         </Button>
                                       </TooltipTrigger>
+               
                                       <TooltipContent>
                                         <p>Decline user</p>
+                                    
                                       </TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
+                            
                                 </>
-                              ) : user.verificationStatus === "pending" && !isSuperAdmin ? (
+                              ) : user.verificationStatus === "pending" && !isSuperAdmin ?
+                              (
                                 <TooltipProvider>
                                   <Tooltip>
+                                  
                                     <TooltipTrigger asChild>
                                       <div className="flex gap-2">
                                         <Button
+                 
                                           variant="outline"
                                           size="sm"
+                                 
                                           className="h-8 w-8 p-0 border border-gray-300 opacity-50 cursor-not-allowed"
                                           disabled
                                         >
+   
                                           <Check className="h-4 w-4 text-gray-400" />
                                         </Button>
+                 
                                         <Button
                                           variant="outline"
+                                   
                                           size="sm"
                                           className="h-8 w-8 p-0 border border-gray-300 opacity-50 cursor-not-allowed"
                                           disabled
-                                        >
+   
+                                          >
                                           <X className="h-4 w-4 text-gray-400" />
+                 
                                         </Button>
                                       </div>
                                     </TooltipTrigger>
+   
                                     <TooltipContent>
                                       <p>Super Admin access required</p>
+                          
                                     </TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
+                        
                               ) : (
                                 <TooltipProvider>
                                   <Tooltip>
+                          
                                     <TooltipTrigger asChild>
                                       <Button
                                         variant="ghost"
+           
                                         size="sm"
                                         className="h-8 w-8 p-0"
+                             
                                         disabled={!isSuperAdmin}
                                       >
                                         <Edit className="h-4 w-4" />
+        
                                         <span className="sr-only">Edit user</span>
                                       </Button>
+                            
                                     </TooltipTrigger>
                                     <TooltipContent>
                                       <p>
+                  
                                         {isSuperAdmin ? "Edit user" : "Super Admin access required"}
                                       </p>
                                     </TooltipContent>
+                    
                                   </Tooltip>
                                 </TooltipProvider>
                               )}
+                        
                             </div>
                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
+    
                   </Table>
                 </div>
 
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-muted-foreground">
                     {`Showing ${paginatedUsers.length} of ${totalUsers} users`}
+       
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
+    
                       onClick={() =>
                         setCurrentPage((prev) => Math.max(1, prev - 1))
                       }
                       disabled={currentPage === 1}
-                    >
+      
+                      >
                       Previous
                     </Button>
                     {Array.from({ length: totalPages }, (_, i) => (
+                 
                       <Button
                         key={i + 1}
                         variant={currentPage === i + 1 ? "default" : "outline"}
                         size="sm"
                         onClick={() => setCurrentPage(i + 1)}
                       >
+                        
                         {i + 1}
                       </Button>
                     ))}
                     <Button
                       variant="outline"
+              
                       size="sm"
                       onClick={() => setCurrentPage((prev) => prev + 1)}
                       disabled={currentPage === totalPages}
                     >
+                    
                       Next
                     </Button>
                   </div>
@@ -422,6 +490,7 @@ export function RBACPage() {
               </TabsContent>
             </Tabs>
           </CardContent>
+        
         </Card>
       </div>
 

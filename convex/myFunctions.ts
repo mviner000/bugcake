@@ -5,6 +5,7 @@ import { query, mutation, action } from "./_generated/server";
 import { api } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { Doc } from "./_generated/dataModel";
+import { Id } from "./_generated/dataModel";
 
 // Write your Convex functions in any file inside this directory (`convex`).
 // See https://docs.convex.dev/functions for more.
@@ -414,57 +415,57 @@ export const updateUserVerificationStatus = mutation({
 });
 
 export const createSheet = mutation({
-  args: {
-    name: v.string(),
-    type: v.union(
-      v.literal("sheet"),
-      v.literal("doc"),
-      v.literal("pdf"),
-      v.literal("folder"),
-      v.literal("other"),
-    ),
-    testCaseType: v.union(
-      v.literal("functionality"),
-      v.literal("altTextAriaLabel"),
-    ),
-    shared: v.boolean(),
-    // Optional fields you might add later
-    isPublic: v.optional(v.boolean()),
-    requestable: v.optional(v.boolean()),
-  },
-  handler: async (ctx, args) => {
-    // 1. Authenticate and identify the user
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Unauthorized: You must be logged in to create a sheet.");
-    }
+  args: {
+    name: v.string(),
+    type: v.union(
+      v.literal("sheet"),
+      v.literal("doc"),
+      v.literal("pdf"),
+      v.literal("folder"),
+      v.literal("other"),
+    ),
+    testCaseType: v.union(
+      v.literal("functionality"),
+      v.literal("altTextAriaLabel"),
+    ),
+    shared: v.boolean(),
+    // Optional fields you might add later
+    isPublic: v.optional(v.boolean()),
+    requestable: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    // 1. Authenticate and identify the user
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Unauthorized: You must be logged in to create a sheet.");
+    }
 
-    // We must normalize the ID to ensure it's a valid Doc<"users"> ID
-    const normalizedUserId = ctx.db.normalizeId("users", userId);
-    if (!normalizedUserId) {
-      throw new Error("Invalid user session.");
-    }
+    // We must normalize the ID to ensure it's a valid Doc<"users"> ID
+    const normalizedUserId = ctx.db.normalizeId("users", userId);
+    if (!normalizedUserId) {
+      throw new Error("Invalid user session.");
+    }
 
-    const now = Date.now();
+    const now = Date.now();
 
-    // 2. Insert the new document into the 'sheets' table
-    const sheetId = await ctx.db.insert("sheets", {
-      name: args.name,
-      type: args.type,
-      owner: normalizedUserId, // Automatically set the owner to the logged-in user
-      last_opened_at: now,
-      created_at: now,
-      updated_at: now,
-      shared: args.shared,
-      testCaseType: args.testCaseType,
-      // Use defaults for optional fields if not provided
-      isPublic: args.isPublic ?? false,
-      requestable: args.requestable ?? false,
-    });
+    // 2. Insert the new document into the 'sheets' table
+    const sheetId = await ctx.db.insert("sheets", {
+      name: args.name,
+      type: args.type,
+      owner: normalizedUserId, // Automatically set the owner to the logged-in user
+      last_opened_at: now,
+      created_at: now,
+      updated_at: now,
+      shared: args.shared,
+      testCaseType: args.testCaseType,
+      // Use defaults for optional fields if not provided
+      isPublic: args.isPublic ?? false,
+      requestable: args.requestable ?? false,
+    });
 
-    // 3. Return the ID of the new sheet for the frontend to navigate
-    return sheetId;
-  },
+    // 3. Return the ID of the new sheet for the frontend to navigate
+    return sheetId;
+  },
 });
 
 /**
@@ -506,33 +507,57 @@ export const sendSupportMessage = mutation({
  * Retrieves all support messages, along with the sender's email.
  * This is intended for an admin dashboard to view and manage tickets.
  */
+
 export const getSupportMessages = query({
   args: {},
   handler: async (ctx) => {
     // 1. Check if the logged-in user is a super_admin
-    const userId = await getAuthUserId(ctx);
+    const userId = await getAuthUserId(ctx); // This is the ID of the logged-in user
     if (!userId) {
       throw new Error("Authentication required.");
     }
 
     const user = await ctx.db.get(userId);
     if (user?.role !== "super_admin") {
-      throw new Error("Access denied. Only super administrators can view support messages.");
+      throw new Error(
+        "Access denied. Only super administrators can view support messages.",
+      );
     }
 
     // 2. Fetch all support messages
-    const messages = await ctx.db.query("supportMessages").order("desc").collect();
+    const messages = await ctx.db
+      .query("supportMessages")
+      .order("desc")
+      .collect();
 
-    // 3. Enhance messages with user and resolver details
+    // 3. Enhance messages with user, resolver, and NEW view details
     const messagesWithDetails = await Promise.all(
       messages.map(async (message) => {
         const sender = await ctx.db.get(message.userId);
-        const resolver = message.resolvedBy ? await ctx.db.get(message.resolvedBy) : null;
+        const resolver = message.resolvedBy
+          ? await ctx.db.get(message.resolvedBy)
+          : null;
+
+        // Fetch all view records for this message
+        const viewRecords = await ctx.db
+          .query("messageViews")
+          .filter((q) => q.eq(q.field("messageId"), message._id))
+          .collect();
+
+        // Calculate view count
+        const viewCount = viewRecords.length;
+
+        // Determine if the *currently logged-in admin* has seen it
+        const isSeenByMe = viewRecords.some(
+          (view) => view.adminId.toString() === userId.toString(),
+        );
 
         return {
           ...message,
           senderEmail: sender?.email ?? "Unknown User",
           resolverEmail: resolver?.email ?? "N/A",
+          viewCount, // <-- NEW: Total number of admins who have viewed
+          isSeenByMe, // <-- NEW: Has the current admin viewed it?
         };
       }),
     );
@@ -573,8 +598,55 @@ export const resolveSupportMessage = mutation({
 });
 
 /**
- * Retrieves support messages for a specific user.
- * This is intended for an admin to view a user's support ticket history.
+ * Records a view for a support message by the currently logged-in super_admin.
+ * It ensures only one view record exists per admin per message (for the specific message).
+ */
+export const markMessageAsSeen = mutation({
+  args: {
+    messageId: v.id("supportMessages"), // The ID of the message that was opened
+  },
+  handler: async (ctx, args) => {
+    // 1. Authentication and Authorization Check
+    const adminUserId = await getAuthUserId(ctx);
+    if (!adminUserId) {
+      throw new Error("Authentication required.");
+    }
+
+    const adminUser = await ctx.db.get(adminUserId);
+    if (adminUser?.role !== "super_admin") {
+      throw new Error(
+        "Access denied. Only super administrators can mark messages as seen.",
+      );
+    }
+
+    // 2. Check if the admin has already seen this specific message
+    const existingView = await ctx.db
+      .query("messageViews")
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("messageId"), args.messageId),
+          q.eq(q.field("adminId"), adminUserId),
+        ),
+      )
+      .first();
+
+    // 3. If no existing view, insert a new record
+    if (!existingView) {
+      await ctx.db.insert("messageViews", {
+        messageId: args.messageId,
+        adminId: adminUserId,
+        viewedAt: Date.now(),
+      });
+      return { success: true, seen: true, message: "Message marked as seen." };
+    }
+
+    return { success: true, seen: true, message: "Message already marked as seen by this admin." };
+  },
+});
+
+/**
+ * Retrieves support messages for a specific user, and the details of ALL unique admins 
+ * who have viewed any message in the thread.
  */
 export const listSupportMessagesByUserId = query({
   args: {
@@ -602,19 +674,60 @@ export const listSupportMessagesByUserId = query({
     // 3. Get sender details
     const targetUser = await ctx.db.get(args.targetUserId);
 
-    // --- START: New Fallback Logic ---
+    // --- START: Seener Logic FIX: Collect ALL unique admins who have viewed the thread ---
+
+    const messageIds = supportMessages.map((m) => m._id);
+    const seenAdminIds = new Set<Id<"users">>();
+
+    if (supportMessages.length > 0) {
+      
+      // Collect ALL view records for ALL messages in this thread.
+      // This is the guaranteed-to-work workaround for missing q.in.
+      const allViewRecords: Doc<"messageViews">[] = [];
+      
+      for (const message of supportMessages) {
+        const views = await ctx.db
+          .query("messageViews")
+          .filter((q) => q.eq(q.field("messageId"), message._id))
+          .collect();
+        allViewRecords.push(...views);
+      }
+      
+      // Collect the unique admin IDs from all view records
+      for (const view of allViewRecords) {
+          seenAdminIds.add(view.adminId);
+      }
+    }
+    
+    // Convert Set of IDs to array, and fetch full user details for each unique admin
+    const uniqueAdminIds = Array.from(seenAdminIds);
+    const seenByAdmins = await Promise.all(
+        uniqueAdminIds.map(async (adminId) => {
+            const adminUser = await ctx.db.get(adminId);
+            return {
+                _id: adminId,
+                name: adminUser?.name || adminUser?.email || "Admin",
+                email: adminUser?.email || "N/A",
+                image: adminUser?.image || "/placeholder.svg",
+            };
+        })
+    );
+
+    // --- END: Seener Logic FIX ---
+
     // Determine the display name: Use name, fallback to email, then "Unknown User"
     const displayName = targetUser?.name || targetUser?.email || "Unknown User";
-    // --- END: New Fallback Logic ---
-
 
     return {
       supportMessages,
       targetUser: {
-          // Use the determined displayName
-          name: displayName, 
-          image: targetUser?.image || "/placeholder.svg",
-      }
+        _id: args.targetUserId,
+        name: displayName, 
+        email: targetUser?.email || "N/A", 
+        image: targetUser?.image || "/placeholder.svg",
+      },
+      // RETURN THE ARRAY OF SEEN ADMINS
+      seenByAdmins: seenByAdmins, 
     };
   },
 });
