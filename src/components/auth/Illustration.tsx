@@ -10,7 +10,7 @@ interface Testimonial {
 }
 
 interface IllustrationProps {
-  flow: "signIn" | "signUp";
+  flow: "signIn" | "signUp" | "forgotPassword";
 }
 
 export function Illustration({ flow }: IllustrationProps) {
@@ -48,7 +48,7 @@ export function Illustration({ flow }: IllustrationProps) {
   }, [testimonials.length]);
 
   return (
-    <div className={`hidden lg:block bg-gradient-to-br from-orange-400 to-orange-500 p-8 relative overflow-hidden ${flow === 'signUp' ? 'order-1' : 'order-2'}`}>
+    <div className={`hidden lg:block bg-gradient-to-br from-orange-400 to-orange-500 p-8 relative overflow-hidden ${flow === 'signUp' || flow === 'forgotPassword' ? 'order-1' : 'order-2'}`}>
       <div className="relative h-full flex items-center justify-center">
         {/* Bug Reports Window */}
         <div className="bg-white rounded-lg shadow-lg p-4 w-64 relative z-10">

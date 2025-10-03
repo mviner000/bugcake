@@ -1,4 +1,4 @@
-// App.tsx
+// src/App.tsx
 
 import { Authenticated, Unauthenticated, useQuery } from "convex/react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
@@ -27,6 +27,7 @@ function UnauthenticatedRoutes() {
     <Routes>
       <Route path="/signin" element={<SignInForm />} />
       <Route path="/signup" element={<SignInForm />} />
+      <Route path="/forgot-password" element={<SignInForm />} />
       <Route path="*" element={<Navigate to="/signin" state={state} replace />} />
     </Routes>
   );
@@ -59,6 +60,7 @@ function AuthenticatedApp() {
           {/* Redirect authenticated users away from auth pages */}
           <Route path="/signin" element={<Navigate to="/" replace />} />
           <Route path="/signup" element={<Navigate to="/" replace />} />
+          <Route path="/forgot-password" element={<Navigate to="/" replace />} />
           {/* An approved user trying to access /status is redirected home */}
           <Route path="/status" element={<Navigate to="/" replace />} />
           <Route path="*" element={<NotFound />} />

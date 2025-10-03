@@ -751,8 +751,6 @@ export const getUnseenMessageCountForUser = query({
     // 2. Find all messages from the target user
     const userMessages = await ctx.db
       .query("supportMessages")
-      // IMPORTANT: Adjust this filter if your message table structure is different.
-      // Assuming 'senderId' stores the user._id and is indexed for performance.
       .filter((q) => q.eq(q.field("userId"), args.targetUserId)) 
       .collect();
 
