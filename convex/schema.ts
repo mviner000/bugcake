@@ -265,4 +265,18 @@ export default defineSchema({
     .index("module", ["module"])
     .index("createdBy", ["createdBy"])
     .index("executedBy", ["executedBy"]),
+
+    supportMessages: defineTable({
+    userId: v.id("users"), // The link to the user who sent the message
+    subject: v.string(), // The subject line from the form
+    message: v.string(), // The message content
+    isResolved: v.boolean(), // Simple flag to see if it's handled
+    
+    // New fields for tracking resolution
+    resolvedBy: v.optional(v.id("users")), // The admin who resolved the message
+    dateCreated: v.number(), // Timestamp of when the message was created
+    dateResolved: v.optional(v.number()), // Timestamp of when it was resolved
+  })
+    .index("by_userId", ["userId"]) // To find all messages from a user
+    .index("by_isResolved", ["isResolved"]), // To find all unresolved messages
 });

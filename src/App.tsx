@@ -1,3 +1,5 @@
+// App.tsx
+
 import { Authenticated, Unauthenticated, useQuery } from "convex/react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 
@@ -66,7 +68,14 @@ function AuthenticatedApp() {
   // For 'pending' or 'declined' users, only allow access to the status page.
   return (
     <Routes>
-      <Route path="/status" element={<VerificationStatusPage status={status} />} />
+      <Route path="/status" 
+        element={
+          <VerificationStatusPage 
+            status={user?.verificationStatus} 
+            userEmail={user?.email}
+          />} 
+      />
+      
       {/* Any other URL will redirect them back to their status page */}
       <Route path="*" element={<Navigate to="/status" replace />} />
     </Routes>

@@ -466,3 +466,108 @@ export const createSheet = mutation({
     return sheetId;
   },
 });
+
+/**
+ * Creates a new support message from a user.
+ * This is called from the Contact Support modal on the frontend.
+ */
+export const sendSupportMessage = mutation({
+  args: {
+    subject: v.string(),
+    message: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // 1. Get the authenticated user
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("You must be logged in to send a support message.");
+    }
+
+    // We must normalize the ID to ensure it's a valid Doc<"users"> ID
+    const normalizedUserId = ctx.db.normalizeId("users", userId);
+    if (!normalizedUserId) {
+      throw new Error("Invalid user session.");
+    }
+
+    // 2. Insert the new message into the database
+    await ctx.db.insert("supportMessages", {
+      userId: normalizedUserId,
+      subject: args.subject,
+      message: args.message,
+      isResolved: false, // Messages are always unresolved when created
+      dateCreated: Date.now(),
+    });
+
+    return { success: true, message: "Your support message has been sent!" };
+  },
+});
+
+/**
+ * Retrieves all support messages, along with the sender's email.
+ * This is intended for an admin dashboard to view and manage tickets.
+ */
+export const getSupportMessages = query({
+  args: {},
+  handler: async (ctx) => {
+    // 1. Check if the logged-in user is a super_admin
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Authentication required.");
+    }
+
+    const user = await ctx.db.get(userId);
+    if (user?.role !== "super_admin") {
+      throw new Error("Access denied. Only super administrators can view support messages.");
+    }
+
+    // 2. Fetch all support messages
+    const messages = await ctx.db.query("supportMessages").order("desc").collect();
+
+    // 3. Enhance messages with user and resolver details
+    const messagesWithDetails = await Promise.all(
+      messages.map(async (message) => {
+        const sender = await ctx.db.get(message.userId);
+        const resolver = message.resolvedBy ? await ctx.db.get(message.resolvedBy) : null;
+
+        return {
+          ...message,
+          senderEmail: sender?.email ?? "Unknown User",
+          resolverEmail: resolver?.email ?? "N/A",
+        };
+      }),
+    );
+
+    return messagesWithDetails;
+  },
+});
+
+/**
+ * Marks a support message as resolved.
+ * This is intended for an admin to call from a support dashboard.
+ */
+export const resolveSupportMessage = mutation({
+  args: {
+    messageId: v.id("supportMessages"), // The ID of the message to resolve
+  },
+  handler: async (ctx, args) => {
+    // 1. Check if the logged-in user is a super_admin
+    const adminUserId = await getAuthUserId(ctx);
+    if (!adminUserId) {
+      throw new Error("Authentication required.");
+    }
+
+    const adminUser = await ctx.db.get(adminUserId);
+    if (adminUser?.role !== "super_admin") {
+      throw new Error("Access denied. Only super administrators can resolve messages.");
+    }
+
+    // 2. Update the message to mark it as resolved
+    await ctx.db.patch(args.messageId, {
+      isResolved: true,
+      resolvedBy: adminUserId, // Record which admin resolved it
+      dateResolved: Date.now(), // Record the time of resolution
+    });
+
+    return { success: true, message: "Support message has been marked as resolved." };
+  },
+});
