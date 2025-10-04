@@ -5,6 +5,7 @@ import { api } from "../../../convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
 import React, { useState, useRef, useCallback } from "react";
 import { Plus, Check, X } from "lucide-react";
+import { NumberedTextarea } from "./NumberedTextarea";
 
 interface FunctionalityTestCasesTableProps {
   testCases: (Doc<"functionalityTestCases"> & {
@@ -726,29 +727,29 @@ export function FunctionalityTestCasesTable({
                       />
                     </td>
                     <td
-                      data-column="preConditions"
-                      style={{ width: `${getColumnWidth("preConditions", 180)}px` }}
-                      className="border border-gray-300 px-3 py-2"
-                    >
-                      <textarea
-                        value={newTestCase.preConditions}
-                        onChange={(e) => setNewTestCase({...newTestCase, preConditions: e.target.value})}
-                        placeholder="Pre Conditions"
-                        rows={2}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
+  data-column="preConditions"
+  style={{ width: `${getColumnWidth("preConditions", 180)}px` }}
+  className="border border-gray-300 px-3 py-2"
+>
+  <NumberedTextarea
+    value={newTestCase.preConditions}
+    onChange={(value) => setNewTestCase({...newTestCase, preConditions: value})}
+    placeholder="Pre Conditions"
+    rows={3}
+    className="text-sm"
+  />
                     </td>
                     <td
                       data-column="steps"
                       style={{ width: `${getColumnWidth("steps", 250)}px` }}
                       className="border border-gray-300 px-3 py-2"
                     >
-                      <textarea
+                      <NumberedTextarea
                         value={newTestCase.steps}
-                        onChange={(e) => setNewTestCase({...newTestCase, steps: e.target.value})}
+                        onChange={(value) => setNewTestCase({...newTestCase, steps: value})}
                         placeholder="Test Steps *"
-                        rows={2}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        rows={3}
+                        className="text-sm"
                       />
                     </td>
                     <td
@@ -756,12 +757,12 @@ export function FunctionalityTestCasesTable({
                       style={{ width: `${getColumnWidth("expectedResults", 250)}px` }}
                       className="border border-gray-300 px-3 py-2"
                     >
-                      <textarea
+                      <NumberedTextarea
                         value={newTestCase.expectedResults}
-                        onChange={(e) => setNewTestCase({...newTestCase, expectedResults: e.target.value})}
+                        onChange={(value) => setNewTestCase({...newTestCase, expectedResults: value})}
                         placeholder="Expected Results *"
-                        rows={2}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        rows={3}
+                        className="text-sm"
                       />
                     </td>
                     <td
