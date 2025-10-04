@@ -3,8 +3,16 @@
 import { Doc } from "convex/_generated/dataModel";
 import { api } from "../../../convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
-import React, { useState, useRef, useCallback, useEffect } from "react";
-import { Plus, Check, X } from "lucide-react";
+import React, { useState, useRef } from "react";
+import { useColumnResize } from "../../hooks/useColumnResize";
+import { useRowResize } from "../../hooks/useRowResize";
+import { useColumnWidths } from "../../hooks/useColumnWidths";
+import { TableHeaderCell } from "../common/TableHeaderCell";
+import { ResizeHandle } from "../common/ResizeHandle";
+import { TableActionButtons } from "../common/TableActionButtons";
+import { EmptyTableState } from "../common/EmptyTableState";
+import { ResizeFeedback } from "../common/ResizeFeedback";
+import { formatToList } from "../../utils/formatUtils";
 
 // --- NumberedTextarea Component Definition ---
 interface NumberedTextareaProps {
@@ -59,7 +67,6 @@ const NumberedTextarea: React.FC<NumberedTextareaProps> = ({
   );
 };
 
-
 // --- AltTextAriaLabelTable Component ---
 
 interface AltTextAriaLabelTableProps {
@@ -101,35 +108,31 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
     testCaseType: "altTextAriaLabel",
   });
 
+  // Custom Hooks
+  const { getColumnWidth } = useColumnWidths(fetchedColumnWidths);
+  
+  const { resizingRow, handleRowMouseDown } = useRowResize({
+    onResizeComplete: async (testCaseId, rowHeight) => {
+      await updateRowHeight({ testCaseId, rowHeight });
+    }
+  });
+
+  const { resizingColumn, handleColumnMouseDown } = useColumnResize({
+    onResizeComplete: async (columnName, width) => {
+      await updateColumnWidth({
+        sheetId,
+        columnName,
+        width,
+        testCaseType: "altTextAriaLabel"
+      });
+    }
+  });
+
   // State
   const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [newTestCase, setNewTestCase] = useState<NewTestCase>(initialNewTestCaseState);
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
-  const [resizingRow, setResizingRow] = useState<string | null>(null);
-  const [rowStartY, setRowStartY] = useState(0);
-  const [rowStartHeight, setRowStartHeight] = useState(0);
-  const [resizingColumn, setResizingColumn] = useState<string | null>(null);
-  const [colStartX, setColStartX] = useState(0);
-  const [colStartWidth, setColStartWidth] = useState(0);
   const tableRef = useRef<HTMLTableElement>(null);
-
-  useEffect(() => {
-    if (fetchedColumnWidths && Array.isArray(fetchedColumnWidths)) {
-      const widths = fetchedColumnWidths.reduce<Record<string, number>>((acc, item) => {
-        if (item?.columnName && typeof item.width === "number") {
-          acc[item.columnName] = item.width;
-        }
-        return acc;
-      }, {});
-      setColumnWidths(widths);
-    }
-  }, [fetchedColumnWidths]);
-
-  // Helper to get column width
-  const getColumnWidth = (columnName: string, defaultWidth: number) => {
-    return columnWidths[columnName] || defaultWidth;
-  };
 
   // --- Event Handlers ---
 
@@ -140,13 +143,6 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
 
   const handleNumberedTextareaChange = (name: keyof NewTestCase, value: string) => {
     setNewTestCase((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const formatToList = (text: string) => {
-    return text.split('\n')
-      .map((line, index) => line.trim() ? `${index + 1}. ${line.trim()}` : '')
-      .filter(line => line)
-      .join('\n');
   };
 
   const handleSaveNew = async () => {
@@ -185,87 +181,6 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
     setNewTestCase(initialNewTestCaseState);
   };
 
-  // --- Resizing Handlers (Row & Column) ---
-  const handleRowMouseDown = useCallback((e: React.MouseEvent, testCaseId: string, currentHeight: number) => {
-    e.preventDefault(); setResizingRow(testCaseId); setRowStartY(e.clientY); setRowStartHeight(currentHeight);
-    document.body.style.cursor = "row-resize"; document.body.style.userSelect = "none";
-  }, []);
-
-  const handleRowMouseMove = useCallback((e: MouseEvent) => {
-    if (!resizingRow) return;
-    const deltaY = e.clientY - rowStartY;
-    const newHeight = Math.max(20, Math.min(500, rowStartHeight + deltaY));
-    const row = document.querySelector(`tr[data-testcase-id="${resizingRow}"]`) as HTMLElement;
-    if (row) row.style.height = `${newHeight}px`;
-  }, [resizingRow, rowStartY, rowStartHeight]);
-
-  const handleRowMouseUp = useCallback(() => {
-    if (!resizingRow) return;
-    const row = document.querySelector(`tr[data-testcase-id="${resizingRow}"]`) as HTMLElement;
-    const finalHeight = row ? parseInt(row.style.height, 10) : rowStartHeight;
-    updateRowHeight({ testCaseId: resizingRow, rowHeight: finalHeight });
-    setResizingRow(null); document.body.style.cursor = ""; document.body.style.userSelect = "";
-  }, [resizingRow, rowStartHeight, updateRowHeight]);
-
-  const handleColumnMouseDown = useCallback((e: React.MouseEvent, columnName: string, currentWidth: number) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setResizingColumn(columnName);
-    setColStartX(e.clientX);
-    setColStartWidth(currentWidth);
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-  }, []);
-
-  const handleColumnMouseMove = useCallback((e: MouseEvent) => {
-    if (!resizingColumn) return;
-    const deltaX = e.clientX - colStartX;
-    const newWidth = Math.max(50, Math.min(1000, colStartWidth + deltaX));
-    const cells = document.querySelectorAll(`[data-column="${resizingColumn}"]`);
-    cells.forEach((cell) => {
-      (cell as HTMLElement).style.width = `${newWidth}px`;
-    });
-  }, [resizingColumn, colStartX, colStartWidth]);
-
-  const handleColumnMouseUp = useCallback(() => {
-    if (!resizingColumn) return;
-    const cell = document.querySelector(`[data-column="${resizingColumn}"]`) as HTMLElement;
-    const finalWidth = cell ? parseInt(cell.style.width) || colStartWidth : colStartWidth;
-    updateColumnWidth({
-      sheetId,
-      columnName: resizingColumn,
-      width: finalWidth,
-      testCaseType: "altTextAriaLabel"
-    }).catch((error) => {
-      console.error("Failed to update column width:", error);
-    });
-    setResizingColumn(null);
-    document.body.style.cursor = "";
-    document.body.style.userSelect = "";
-  }, [resizingColumn, colStartWidth, sheetId, updateColumnWidth]);
-
-  useEffect(() => {
-    if (resizingRow) {
-      document.addEventListener("mousemove", handleRowMouseMove);
-      document.addEventListener("mouseup", handleRowMouseUp);
-      return () => {
-        document.removeEventListener("mousemove", handleRowMouseMove);
-        document.removeEventListener("mouseup", handleRowMouseUp);
-      };
-    }
-  }, [resizingRow, handleRowMouseMove, handleRowMouseUp]);
-
-  useEffect(() => {
-    if (resizingColumn) {
-      document.addEventListener("mousemove", handleColumnMouseMove);
-      document.addEventListener("mouseup", handleColumnMouseUp);
-      return () => {
-        document.removeEventListener("mousemove", handleColumnMouseMove);
-        document.removeEventListener("mouseup", handleColumnMouseUp);
-      };
-    }
-  }, [resizingColumn, handleColumnMouseMove, handleColumnMouseUp]);
-
   const columns = [
     { key: "sequenceNumber", label: "TC ID", width: 80 },
     { key: "persona", label: "Persona", width: 150 },
@@ -292,41 +207,25 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
           <thead>
             <tr className="bg-gray-100">
               {columns.map(({ key, label, width }) => (
-                <th
+                <TableHeaderCell
                   key={key}
-                  data-column={key}
-                  style={{ width: `${getColumnWidth(key, width)}px`, position: "relative" }}
-                  className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700"
-                >
-                  {label}
-                  <div
-                    className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 opacity-0 hover:opacity-100 transition-opacity"
-                    onMouseDown={(e) => handleColumnMouseDown(e, key, getColumnWidth(key, width))}
-                    style={{
-                      background: resizingColumn === key ? "#3b82f6" : "transparent",
-                      opacity: resizingColumn === key ? 1 : undefined,
-                    }}
-                  />
-                </th>
+                  columnKey={key}
+                  label={label}
+                  width={getColumnWidth(key, width)}
+                  isResizing={resizingColumn === key}
+                  onResizeStart={handleColumnMouseDown}
+                />
               ))}
             </tr>
           </thead>
           <tbody>
             {testCases.length === 0 && !isAdding ? (
-              <tr>
-                <td colSpan={15} className="text-center py-8 text-gray-500">
-                  <div className="flex flex-col items-center gap-2">
-                    <p>No Alt Text / Aria Label test cases found.</p>
-                    <button
-                      onClick={handleAddNew}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                    >
-                      <Plus size={16} />
-                      Add First Test Case
-                    </button>
-                  </div>
-                </td>
-              </tr>
+              <EmptyTableState
+                message="No Alt Text / Aria Label test cases found."
+                onAdd={handleAddNew}
+                buttonText="Add First Test Case"
+                colSpan={15}
+              />
             ) : (
               <>
                 {testCases.map((testCase) => (
@@ -346,13 +245,10 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
                         {testCase[key as keyof typeof testCase] ?? "N/A"}
                       </td>
                     ))}
-                    <div
-                      className="absolute bottom-0 left-0 right-0 h-1 cursor-row-resize hover:bg-blue-400 opacity-0 hover:opacity-100 transition-opacity"
+                    <ResizeHandle
+                      direction="row"
+                      isResizing={resizingRow === testCase._id}
                       onMouseDown={(e) => handleRowMouseDown(e, testCase._id, testCase.rowHeight || 20)}
-                      style={{
-                        background: resizingRow === testCase._id ? "#3b82f6" : "transparent",
-                        opacity: resizingRow === testCase._id ? 1 : undefined,
-                      }}
                     />
                   </tr>
                 ))}
@@ -569,52 +465,22 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
         </table>
       </div>
 
-      {/* Add New Row Button */}
-      {testCases.length > 0 && !isAdding && (
-        <div className="flex justify-center py-4">
-          <button
-            onClick={handleAddNew}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-          >
-            <Plus size={16} />
-            Add New Test Case
-          </button>
-        </div>
-      )}
-
-      {/* Action Buttons for New Row */}
-      {isAdding && (
-        <div className="flex justify-center gap-2 py-4">
-          <button
-            onClick={handleSaveNew}
-            disabled={isSaving}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Check size={16} />
-            {isSaving ? "Saving..." : "Save"}
-          </button>
-          <button
-            onClick={handleCancelNew}
-            disabled={isSaving}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <X size={16} />
-            Cancel
-          </button>
-        </div>
+      {/* Add New Row Button - FIXED: Now shows when adding OR when testCases exist */}
+      {(testCases.length > 0 || isAdding) && (
+        <TableActionButtons
+          isAdding={isAdding}
+          isSaving={isSaving}
+          onAdd={handleAddNew}
+          onSave={handleSaveNew}
+          onCancel={handleCancelNew}
+        />
       )}
 
       {/* Visual feedback during resize */}
-      {resizingRow && (
-        <div className="fixed top-4 right-4 bg-black bg-opacity-75 text-white px-3 py-1 rounded text-sm z-50">
-          Resizing row...
-        </div>
-      )}
-      {resizingColumn && (
-        <div className="fixed top-4 right-4 bg-black bg-opacity-75 text-white px-3 py-1 rounded text-sm z-50">
-          Resizing column...
-        </div>
-      )}
+      <ResizeFeedback
+        isResizingRow={!!resizingRow}
+        isResizingColumn={!!resizingColumn}
+      />
     </div>
   );
 }

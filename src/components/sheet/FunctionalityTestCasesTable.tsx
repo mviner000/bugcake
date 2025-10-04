@@ -3,9 +3,17 @@
 import { Doc } from "convex/_generated/dataModel";
 import { api } from "../../../convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
-import React, { useState, useRef, useCallback } from "react";
-import { Plus, Check, X } from "lucide-react";
+import { useState, useRef } from "react";
 import { NumberedTextarea } from "./NumberedTextarea";
+import { useColumnResize } from "../../hooks/useColumnResize";
+import { useRowResize } from "../../hooks/useRowResize";
+import { useColumnWidths } from "../../hooks/useColumnWidths";
+import { TableHeaderCell } from "../common/TableHeaderCell";
+import { ResizeHandle } from "../common/ResizeHandle";
+import { TableActionButtons } from "../common/TableActionButtons";
+import { EmptyTableState } from "../common/EmptyTableState";
+import { ResizeFeedback } from "../common/ResizeFeedback";
+import { formatWithNumbering } from "../../utils/formatUtils";
 
 interface FunctionalityTestCasesTableProps {
   testCases: (Doc<"functionalityTestCases"> & {
@@ -39,18 +47,32 @@ export function FunctionalityTestCasesTable({
   const createTestCase = useMutation(
     api.myFunctions.createFunctionalityTestCase,
   );
-  const columnWidths = useQuery(api.myFunctions.getColumnWidths, {
+  const fetchedColumnWidths = useQuery(api.myFunctions.getColumnWidths, {
     sheetId,
     testCaseType: "functionality",
   });
   const updateColumnWidth = useMutation(api.myFunctions.updateColumnWidth);
   
-  const [resizing, setResizing] = useState<string | null>(null);
-  const [startY, setStartY] = useState(0);
-  const [startHeight, setStartHeight] = useState(0);
-  const [resizingColumn, setResizingColumn] = useState<string | null>(null);
-  const [startX, setStartX] = useState(0);
-  const [startWidth, setStartWidth] = useState(0);
+  // Custom Hooks
+  const { getColumnWidth } = useColumnWidths(fetchedColumnWidths);
+  
+  const { resizingRow, handleRowMouseDown } = useRowResize({
+    onResizeComplete: async (testCaseId, rowHeight) => {
+      await updateRowHeight({ testCaseId, rowHeight });
+    }
+  });
+
+  const { resizingColumn, handleColumnMouseDown } = useColumnResize({
+    onResizeComplete: async (columnName, width) => {
+      await updateColumnWidth({
+        sheetId,
+        columnName,
+        width,
+        testCaseType: "functionality"
+      });
+    }
+  });
+
   const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [newTestCase, setNewTestCase] = useState<NewTestCase>({
@@ -68,140 +90,6 @@ export function FunctionalityTestCasesTable({
   
   const tableRef = useRef<HTMLTableElement>(null);
 
-  // Helper to get column width
-  const getColumnWidth = (columnName: string, defaultWidth: number) => {
-    const saved = columnWidths?.find((cw) => cw.columnName === columnName);
-    return saved ? saved.width : defaultWidth;
-  };
-
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent, testCaseId: string, currentHeight: number) => {
-      e.preventDefault();
-      setResizing(testCaseId);
-      setStartY(e.clientY);
-      setStartHeight(currentHeight);
-      document.body.style.cursor = "row-resize";
-      document.body.style.userSelect = "none";
-    },
-    [],
-  );
-
-  const handleMouseMove = useCallback(
-    (e: MouseEvent) => {
-      if (!resizing) return;
-
-      const deltaY = e.clientY - startY;
-      const newHeight = Math.max(20, Math.min(500, startHeight + deltaY));
-
-      const row = document.querySelector(
-        `tr[data-testcase-id="${resizing}"]`,
-      ) as HTMLElement;
-      if (row) {
-        row.style.height = `${newHeight}px`;
-      }
-    },
-    [resizing, startY, startHeight],
-  );
-
-  const handleMouseUp = useCallback(() => {
-    if (!resizing) return;
-
-    const row = document.querySelector(
-      `tr[data-testcase-id="${resizing}"]`,
-    ) as HTMLElement;
-    const finalHeight = row ? parseInt(row.style.height) || 20 : 20;
-
-    updateRowHeight({
-      testCaseId: resizing,
-      rowHeight: finalHeight,
-    }).catch((error) => {
-      console.error("Failed to update row height:", error);
-      if (row) {
-        const originalTestCase = testCases.find((tc) => tc._id === resizing);
-        row.style.height = `${originalTestCase?.rowHeight || 20}px`;
-      }
-    });
-
-    setResizing(null);
-    document.body.style.cursor = "";
-    document.body.style.userSelect = "";
-  }, [resizing, updateRowHeight, testCases]);
-
-  // Column resize handlers
-  const handleColumnMouseDown = useCallback(
-    (e: React.MouseEvent, columnName: string, currentWidth: number) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setResizingColumn(columnName);
-      setStartX(e.clientX);
-      setStartWidth(currentWidth);
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
-    },
-    [],
-  );
-
-  const handleColumnMouseMove = useCallback(
-    (e: MouseEvent) => {
-      if (!resizingColumn) return;
-
-      const deltaX = e.clientX - startX;
-      const newWidth = Math.max(50, Math.min(1000, startWidth + deltaX));
-
-      const cells = document.querySelectorAll(
-        `[data-column="${resizingColumn}"]`,
-      );
-      cells.forEach((cell) => {
-        (cell as HTMLElement).style.width = `${newWidth}px`;
-      });
-    },
-    [resizingColumn, startX, startWidth],
-  );
-
-  const handleColumnMouseUp = useCallback(() => {
-    if (!resizingColumn) return;
-
-    const cell = document.querySelector(
-      `[data-column="${resizingColumn}"]`,
-    ) as HTMLElement;
-    const finalWidth = cell ? parseInt(cell.style.width) || 150 : 150;
-
-    updateColumnWidth({
-      sheetId,
-      columnName: resizingColumn,
-      width: finalWidth,
-      testCaseType: "functionality",
-    }).catch((error) => {
-      console.error("Failed to update column width:", error);
-    });
-
-    setResizingColumn(null);
-    document.body.style.cursor = "";
-    document.body.style.userSelect = "";
-  }, [resizingColumn, updateColumnWidth, sheetId]);
-
-  React.useEffect(() => {
-    if (resizing) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-      return () => {
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
-      };
-    }
-  }, [resizing, handleMouseMove, handleMouseUp]);
-
-  React.useEffect(() => {
-    if (resizingColumn) {
-      document.addEventListener("mousemove", handleColumnMouseMove);
-      document.addEventListener("mouseup", handleColumnMouseUp);
-      return () => {
-        document.removeEventListener("mousemove", handleColumnMouseMove);
-        document.removeEventListener("mouseup", handleColumnMouseUp);
-      };
-    }
-  }, [resizingColumn, handleColumnMouseMove, handleColumnMouseUp]);
-
   const handleAddNew = () => {
     setIsAdding(true);
     setNewTestCase({
@@ -216,18 +104,6 @@ export function FunctionalityTestCasesTable({
       status: "Not Run",
       jiraUserStory: "",
     });
-  };
-
-  // Helper function to format text with numbering
-  const formatWithNumbering = (text: string): string => {
-    const lines = text
-      .split('\n')
-      .filter(line => line.trim() !== '')
-      .map(line => line.trim());
-    
-    return lines
-      .map((line, index) => `${index + 1}.) ${line}`)
-      .join('\n');
   };
 
   const handleSaveNew = async () => {
@@ -289,6 +165,23 @@ export function FunctionalityTestCasesTable({
     });
   };
 
+  const columns = [
+    { key: "tcId", label: "TC ID", width: 80 },
+    { key: "level", label: "TC Level", width: 100 },
+    { key: "scenario", label: "Scenarios", width: 120 },
+    { key: "module", label: "Module", width: 150 },
+    { key: "subModule", label: "Sub Module", width: 150 },
+    { key: "title", label: "Test Case Title", width: 200 },
+    { key: "preConditions", label: "Pre Conditions", width: 180 },
+    { key: "steps", label: "Test Steps", width: 250 },
+    { key: "expectedResults", label: "Expected Results", width: 250 },
+    { key: "status", label: "Testing Status", width: 120 },
+    { key: "executedBy", label: "Executed By:", width: 150 },
+    { key: "jiraUserStory", label: "Jira Associated User Stories", width: 180 },
+    { key: "createdBy", label: "Created By:", width: 150 },
+    { key: "createdAt", label: "Date of Creation", width: 130 },
+  ];
+
   return (
     <div className="flex flex-col">
       {/* Scrollable table container */}
@@ -296,234 +189,26 @@ export function FunctionalityTestCasesTable({
         <table ref={tableRef} className="w-full border-collapse" style={{ minWidth: 'max-content' }}>
           <thead>
             <tr className="bg-gray-100">
-              <th
-                data-column="tcId"
-                style={{ width: `${getColumnWidth("tcId", 80)}px`, position: "relative" }}
-                className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700"
-              >
-                TC ID
-                <div
-                  className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 opacity-0 hover:opacity-100 transition-opacity"
-                  onMouseDown={(e) => handleColumnMouseDown(e, "tcId", getColumnWidth("tcId", 80))}
-                  style={{
-                    background: resizingColumn === "tcId" ? "#3b82f6" : "transparent",
-                    opacity: resizingColumn === "tcId" ? 1 : undefined,
-                  }}
+              {columns.map(({ key, label, width }) => (
+                <TableHeaderCell
+                  key={key}
+                  columnKey={key}
+                  label={label}
+                  width={getColumnWidth(key, width)}
+                  isResizing={resizingColumn === key}
+                  onResizeStart={handleColumnMouseDown}
                 />
-              </th>
-              <th
-                data-column="level"
-                style={{ width: `${getColumnWidth("level", 100)}px`, position: "relative" }}
-                className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700"
-              >
-                TC Level
-                <div
-                  className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 opacity-0 hover:opacity-100 transition-opacity"
-                  onMouseDown={(e) => handleColumnMouseDown(e, "level", getColumnWidth("level", 100))}
-                  style={{
-                    background: resizingColumn === "level" ? "#3b82f6" : "transparent",
-                    opacity: resizingColumn === "level" ? 1 : undefined,
-                  }}
-                />
-              </th>
-              <th
-                data-column="scenario"
-                style={{ width: `${getColumnWidth("scenario", 120)}px`, position: "relative" }}
-                className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700"
-              >
-                Scenarios
-                <div
-                  className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 opacity-0 hover:opacity-100 transition-opacity"
-                  onMouseDown={(e) => handleColumnMouseDown(e, "scenario", getColumnWidth("scenario", 120))}
-                  style={{
-                    background: resizingColumn === "scenario" ? "#3b82f6" : "transparent",
-                    opacity: resizingColumn === "scenario" ? 1 : undefined,
-                  }}
-                />
-              </th>
-              <th
-                data-column="module"
-                style={{ width: `${getColumnWidth("module", 150)}px`, position: "relative" }}
-                className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700"
-              >
-                Module
-                <div
-                  className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 opacity-0 hover:opacity-100 transition-opacity"
-                  onMouseDown={(e) => handleColumnMouseDown(e, "module", getColumnWidth("module", 150))}
-                  style={{
-                    background: resizingColumn === "module" ? "#3b82f6" : "transparent",
-                    opacity: resizingColumn === "module" ? 1 : undefined,
-                  }}
-                />
-              </th>
-              <th
-                data-column="subModule"
-                style={{ width: `${getColumnWidth("subModule", 150)}px`, position: "relative" }}
-                className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700"
-              >
-                Sub Module
-                <div
-                  className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 opacity-0 hover:opacity-100 transition-opacity"
-                  onMouseDown={(e) => handleColumnMouseDown(e, "subModule", getColumnWidth("subModule", 150))}
-                  style={{
-                    background: resizingColumn === "subModule" ? "#3b82f6" : "transparent",
-                    opacity: resizingColumn === "subModule" ? 1 : undefined,
-                  }}
-                />
-              </th>
-              <th
-                data-column="title"
-                style={{ width: `${getColumnWidth("title", 200)}px`, position: "relative" }}
-                className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700"
-              >
-                Test Case Title
-                <div
-                  className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 opacity-0 hover:opacity-100 transition-opacity"
-                  onMouseDown={(e) => handleColumnMouseDown(e, "title", getColumnWidth("title", 200))}
-                  style={{
-                    background: resizingColumn === "title" ? "#3b82f6" : "transparent",
-                    opacity: resizingColumn === "title" ? 1 : undefined,
-                  }}
-                />
-              </th>
-              <th
-                data-column="preConditions"
-                style={{ width: `${getColumnWidth("preConditions", 180)}px`, position: "relative" }}
-                className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700"
-              >
-                Pre Conditions
-                <div
-                  className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 opacity-0 hover:opacity-100 transition-opacity"
-                  onMouseDown={(e) => handleColumnMouseDown(e, "preConditions", getColumnWidth("preConditions", 180))}
-                  style={{
-                    background: resizingColumn === "preConditions" ? "#3b82f6" : "transparent",
-                    opacity: resizingColumn === "preConditions" ? 1 : undefined,
-                  }}
-                />
-              </th>
-              <th
-                data-column="steps"
-                style={{ width: `${getColumnWidth("steps", 250)}px`, position: "relative" }}
-                className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700"
-              >
-                Test Steps
-                <div
-                  className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 opacity-0 hover:opacity-100 transition-opacity"
-                  onMouseDown={(e) => handleColumnMouseDown(e, "steps", getColumnWidth("steps", 250))}
-                  style={{
-                    background: resizingColumn === "steps" ? "#3b82f6" : "transparent",
-                    opacity: resizingColumn === "steps" ? 1 : undefined,
-                  }}
-                />
-              </th>
-              <th
-                data-column="expectedResults"
-                style={{ width: `${getColumnWidth("expectedResults", 250)}px`, position: "relative" }}
-                className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700"
-              >
-                Expected Results
-                <div
-                  className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 opacity-0 hover:opacity-100 transition-opacity"
-                  onMouseDown={(e) => handleColumnMouseDown(e, "expectedResults", getColumnWidth("expectedResults", 250))}
-                  style={{
-                    background: resizingColumn === "expectedResults" ? "#3b82f6" : "transparent",
-                    opacity: resizingColumn === "expectedResults" ? 1 : undefined,
-                  }}
-                />
-              </th>
-              <th
-                data-column="status"
-                style={{ width: `${getColumnWidth("status", 120)}px`, position: "relative" }}
-                className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700"
-              >
-                Testing Status
-                <div
-                  className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 opacity-0 hover:opacity-100 transition-opacity"
-                  onMouseDown={(e) => handleColumnMouseDown(e, "status", getColumnWidth("status", 120))}
-                  style={{
-                    background: resizingColumn === "status" ? "#3b82f6" : "transparent",
-                    opacity: resizingColumn === "status" ? 1 : undefined,
-                  }}
-                />
-              </th>
-              <th
-                data-column="executedBy"
-                style={{ width: `${getColumnWidth("executedBy", 150)}px`, position: "relative" }}
-                className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700"
-              >
-                Executed By:
-                <div
-                  className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 opacity-0 hover:opacity-100 transition-opacity"
-                  onMouseDown={(e) => handleColumnMouseDown(e, "executedBy", getColumnWidth("executedBy", 150))}
-                  style={{
-                    background: resizingColumn === "executedBy" ? "#3b82f6" : "transparent",
-                    opacity: resizingColumn === "executedBy" ? 1 : undefined,
-                  }}
-                />
-              </th>
-              <th
-                data-column="jiraUserStory"
-                style={{ width: `${getColumnWidth("jiraUserStory", 180)}px`, position: "relative" }}
-                className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700"
-              >
-                Jira Associated User Stories
-                <div
-                  className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 opacity-0 hover:opacity-100 transition-opacity"
-                  onMouseDown={(e) => handleColumnMouseDown(e, "jiraUserStory", getColumnWidth("jiraUserStory", 180))}
-                  style={{
-                    background: resizingColumn === "jiraUserStory" ? "#3b82f6" : "transparent",
-                    opacity: resizingColumn === "jiraUserStory" ? 1 : undefined,
-                  }}
-                />
-              </th>
-              <th
-                data-column="createdBy"
-                style={{ width: `${getColumnWidth("createdBy", 150)}px`, position: "relative" }}
-                className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700"
-              >
-                Created By:
-                <div
-                  className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 opacity-0 hover:opacity-100 transition-opacity"
-                  onMouseDown={(e) => handleColumnMouseDown(e, "createdBy", getColumnWidth("createdBy", 150))}
-                  style={{
-                    background: resizingColumn === "createdBy" ? "#3b82f6" : "transparent",
-                    opacity: resizingColumn === "createdBy" ? 1 : undefined,
-                  }}
-                />
-              </th>
-              <th
-                data-column="createdAt"
-                style={{ width: `${getColumnWidth("createdAt", 130)}px`, position: "relative" }}
-                className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700"
-              >
-                Date of Creation
-                <div
-                  className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 opacity-0 hover:opacity-100 transition-opacity"
-                  onMouseDown={(e) => handleColumnMouseDown(e, "createdAt", getColumnWidth("createdAt", 130))}
-                  style={{
-                    background: resizingColumn === "createdAt" ? "#3b82f6" : "transparent",
-                    opacity: resizingColumn === "createdAt" ? 1 : undefined,
-                  }}
-                />
-              </th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {testCases.length === 0 && !isAdding ? (
-              <tr>
-                <td colSpan={14} className="text-center py-8 text-gray-500">
-                  <div className="flex flex-col items-center gap-2">
-                    <p>No functionality test cases found.</p>
-                    <button
-                      onClick={handleAddNew}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                    >
-                      <Plus size={16} />
-                      Add First Test Case
-                    </button>
-                  </div>
-                </td>
-              </tr>
+              <EmptyTableState
+                message="No functionality test cases found."
+                onAdd={handleAddNew}
+                buttonText="Add First Test Case"
+                colSpan={14}
+              />
             ) : (
               <>
                 {testCases.map((testCase) => (
@@ -635,16 +320,10 @@ export function FunctionalityTestCasesTable({
                         year: '2-digit'
                       })}
                     </td>
-                    <div
-                      className="absolute bottom-0 left-0 right-0 h-1 cursor-row-resize hover:bg-blue-400 opacity-0 hover:opacity-100 transition-opacity"
-                      onMouseDown={(e) =>
-                        handleMouseDown(e, testCase._id, testCase.rowHeight || 20)
-                      }
-                      style={{
-                        background:
-                          resizing === testCase._id ? "#3b82f6" : "transparent",
-                        opacity: resizing === testCase._id ? 1 : undefined,
-                      }}
+                    <ResizeHandle
+                      direction="row"
+                      isResizing={resizingRow === testCase._id}
+                      onMouseDown={(e) => handleRowMouseDown(e, testCase._id, testCase.rowHeight || 20)}
                     />
                   </tr>
                 ))}
@@ -824,52 +503,22 @@ export function FunctionalityTestCasesTable({
         </table>
       </div>
 
-      {/* Add New Row Button */}
-      {testCases.length > 0 && !isAdding && (
-        <div className="flex justify-center py-4">
-          <button
-            onClick={handleAddNew}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-          >
-            <Plus size={16} />
-            Add New Test Case
-          </button>
-        </div>
-      )}
-
-      {/* Action Buttons for New Row */}
-      {isAdding && (
-        <div className="flex justify-center gap-2 py-4">
-          <button
-            onClick={handleSaveNew}
-            disabled={isSaving}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Check size={16} />
-            {isSaving ? "Saving..." : "Save"}
-          </button>
-          <button
-            onClick={handleCancelNew}
-            disabled={isSaving}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <X size={16} />
-            Cancel
-          </button>
-        </div>
+      {/* Add New Row Button - FIXED: Now shows when adding OR when testCases exist */}
+      {(testCases.length > 0 || isAdding) && (
+        <TableActionButtons
+          isAdding={isAdding}
+          isSaving={isSaving}
+          onAdd={handleAddNew}
+          onSave={handleSaveNew}
+          onCancel={handleCancelNew}
+        />
       )}
 
       {/* Visual feedback during resize */}
-      {resizing && (
-        <div className="fixed top-4 right-4 bg-black bg-opacity-75 text-white px-3 py-1 rounded text-sm">
-          Resizing row...
-        </div>
-      )}
-      {resizingColumn && (
-        <div className="fixed top-4 right-4 bg-black bg-opacity-75 text-white px-3 py-1 rounded text-sm">
-          Resizing column...
-        </div>
-      )}
+      <ResizeFeedback
+        isResizingRow={!!resizingRow}
+        isResizingColumn={!!resizingColumn}
+      />
     </div>
   );
 }
