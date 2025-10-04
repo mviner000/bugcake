@@ -219,27 +219,58 @@ export const getTestCasesForSheet = query({
       return null;
     }
 
-    let testCases: (
-      | Doc<"functionalityTestCases">
-      | Doc<"altTextAriaLabelTestCases">
-    )[] = [];
+    let testCases: any[] = [];
 
     if (sheet.testCaseType === "functionality") {
-      testCases = await ctx.db
+      const rawTestCases = await ctx.db
         .query("functionalityTestCases")
         .filter((q) => q.eq(q.field("sheetId"), normalizedSheetId))
         .collect();
+
+      // Enrich with user information AND sequence number
+      testCases = await Promise.all(
+        rawTestCases.map(async (testCase, index) => {
+          const createdByUser = await ctx.db.get(testCase.createdBy);
+          const executedByUser = testCase.executedBy
+            ? await ctx.db.get(testCase.executedBy)
+            : null;
+
+          return {
+            ...testCase,
+            createdByName: createdByUser?.email || "Unknown User",
+            executedByName: executedByUser?.email || "N/A",
+            sequenceNumber: index + 1, // Simple incremental number based on array position
+          };
+        })
+      );
     } else if (sheet.testCaseType === "altTextAriaLabel") {
-      testCases = await ctx.db
+      const rawTestCases = await ctx.db
         .query("altTextAriaLabelTestCases")
         .filter((q) => q.eq(q.field("sheetId"), normalizedSheetId))
         .collect();
+
+      // Enrich with user information AND sequence number
+      testCases = await Promise.all(
+        rawTestCases.map(async (testCase, index) => {
+          const createdByUser = await ctx.db.get(testCase.createdBy);
+          const executedByUser = testCase.executedBy
+            ? await ctx.db.get(testCase.executedBy)
+            : null;
+
+          return {
+            ...testCase,
+            createdByName: createdByUser?.email || "Unknown User",
+            executedByName: executedByUser?.email || "N/A",
+            sequenceNumber: index + 1, // Simple incremental number based on array position
+          };
+        })
+      );
     }
 
     return {
       sheet,
       testCaseType: sheet.testCaseType,
-      testCases, // Return the correctly typed array
+      testCases,
     };
   },
 });

@@ -9,7 +9,7 @@ export const sendResetPasswordEmail = internalAction({
     to: v.string(),
     resetLink: v.string(), 
   },
-  handler: async (ctx, args) => {
+  handler: async (_ctx, args) => {
     try {
       const apiKey = process.env.RESEND_API_KEY;
       

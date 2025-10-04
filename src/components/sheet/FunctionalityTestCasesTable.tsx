@@ -6,7 +6,11 @@ import { useMutation } from "convex/react";
 import React, { useState, useRef, useCallback } from "react";
 
 interface FunctionalityTestCasesTableProps {
-  testCases: Doc<"functionalityTestCases">[];
+  testCases: (Doc<"functionalityTestCases"> & {
+    createdByName: string;
+    executedByName: string;
+    sequenceNumber: number;
+  })[];
 }
 
 export function FunctionalityTestCasesTable({
@@ -121,14 +125,26 @@ export function FunctionalityTestCasesTable({
               Expected Results
             </th>
             <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              Testing
+              Testing Status
+            </th>
+            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
+              Executed By:
+            </th>
+            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
+              Jira Associated User Stories
+            </th>
+            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
+              Created By:
+            </th>
+            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
+              Date of Creation
             </th>
           </tr>
         </thead>
         <tbody>
           {testCases.length === 0 ? (
             <tr>
-              <td colSpan={10} className="text-center py-4 text-gray-500">
+              <td colSpan={14} className="text-center py-4 text-gray-500">
                 No functionality test cases found.
               </td>
             </tr>
@@ -141,7 +157,7 @@ export function FunctionalityTestCasesTable({
                 style={{ height: `${testCase.rowHeight || 20}px` }}
               >
                 <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase._id}
+                  TC_{String(testCase.sequenceNumber).padStart(3, '0')}
                 </td>
                 <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
                   {testCase.level}
@@ -169,6 +185,18 @@ export function FunctionalityTestCasesTable({
                 </td>
                 <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
                   {testCase.status}
+                </td>
+                <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
+                  {testCase.executedByName}
+                </td>
+                <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
+                  {testCase.jiraUserStory}
+                </td>
+                <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
+                  {testCase.createdByName}
+                </td>
+                <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
+                  {testCase.createdAt}
                 </td>
                 {/* Row resize handle */}
                 <div
