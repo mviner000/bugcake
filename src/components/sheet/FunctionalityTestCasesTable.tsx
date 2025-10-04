@@ -1,5 +1,3 @@
-// src/sheet/FunctionalityTestCasesTable.tsx
-
 import { Doc } from "convex/_generated/dataModel";
 import { api } from "../../../convex/_generated/api";
 import { useMutation } from "convex/react";
@@ -293,10 +291,10 @@ export function FunctionalityTestCasesTable({
                   <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
                     {testCase.preConditions ?? "N/A"}
                   </td>
-                  <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
+                  <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900 whitespace-pre-wrap">
                     {testCase.steps}
                   </td>
-                  <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
+                  <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900 whitespace-pre-wrap">
                     {testCase.expectedResults}
                   </td>
                   <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
@@ -312,7 +310,11 @@ export function FunctionalityTestCasesTable({
                     {testCase.createdByName}
                   </td>
                   <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                    {testCase.createdAt}
+                    {new Date(testCase.createdAt).toLocaleDateString('en-US', {
+                      month: '2-digit',
+                      day: '2-digit',
+                      year: '2-digit'
+                    })}
                   </td>
                   <div
                     className="absolute bottom-0 left-0 right-0 h-1 cursor-row-resize hover:bg-blue-400 opacity-0 hover:opacity-100 transition-opacity"
