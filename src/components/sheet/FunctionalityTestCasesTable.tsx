@@ -727,17 +727,17 @@ export function FunctionalityTestCasesTable({
                       />
                     </td>
                     <td
-  data-column="preConditions"
-  style={{ width: `${getColumnWidth("preConditions", 180)}px` }}
-  className="border border-gray-300 px-3 py-2"
->
-  <NumberedTextarea
-    value={newTestCase.preConditions}
-    onChange={(value) => setNewTestCase({...newTestCase, preConditions: value})}
-    placeholder="Pre Conditions"
-    rows={3}
-    className="text-sm"
-  />
+                      data-column="preConditions"
+                      style={{ width: `${getColumnWidth("preConditions", 180)}px` }}
+                      className="border border-gray-300 px-3 py-2"
+                    >
+                      <NumberedTextarea
+                        value={newTestCase.preConditions}
+                        onChange={(value) => setNewTestCase({...newTestCase, preConditions: value})}
+                        placeholder="Pre Conditions"
+                        rows={3}
+                        className="text-sm"
+                      />
                     </td>
                     <td
                       data-column="steps"

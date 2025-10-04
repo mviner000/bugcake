@@ -2,208 +2,617 @@
 
 import { Doc } from "convex/_generated/dataModel";
 import { api } from "../../../convex/_generated/api";
-import { useMutation } from "convex/react";
-import React, { useState, useRef, useCallback } from "react";
+import { useMutation, useQuery } from "convex/react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
+import { Plus, Check, X } from "lucide-react";
 
-interface AltTextAriaLabelTableProps {
-  testCases: Doc<"altTextAriaLabelTestCases">[];
+// --- NumberedTextarea Component Definition ---
+interface NumberedTextareaProps {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  className?: string;
+  rows?: number;
 }
 
-export function AltTextAriaLabelTable({
-  testCases,
-}: AltTextAriaLabelTableProps) {
-  const updateRowHeight = useMutation(
-    api.myFunctions.updateAltTextAriaLabelTestCaseRowHeight,
-  );
-  const [resizing, setResizing] = useState<string | null>(null);
-  const [startY, setStartY] = useState(0);
-  const [startHeight, setStartHeight] = useState(0);
-  const tableRef = useRef<HTMLTableElement>(null);
-
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent, testCaseId: string, currentHeight: number) => {
-      e.preventDefault();
-      setResizing(testCaseId);
-      setStartY(e.clientY);
-      setStartHeight(currentHeight);
-      document.body.style.cursor = "row-resize";
-      document.body.style.userSelect = "none";
-    },
-    [],
-  );
-
-  const handleMouseMove = useCallback(
-    (e: MouseEvent) => {
-      if (!resizing) return;
-
-      const deltaY = e.clientY - startY;
-      const newHeight = Math.max(20, Math.min(500, startHeight + deltaY));
-
-      // Update the row height visually during drag
-      const row = document.querySelector(
-        `tr[data-testcase-id="${resizing}"]`,
-      ) as HTMLElement;
-      if (row) {
-        row.style.height = `${newHeight}px`;
-      }
-    },
-    [resizing, startY, startHeight],
-  );
-
-  const handleMouseUp = useCallback(() => {
-    if (!resizing) return;
-
-    const row = document.querySelector(
-      `tr[data-testcase-id="${resizing}"]`,
-    ) as HTMLElement;
-    const finalHeight = row ? parseInt(row.style.height) || 20 : 20;
-
-    // Update in background without awaiting
-    updateRowHeight({
-      testCaseId: resizing,
-      rowHeight: finalHeight,
-    }).catch((error) => {
-      console.error("Failed to update row height:", error);
-      // Revert the visual change if the update failed
-      if (row) {
-        const originalTestCase = testCases.find((tc) => tc._id === resizing);
-        row.style.height = `${originalTestCase?.rowHeight || 20}px`;
-      }
-    });
-
-    setResizing(null);
-    document.body.style.cursor = "";
-    document.body.style.userSelect = "";
-  }, [resizing, updateRowHeight, testCases]);
-
-  // Add event listeners for mouse move and mouse up
-  React.useEffect(() => {
-    if (resizing) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-      return () => {
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
-      };
-    }
-  }, [resizing, handleMouseMove, handleMouseUp]);
+const NumberedTextarea: React.FC<NumberedTextareaProps> = ({
+  value,
+  onChange,
+  placeholder,
+  className = '',
+  rows = 4
+}) => {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const lines = value.split('\n');
+  const lineNumbers = Array.from({ length: Math.max(lines.length, 1) }, (_, i) => i + 1);
 
   return (
-    <div className="overflow-x-auto">
-      <table ref={tableRef} className="w-full border-collapse">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              TC ID
-            </th>
-            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              Persona
-            </th>
-            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              Module
-            </th>
-            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              Sub Module
-            </th>
-            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              Page Section
-            </th>
-            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              Images/Icons
-            </th>
-            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              Remarks
-            </th>
-            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              Alt Text/Aria Label
-            </th>
-            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              SE Implementation
-            </th>
-            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              Actual Results
-            </th>
-            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              Testing Status
-            </th>
-            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-              Jira User Story
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {testCases.length === 0 ? (
-            <tr>
-              <td colSpan={12} className="text-center py-4 text-gray-500">
-                No Alt Text / Aria Label test cases found.
-              </td>
+    <div className="flex border border-gray-300 rounded-md bg-white overflow-hidden">
+      {/* Line numbers */}
+      <div
+        className="flex flex-col items-end px-3 py-2 bg-gray-50 border-r border-gray-200 text-gray-500 text-sm select-none"
+        style={{ minWidth: '40px' }}
+      >
+        {lineNumbers.map((num) => (
+          <div key={num} className="leading-6 h-6">
+            {num}.
+          </div>
+        ))}
+      </div>
+      {/* Textarea */}
+      <div className="relative flex-1">
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          rows={rows}
+          className={`w-full px-3 py-2 text-sm border-0 focus:outline-none focus:ring-0 resize-none ${className}`}
+          style={{
+            fontFamily: 'monospace',
+            lineHeight: '1.5rem',
+            height: `${Math.max(rows, lineNumbers.length) * 1.5}rem`,
+          }}
+        />
+      </div>
+    </div>
+  );
+};
+
+
+// --- AltTextAriaLabelTable Component ---
+
+interface AltTextAriaLabelTableProps {
+  testCases: (Doc<"altTextAriaLabelTestCases"> & { createdByName: string; sequenceNumber: number; })[];
+  sheetId: string;
+}
+
+interface NewTestCase {
+  persona: "Super Admin" | "Admin" | "User" | "Employee" | "Reporting Manager" | "Manager";
+  module: string;
+  subModule: string;
+  pageSection: string;
+  wireframeLink: string;
+  imagesIcons: string;
+  remarks: string;
+  altTextAriaLabel: string;
+  seImplementation: "Not yet" | "Ongoing" | "Done" | "Has Concerns" | "To Update" | "Outdated" | "Not Available";
+  actualResults: string;
+  testingStatus: "Passed" | "Failed" | "Not Run" | "Blocked" | "Not Available";
+  notes: string;
+  jiraUserStory: string;
+}
+
+const initialNewTestCaseState: NewTestCase = {
+  persona: "User", module: "", subModule: "", pageSection: "", wireframeLink: "",
+  imagesIcons: "", remarks: "", altTextAriaLabel: "", seImplementation: "Not yet",
+  actualResults: "", testingStatus: "Not Run", notes: "", jiraUserStory: "",
+};
+
+export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTableProps) {
+  // Mutations
+  const updateRowHeight = useMutation(api.myFunctions.updateAltTextAriaLabelTestCaseRowHeight);
+  const createTestCase = useMutation(api.myFunctions.createAltTextAriaLabelTestCase);
+  const updateColumnWidth = useMutation(api.myFunctions.updateColumnWidth);
+
+  // Queries
+  const fetchedColumnWidths = useQuery(api.myFunctions.getColumnWidths, {
+    sheetId,
+    testCaseType: "altTextAriaLabel",
+  });
+
+  // State
+  const [isAdding, setIsAdding] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [newTestCase, setNewTestCase] = useState<NewTestCase>(initialNewTestCaseState);
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+  const [resizingRow, setResizingRow] = useState<string | null>(null);
+  const [rowStartY, setRowStartY] = useState(0);
+  const [rowStartHeight, setRowStartHeight] = useState(0);
+  const [resizingColumn, setResizingColumn] = useState<string | null>(null);
+  const [colStartX, setColStartX] = useState(0);
+  const [colStartWidth, setColStartWidth] = useState(0);
+  const tableRef = useRef<HTMLTableElement>(null);
+
+  useEffect(() => {
+    if (fetchedColumnWidths && Array.isArray(fetchedColumnWidths)) {
+      const widths = fetchedColumnWidths.reduce<Record<string, number>>((acc, item) => {
+        if (item?.columnName && typeof item.width === "number") {
+          acc[item.columnName] = item.width;
+        }
+        return acc;
+      }, {});
+      setColumnWidths(widths);
+    }
+  }, [fetchedColumnWidths]);
+
+  // Helper to get column width
+  const getColumnWidth = (columnName: string, defaultWidth: number) => {
+    return columnWidths[columnName] || defaultWidth;
+  };
+
+  // --- Event Handlers ---
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setNewTestCase((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleNumberedTextareaChange = (name: keyof NewTestCase, value: string) => {
+    setNewTestCase((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const formatToList = (text: string) => {
+    return text.split('\n')
+      .map((line, index) => line.trim() ? `${index + 1}. ${line.trim()}` : '')
+      .filter(line => line)
+      .join('\n');
+  };
+
+  const handleSaveNew = async () => {
+    if (!newTestCase.persona || !newTestCase.module || !newTestCase.altTextAriaLabel) {
+      alert("Persona, Module, and Alt Text/Aria Label fields are required.");
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const payload = {
+        ...newTestCase,
+        imagesIcons: formatToList(newTestCase.imagesIcons),
+        remarks: formatToList(newTestCase.remarks),
+        altTextAriaLabel: formatToList(newTestCase.altTextAriaLabel),
+        actualResults: formatToList(newTestCase.actualResults),
+        notes: formatToList(newTestCase.notes),
+      };
+      await createTestCase({ sheetId, ...payload });
+      setNewTestCase(initialNewTestCaseState);
+      setIsAdding(false);
+    } catch (error) {
+      console.error("Failed to create test case:", error);
+      alert("Error: Could not save the new test case.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancelNew = () => {
+    setIsAdding(false);
+    setNewTestCase(initialNewTestCaseState);
+  };
+
+  const handleAddNew = () => {
+    setIsAdding(true);
+    setNewTestCase(initialNewTestCaseState);
+  };
+
+  // --- Resizing Handlers (Row & Column) ---
+  const handleRowMouseDown = useCallback((e: React.MouseEvent, testCaseId: string, currentHeight: number) => {
+    e.preventDefault(); setResizingRow(testCaseId); setRowStartY(e.clientY); setRowStartHeight(currentHeight);
+    document.body.style.cursor = "row-resize"; document.body.style.userSelect = "none";
+  }, []);
+
+  const handleRowMouseMove = useCallback((e: MouseEvent) => {
+    if (!resizingRow) return;
+    const deltaY = e.clientY - rowStartY;
+    const newHeight = Math.max(20, Math.min(500, rowStartHeight + deltaY));
+    const row = document.querySelector(`tr[data-testcase-id="${resizingRow}"]`) as HTMLElement;
+    if (row) row.style.height = `${newHeight}px`;
+  }, [resizingRow, rowStartY, rowStartHeight]);
+
+  const handleRowMouseUp = useCallback(() => {
+    if (!resizingRow) return;
+    const row = document.querySelector(`tr[data-testcase-id="${resizingRow}"]`) as HTMLElement;
+    const finalHeight = row ? parseInt(row.style.height, 10) : rowStartHeight;
+    updateRowHeight({ testCaseId: resizingRow, rowHeight: finalHeight });
+    setResizingRow(null); document.body.style.cursor = ""; document.body.style.userSelect = "";
+  }, [resizingRow, rowStartHeight, updateRowHeight]);
+
+  const handleColumnMouseDown = useCallback((e: React.MouseEvent, columnName: string, currentWidth: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setResizingColumn(columnName);
+    setColStartX(e.clientX);
+    setColStartWidth(currentWidth);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }, []);
+
+  const handleColumnMouseMove = useCallback((e: MouseEvent) => {
+    if (!resizingColumn) return;
+    const deltaX = e.clientX - colStartX;
+    const newWidth = Math.max(50, Math.min(1000, colStartWidth + deltaX));
+    const cells = document.querySelectorAll(`[data-column="${resizingColumn}"]`);
+    cells.forEach((cell) => {
+      (cell as HTMLElement).style.width = `${newWidth}px`;
+    });
+  }, [resizingColumn, colStartX, colStartWidth]);
+
+  const handleColumnMouseUp = useCallback(() => {
+    if (!resizingColumn) return;
+    const cell = document.querySelector(`[data-column="${resizingColumn}"]`) as HTMLElement;
+    const finalWidth = cell ? parseInt(cell.style.width) || colStartWidth : colStartWidth;
+    updateColumnWidth({
+      sheetId,
+      columnName: resizingColumn,
+      width: finalWidth,
+      testCaseType: "altTextAriaLabel"
+    }).catch((error) => {
+      console.error("Failed to update column width:", error);
+    });
+    setResizingColumn(null);
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+  }, [resizingColumn, colStartWidth, sheetId, updateColumnWidth]);
+
+  useEffect(() => {
+    if (resizingRow) {
+      document.addEventListener("mousemove", handleRowMouseMove);
+      document.addEventListener("mouseup", handleRowMouseUp);
+      return () => {
+        document.removeEventListener("mousemove", handleRowMouseMove);
+        document.removeEventListener("mouseup", handleRowMouseUp);
+      };
+    }
+  }, [resizingRow, handleRowMouseMove, handleRowMouseUp]);
+
+  useEffect(() => {
+    if (resizingColumn) {
+      document.addEventListener("mousemove", handleColumnMouseMove);
+      document.addEventListener("mouseup", handleColumnMouseUp);
+      return () => {
+        document.removeEventListener("mousemove", handleColumnMouseMove);
+        document.removeEventListener("mouseup", handleColumnMouseUp);
+      };
+    }
+  }, [resizingColumn, handleColumnMouseMove, handleColumnMouseUp]);
+
+  const columns = [
+    { key: "sequenceNumber", label: "TC ID", width: 80 },
+    { key: "persona", label: "Persona", width: 150 },
+    { key: "module", label: "Module", width: 150 },
+    { key: "subModule", label: "Sub Module", width: 150 },
+    { key: "pageSection", label: "Page Section", width: 150 },
+    { key: "wireframeLink", label: "Wireframe Link", width: 150 },
+    { key: "imagesIcons", label: "Images/Icons", width: 200 },
+    { key: "remarks", label: "Remarks", width: 250 },
+    { key: "altTextAriaLabel", label: "Alt Text/Aria Label", width: 300 },
+    { key: "seImplementation", label: "SE Implementation", width: 150 },
+    { key: "actualResults", label: "Actual Results", width: 250 },
+    { key: "testingStatus", label: "Testing Status", width: 120 },
+    { key: "notes", label: "Notes", width: 250 },
+    { key: "jiraUserStory", label: "Jira User Story", width: 150 },
+    { key: "createdByName", label: "Created By", width: 150 },
+  ];
+
+  return (
+    <div className="flex flex-col">
+      {/* Scrollable table container */}
+      <div className="overflow-x-auto overflow-y-visible" style={{ maxWidth: '100%' }}>
+        <table ref={tableRef} className="w-full border-collapse" style={{ minWidth: 'max-content' }}>
+          <thead>
+            <tr className="bg-gray-100">
+              {columns.map(({ key, label, width }) => (
+                <th
+                  key={key}
+                  data-column={key}
+                  style={{ width: `${getColumnWidth(key, width)}px`, position: "relative" }}
+                  className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700"
+                >
+                  {label}
+                  <div
+                    className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 opacity-0 hover:opacity-100 transition-opacity"
+                    onMouseDown={(e) => handleColumnMouseDown(e, key, getColumnWidth(key, width))}
+                    style={{
+                      background: resizingColumn === key ? "#3b82f6" : "transparent",
+                      opacity: resizingColumn === key ? 1 : undefined,
+                    }}
+                  />
+                </th>
+              ))}
             </tr>
-          ) : (
-            testCases.map((testCase) => (
-              <tr
-                key={testCase._id}
-                data-testcase-id={testCase._id}
-                className="hover:bg-gray-50 relative"
-                style={{ height: `${testCase.rowHeight || 20}px` }}
-              >
-                <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase._id}
+          </thead>
+          <tbody>
+            {testCases.length === 0 && !isAdding ? (
+              <tr>
+                <td colSpan={15} className="text-center py-8 text-gray-500">
+                  <div className="flex flex-col items-center gap-2">
+                    <p>No Alt Text / Aria Label test cases found.</p>
+                    <button
+                      onClick={handleAddNew}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                    >
+                      <Plus size={16} />
+                      Add First Test Case
+                    </button>
+                  </div>
                 </td>
-                <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase.persona}
-                </td>
-                <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase.module ?? "N/A"}
-                </td>
-                <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase.subModule ?? "N/A"}
-                </td>
-                <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase.pageSection ?? "N/A"}
-                </td>
-                <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase.imagesIcons ?? "N/A"}
-                </td>
-                <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase.remarks ?? "N/A"}
-                </td>
-                <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase.altTextAriaLabel ?? "N/A"}
-                </td>
-                <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase.seImplementation}
-                </td>
-                <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase.actualResults ?? "N/A"}
-                </td>
-                <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase.testingStatus}
-                </td>
-                <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                  {testCase.jiraUserStory ?? "N/A"}
-                </td>
-                {/* Row resize handle */}
-                <div
-                  className="absolute bottom-0 left-0 right-0 h-1 cursor-row-resize hover:bg-blue-400 opacity-0 hover:opacity-100 transition-opacity"
-                  onMouseDown={(e) =>
-                    handleMouseDown(e, testCase._id, testCase.rowHeight || 20)
-                  }
-                  style={{
-                    background:
-                      resizing === testCase._id ? "#3b82f6" : "transparent",
-                    opacity: resizing === testCase._id ? 1 : undefined,
-                  }}
-                />
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              <>
+                {testCases.map((testCase) => (
+                  <tr
+                    key={testCase._id}
+                    data-testcase-id={testCase._id}
+                    className="hover:bg-gray-50 relative"
+                    style={{ height: `${testCase.rowHeight || 20}px` }}
+                  >
+                    {columns.map(({ key, width }) => (
+                      <td
+                        key={key}
+                        data-column={key}
+                        style={{ width: `${getColumnWidth(key, width)}px` }}
+                        className="border border-gray-300 px-3 py-2 text-sm text-gray-900 align-top break-words whitespace-pre-wrap"
+                      >
+                        {testCase[key as keyof typeof testCase] ?? "N/A"}
+                      </td>
+                    ))}
+                    <div
+                      className="absolute bottom-0 left-0 right-0 h-1 cursor-row-resize hover:bg-blue-400 opacity-0 hover:opacity-100 transition-opacity"
+                      onMouseDown={(e) => handleRowMouseDown(e, testCase._id, testCase.rowHeight || 20)}
+                      style={{
+                        background: resizingRow === testCase._id ? "#3b82f6" : "transparent",
+                        opacity: resizingRow === testCase._id ? 1 : undefined,
+                      }}
+                    />
+                  </tr>
+                ))}
+
+                {/* New Row Input */}
+                {isAdding && (
+                  <tr className="bg-blue-50">
+                    <td
+                      data-column="sequenceNumber"
+                      style={{ width: `${getColumnWidth("sequenceNumber", 80)}px` }}
+                      className="border border-gray-300 px-3 py-2 text-sm text-gray-500"
+                    >
+                      TC_{String(testCases.length + 1).padStart(3, '0')}
+                    </td>
+                    <td
+                      data-column="persona"
+                      style={{ width: `${getColumnWidth("persona", 150)}px` }}
+                      className="border border-gray-300 px-3 py-2"
+                    >
+                      <select
+                        name="persona"
+                        value={newTestCase.persona}
+                        onChange={handleInputChange}
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="User">User</option>
+                        <option value="Admin">Admin</option>
+                        <option value="Super Admin">Super Admin</option>
+                        <option value="Employee">Employee</option>
+                        <option value="Reporting Manager">Reporting Manager</option>
+                        <option value="Manager">Manager</option>
+                      </select>
+                    </td>
+                    <td
+                      data-column="module"
+                      style={{ width: `${getColumnWidth("module", 150)}px` }}
+                      className="border border-gray-300 px-3 py-2"
+                    >
+                      <input
+                        name="module"
+                        value={newTestCase.module}
+                        onChange={handleInputChange}
+                        placeholder="Module *"
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td
+                      data-column="subModule"
+                      style={{ width: `${getColumnWidth("subModule", 150)}px` }}
+                      className="border border-gray-300 px-3 py-2"
+                    >
+                      <input
+                        name="subModule"
+                        value={newTestCase.subModule}
+                        onChange={handleInputChange}
+                        placeholder="Sub Module"
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td
+                      data-column="pageSection"
+                      style={{ width: `${getColumnWidth("pageSection", 150)}px` }}
+                      className="border border-gray-300 px-3 py-2"
+                    >
+                      <input
+                        name="pageSection"
+                        value={newTestCase.pageSection}
+                        onChange={handleInputChange}
+                        placeholder="Page Section"
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td
+                      data-column="wireframeLink"
+                      style={{ width: `${getColumnWidth("wireframeLink", 150)}px` }}
+                      className="border border-gray-300 px-3 py-2"
+                    >
+                      <input
+                        name="wireframeLink"
+                        value={newTestCase.wireframeLink}
+                        onChange={handleInputChange}
+                        placeholder="Wireframe Link"
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td
+                      data-column="imagesIcons"
+                      style={{ width: `${getColumnWidth("imagesIcons", 200)}px` }}
+                      className="border border-gray-300 px-3 py-2"
+                    >
+                      <NumberedTextarea
+                        value={newTestCase.imagesIcons}
+                        onChange={(v) => handleNumberedTextareaChange('imagesIcons', v)}
+                        placeholder="Images/Icons"
+                        rows={2}
+                        className="text-sm"
+                      />
+                    </td>
+                    <td
+                      data-column="remarks"
+                      style={{ width: `${getColumnWidth("remarks", 250)}px` }}
+                      className="border border-gray-300 px-3 py-2"
+                    >
+                      <NumberedTextarea
+                        value={newTestCase.remarks}
+                        onChange={(v) => handleNumberedTextareaChange('remarks', v)}
+                        placeholder="Remarks"
+                        rows={2}
+                        className="text-sm"
+                      />
+                    </td>
+                    <td
+                      data-column="altTextAriaLabel"
+                      style={{ width: `${getColumnWidth("altTextAriaLabel", 300)}px` }}
+                      className="border border-gray-300 px-3 py-2"
+                    >
+                      <NumberedTextarea
+                        value={newTestCase.altTextAriaLabel}
+                        onChange={(v) => handleNumberedTextareaChange('altTextAriaLabel', v)}
+                        placeholder="Alt Text/Aria Label *"
+                        rows={2}
+                        className="text-sm"
+                      />
+                    </td>
+                    <td
+                      data-column="seImplementation"
+                      style={{ width: `${getColumnWidth("seImplementation", 150)}px` }}
+                      className="border border-gray-300 px-3 py-2"
+                    >
+                      <select
+                        name="seImplementation"
+                        value={newTestCase.seImplementation}
+                        onChange={handleInputChange}
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="Not yet">Not yet</option>
+                        <option value="Ongoing">Ongoing</option>
+                        <option value="Done">Done</option>
+                        <option value="Has Concerns">Has Concerns</option>
+                        <option value="To Update">To Update</option>
+                        <option value="Outdated">Outdated</option>
+                        <option value="Not Available">Not Available</option>
+                      </select>
+                    </td>
+                    <td
+                      data-column="actualResults"
+                      style={{ width: `${getColumnWidth("actualResults", 250)}px` }}
+                      className="border border-gray-300 px-3 py-2"
+                    >
+                      <NumberedTextarea
+                        value={newTestCase.actualResults}
+                        onChange={(v) => handleNumberedTextareaChange('actualResults', v)}
+                        placeholder="Actual Results"
+                        rows={2}
+                        className="text-sm"
+                      />
+                    </td>
+                    <td
+                      data-column="testingStatus"
+                      style={{ width: `${getColumnWidth("testingStatus", 120)}px` }}
+                      className="border border-gray-300 px-3 py-2"
+                    >
+                      <select
+                        name="testingStatus"
+                        value={newTestCase.testingStatus}
+                        onChange={handleInputChange}
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="Not Run">Not Run</option>
+                        <option value="Passed">Passed</option>
+                        <option value="Failed">Failed</option>
+                        <option value="Blocked">Blocked</option>
+                        <option value="Not Available">Not Available</option>
+                      </select>
+                    </td>
+                    <td
+                      data-column="notes"
+                      style={{ width: `${getColumnWidth("notes", 250)}px` }}
+                      className="border border-gray-300 px-3 py-2"
+                    >
+                      <NumberedTextarea
+                        value={newTestCase.notes}
+                        onChange={(v) => handleNumberedTextareaChange('notes', v)}
+                        placeholder="Notes"
+                        rows={2}
+                        className="text-sm"
+                      />
+                    </td>
+                    <td
+                      data-column="jiraUserStory"
+                      style={{ width: `${getColumnWidth("jiraUserStory", 150)}px` }}
+                      className="border border-gray-300 px-3 py-2"
+                    >
+                      <input
+                        name="jiraUserStory"
+                        value={newTestCase.jiraUserStory}
+                        onChange={handleInputChange}
+                        placeholder="Jira User Story"
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td
+                      data-column="createdByName"
+                      style={{ width: `${getColumnWidth("createdByName", 150)}px` }}
+                      className="border border-gray-300 px-3 py-2 text-sm text-gray-500"
+                    >
+                      You
+                    </td>
+                  </tr>
+                )}
+              </>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Add New Row Button */}
+      {testCases.length > 0 && !isAdding && (
+        <div className="flex justify-center py-4">
+          <button
+            onClick={handleAddNew}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          >
+            <Plus size={16} />
+            Add New Test Case
+          </button>
+        </div>
+      )}
+
+      {/* Action Buttons for New Row */}
+      {isAdding && (
+        <div className="flex justify-center gap-2 py-4">
+          <button
+            onClick={handleSaveNew}
+            disabled={isSaving}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Check size={16} />
+            {isSaving ? "Saving..." : "Save"}
+          </button>
+          <button
+            onClick={handleCancelNew}
+            disabled={isSaving}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <X size={16} />
+            Cancel
+          </button>
+        </div>
+      )}
 
       {/* Visual feedback during resize */}
-      {resizing && (
-        <div className="fixed top-4 right-4 bg-black bg-opacity-75 text-white px-3 py-1 rounded text-sm">
+      {resizingRow && (
+        <div className="fixed top-4 right-4 bg-black bg-opacity-75 text-white px-3 py-1 rounded text-sm z-50">
           Resizing row...
+        </div>
+      )}
+      {resizingColumn && (
+        <div className="fixed top-4 right-4 bg-black bg-opacity-75 text-white px-3 py-1 rounded text-sm z-50">
+          Resizing column...
         </div>
       )}
     </div>

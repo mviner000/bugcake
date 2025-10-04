@@ -255,6 +255,7 @@ export default defineSchema({
     // References
     createdBy: v.id("users"),
     executedBy: v.optional(v.id("users")),
+    notes: v.optional(v.string()),
     jiraUserStory: v.optional(v.string()),
 
     // Timestamps

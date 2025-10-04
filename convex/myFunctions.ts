@@ -945,3 +945,70 @@ export const updateColumnWidth = mutation({
     return { success: true, newWidth: clampedWidth };
   },
 });
+
+// Create a new Alt Text / Aria Label test case
+export const createAltTextAriaLabelTestCase = mutation({
+  args: {
+    sheetId: v.string(),
+    persona: v.union(
+      v.literal("Super Admin"),
+      v.literal("Admin"),
+      v.literal("User"),
+      v.literal("Employee"),
+      v.literal("Reporting Manager"),
+      v.literal("Manager"),
+    ),
+    module: v.string(),
+    subModule: v.optional(v.string()),
+    pageSection: v.string(),
+    wireframeLink: v.optional(v.string()),
+    imagesIcons: v.optional(v.string()),
+    remarks: v.optional(v.string()),
+    altTextAriaLabel: v.string(),
+    seImplementation: v.union(
+      v.literal("Not yet"),
+      v.literal("Ongoing"),
+      v.literal("Done"),
+      v.literal("Has Concerns"),
+      v.literal("To Update"),
+      v.literal("Outdated"),
+      v.literal("Not Available"),
+    ),
+    actualResults: v.optional(v.string()),
+    testingStatus: v.union(
+      v.literal("Passed"),
+      v.literal("Failed"),
+      v.literal("Not Run"),
+      v.literal("Blocked"),
+      v.literal("Not Available"),
+    ),
+    notes: v.optional(v.string()),
+    jiraUserStory: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("User must be authenticated to create a test case");
+    }
+
+    const normalizedSheetId = ctx.db.normalizeId("sheets", args.sheetId);
+    if (!normalizedSheetId) {
+      throw new Error("Invalid sheet ID");
+    }
+
+    const { sheetId, ...restArgs } = args;
+    const now = Date.now();
+
+    const testCaseId = await ctx.db.insert("altTextAriaLabelTestCases", {
+      sheetId: normalizedSheetId,
+      createdBy: userId,
+      executedBy: userId,
+      rowHeight: 20,
+      createdAt: now,
+      updatedAt: now,
+      ...restArgs,
+    });
+
+    return testCaseId;
+  },
+});

@@ -49,7 +49,12 @@ export function DetailPage() {
       );
     } else if (testCaseType === "altTextAriaLabel") {
       const altTextTestCases = testCases.filter(isAltTextTestCase);
-      return <AltTextAriaLabelTable testCases={altTextTestCases} />;
+      return (
+        <AltTextAriaLabelTable
+            testCases={altTextTestCases}
+            sheetId={sheetId} // <-- ADD THIS LINE
+          />
+      );
     }
     return (
       <div className="p-4 text-center">
