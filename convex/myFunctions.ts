@@ -810,3 +810,58 @@ export const getUnseenMessageCountForUser = query({
     return unseenCount;
   },
 });
+
+export const createFunctionalityTestCase = mutation({
+  args: {
+    sheetId: v.string(),
+    title: v.string(),
+    level: v.union(v.literal("High"), v.literal("Low")),
+    scenario: v.union(v.literal("Happy Path"), v.literal("Unhappy Path")),
+    module: v.optional(v.string()),
+    subModule: v.optional(v.string()),
+    preConditions: v.optional(v.string()),
+    steps: v.string(),
+    expectedResults: v.string(),
+    status: v.union(
+      v.literal("Passed"),
+      v.literal("Failed"),
+      v.literal("Not Run"),
+      v.literal("Blocked"),
+      v.literal("Not Available"),
+    ),
+    jiraUserStory: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("User must be authenticated");
+    }
+
+    const normalizedSheetId = ctx.db.normalizeId("sheets", args.sheetId);
+    if (!normalizedSheetId) {
+      throw new Error("Invalid sheet ID");
+    }
+
+    const now = Date.now();
+
+    const testCaseId = await ctx.db.insert("functionalityTestCases", {
+      sheetId: normalizedSheetId,
+      title: args.title,
+      level: args.level,
+      scenario: args.scenario,
+      module: args.module,
+      subModule: args.subModule,
+      preConditions: args.preConditions,
+      steps: args.steps,
+      expectedResults: args.expectedResults,
+      status: args.status,
+      jiraUserStory: args.jiraUserStory,
+      createdBy: userId,
+      createdAt: now,
+      updatedAt: now,
+      rowHeight: 60,
+    });
+
+    return testCaseId;
+  },
+});

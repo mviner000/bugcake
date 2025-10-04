@@ -10,8 +10,6 @@ import { AltTextAriaLabelTable } from "./AltTextAriaLabelTable";
 import { FunctionalityTestCasesTable } from "./FunctionalityTestCasesTable";
 import { Header } from "./Header";
 
-// Utility imports
-
 export function DetailPage() {
   const navigate = useNavigate();
   const { sheetId } = useParams();
@@ -36,9 +34,19 @@ export function DetailPage() {
   const { sheet, testCaseType, testCases } = queryResult;
 
   const renderTable = () => {
+    // Add null check for sheetId
+    if (!sheetId) {
+      return <div className="p-4 text-center">Invalid sheet ID.</div>;
+    }
+
     if (testCaseType === "functionality") {
       const functionalityTestCases = testCases.filter(isFunctionalityTestCase);
-      return <FunctionalityTestCasesTable testCases={functionalityTestCases} />;
+      return (
+        <FunctionalityTestCasesTable 
+          testCases={functionalityTestCases}
+          sheetId={sheetId}  // Pass sheetId here
+        />
+      );
     } else if (testCaseType === "altTextAriaLabel") {
       const altTextTestCases = testCases.filter(isAltTextTestCase);
       return <AltTextAriaLabelTable testCases={altTextTestCases} />;
