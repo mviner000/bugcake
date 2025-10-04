@@ -1,3 +1,5 @@
+// src/components/sheet/FunctionalityTestCasesTable.tsx
+
 import { Doc } from "convex/_generated/dataModel";
 import { api } from "../../../convex/_generated/api";
 import { useMutation } from "convex/react";
@@ -137,6 +139,19 @@ export function FunctionalityTestCasesTable({
     });
   };
 
+  // Helper function to format text with numbering
+  const formatWithNumbering = (text: string): string => {
+    const lines = text
+      .split('\n')
+      .filter(line => line.trim() !== '') // Remove empty lines
+      .map(line => line.trim());
+    
+    // Add numbering to each line
+    return lines
+      .map((line, index) => `${index + 1}.) ${line}`)
+      .join('\n');
+  };
+
   const handleSaveNew = async () => {
     if (!newTestCase.title.trim() || !newTestCase.steps.trim() || !newTestCase.expectedResults.trim()) {
       alert("Title, Steps, and Expected Results are required fields.");
@@ -147,16 +162,16 @@ export function FunctionalityTestCasesTable({
     try {
       await createTestCase({
         sheetId,
-        title: newTestCase.title,
+        title: newTestCase.title.trim(),
         level: newTestCase.level,
         scenario: newTestCase.scenario,
-        module: newTestCase.module || undefined,
-        subModule: newTestCase.subModule || undefined,
-        preConditions: newTestCase.preConditions || undefined,
-        steps: newTestCase.steps,
-        expectedResults: newTestCase.expectedResults,
+        module: newTestCase.module ? newTestCase.module.trim() : undefined,
+        subModule: newTestCase.subModule ? newTestCase.subModule.trim() : undefined,
+        preConditions: newTestCase.preConditions ? formatWithNumbering(newTestCase.preConditions) : undefined,
+        steps: formatWithNumbering(newTestCase.steps),
+        expectedResults: formatWithNumbering(newTestCase.expectedResults),
         status: newTestCase.status,
-        jiraUserStory: newTestCase.jiraUserStory || undefined,
+        jiraUserStory: newTestCase.jiraUserStory ? newTestCase.jiraUserStory.trim() : undefined,
       });
       
       setIsAdding(false);
