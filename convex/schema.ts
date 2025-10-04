@@ -17,13 +17,20 @@ export default defineSchema({
       v.literal("approved"),
       v.literal("declined"),
     ),
+
+    // New fields for password reset
+    resetPasswordToken: v.optional(v.string()), // The unique token 
+    resetPasswordExpiry: v.optional(v.number()), // Unix timestamp (e.g., 1 hour expiry)
+
     // Add the new 'role' field here
     role: v.optional(
       v.union(v.literal("user"), v.literal("admin"), v.literal("super_admin")),
     ),
   })
     .index("email", ["email"])
-    .index("phone", ["phone"]),
+    .index("phone", ["phone"])
+    // Optional: Add an index on the token for quick lookup during the reset phase
+    .index("by_reset_token", ["resetPasswordToken"]), 
   /**
    * Sessions.
    * A single user can have multiple active sessions.

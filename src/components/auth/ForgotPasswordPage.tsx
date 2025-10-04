@@ -5,6 +5,8 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { Input } from "@/components/ui/input";
@@ -30,8 +32,10 @@ export function ForgotPasswordPage() {
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [emailSent, setEmailSent] = useState(false);
+    const [submittedEmail, setSubmittedEmail] = useState<string>("");
 
     const navigate = useNavigate();
+    const forgotPassword = useMutation(api.auth.forgotPassword);
 
     const form = useForm<ForgotPasswordFormData>({
         resolver: zodResolver(forgotPasswordSchema),
@@ -45,17 +49,40 @@ export function ForgotPasswordPage() {
 
         setError(null);
         setIsSubmitting(true);
-        console.log("Forgot password form submitted for:", data.email);
 
-        // Simulate API call for demonstration purposes
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+        try {
+            await forgotPassword({ email: data.email });
+            
+            // Store the email for display purposes
+            setSubmittedEmail(data.email);
+            setEmailSent(true);
+        } catch (err) {
+            console.error("Forgot password error:", err);
+            setError(
+                err instanceof Error 
+                    ? err.message 
+                    : "Failed to send reset email. Please try again."
+            );
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
-        // In a real application, you would handle the response here.
-        // For this static placeholder, we'll just stop the loading spinner.
-        console.log("Static placeholder: Email sent success state triggered.");
+    const handleResend = async () => {
+        if (!submittedEmail) return;
 
-        setEmailSent(true);
-        setIsSubmitting(false);
+        setError(null);
+        setIsSubmitting(true);
+
+        try {
+            await forgotPassword({ email: submittedEmail });
+            setError(null);
+        } catch (err) {
+            console.error("Resend error:", err);
+            setError("Failed to resend email. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     if (emailSent) {
@@ -72,31 +99,42 @@ export function ForgotPasswordPage() {
                         <p className="text-xl text-gray-600">
                             Please check your inbox for instructions to reset your password.
                         </p>
+                        {submittedEmail && (
+                            <p className="text-sm text-gray-500 mt-2">
+                                We sent an email to <span className="font-medium">{submittedEmail}</span>
+                            </p>
+                        )}
                     </div>
 
                     <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
                         <p className="text-sm text-gray-700">
-                            Didn't receive the email? Check your **spam folder**, or click the button below to resend.
+                            Didn't receive the email? Check your <strong>spam folder</strong>, or click the button below to resend.
                         </p>
                     </div>
 
-                    <Button
+                    <ErrorMessage
+                        error={error}
+                        onDismiss={() => setError(null)}
+                    />
+
+                    <LoadingButton
                         type="button"
-                        onClick={() => {
-                            setEmailSent(false);
-                            form.reset();
-                        }}
+                        onClick={handleResend}
+                        loading={isSubmitting}
+                        loadingText="Sending..."
+                        spinnerColor="white"
                         className="h-[64px] w-full bg-gray-900 hover:bg-gray-800 text-white py-3 rounded-full text-base font-medium"
                     >
                         Resend Email
-                    </Button>
+                    </LoadingButton>
 
                     <div className="text-center mt-4">
                         <Button
                             type="button"
                             variant="outline"
+                            disabled={isSubmitting}
                             onClick={() => navigate("/signin")}
-                            className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 py-3 rounded-full text-base font-medium bg-transparent"
+                            className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 py-3 rounded-full text-base font-medium bg-transparent disabled:opacity-50"
                         >
                             Back to sign in
                         </Button>
