@@ -303,5 +303,15 @@ export default defineSchema({
     // 2. Index to efficiently fetch all views for a message (e.g., to get a count)
     .index("byMessageId", ["messageId"]),
 
-    
+  columnWidths: defineTable({
+    sheetId: v.id("sheets"),
+    columnName: v.string(), // e.g., "title", "module", "steps"
+    width: v.number(), // width in pixels
+    testCaseType: v.union(
+      v.literal("functionality"),
+      v.literal("altTextAriaLabel"),
+    ),
+  })
+    .index("bySheetId", ["sheetId"])
+    .index("bySheetAndType", ["sheetId", "testCaseType"]),
 });

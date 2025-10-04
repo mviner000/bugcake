@@ -865,3 +865,83 @@ export const createFunctionalityTestCase = mutation({
     return testCaseId;
   },
 });
+
+// Get column widths for a sheet
+export const getColumnWidths = query({
+  args: {
+    sheetId: v.string(),
+    testCaseType: v.union(
+      v.literal("functionality"),
+      v.literal("altTextAriaLabel"),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const normalizedSheetId = ctx.db.normalizeId("sheets", args.sheetId);
+    if (!normalizedSheetId) {
+      return [];
+    }
+
+    return await ctx.db
+      .query("columnWidths")
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("sheetId"), normalizedSheetId),
+          q.eq(q.field("testCaseType"), args.testCaseType),
+        ),
+      )
+      .collect();
+  },
+});
+
+// Update column width
+export const updateColumnWidth = mutation({
+  args: {
+    sheetId: v.string(),
+    columnName: v.string(),
+    width: v.number(),
+    testCaseType: v.union(
+      v.literal("functionality"),
+      v.literal("altTextAriaLabel"),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("User must be authenticated");
+    }
+
+    const normalizedSheetId = ctx.db.normalizeId("sheets", args.sheetId);
+    if (!normalizedSheetId) {
+      throw new Error("Invalid sheet ID");
+    }
+
+    // Check if column width entry exists
+    const existing = await ctx.db
+      .query("columnWidths")
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("sheetId"), normalizedSheetId),
+          q.eq(q.field("columnName"), args.columnName),
+          q.eq(q.field("testCaseType"), args.testCaseType),
+        ),
+      )
+      .first();
+
+    const clampedWidth = Math.max(50, Math.min(1000, args.width));
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        width: clampedWidth,
+      });
+    } else {
+      await ctx.db.insert("columnWidths", {
+        sheetId: normalizedSheetId,
+        columnName: args.columnName,
+        width: clampedWidth,
+        testCaseType: args.testCaseType,
+      });
+    }
+
+    return { success: true, newWidth: clampedWidth };
+  },
+});
