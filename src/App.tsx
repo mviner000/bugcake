@@ -2,7 +2,7 @@
 
 import { Authenticated, Unauthenticated, useQuery } from "convex/react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { useAuthActions } from "@convex-dev/auth/react"; // Import useAuthActions
+import { useAuthActions } from "@convex-dev/auth/react";
 
 import { api } from "../convex/_generated/api";
 
@@ -11,7 +11,9 @@ import { DetailPage } from "./components/sheet/detail-page";
 import { Header } from "./components/navbar/Header";
 import { Dashboard } from "./components/dashboard";
 import { ProfilePage } from "./components/profile/ProfilePage";
-import { SignInForm } from "./components/auth/SignInForm";
+import { SignInPage } from "./components/auth/SignInPage";
+import { SignUpPage } from "./components/auth/SignUpPage";
+import { ForgotPasswordPage } from "./components/auth/ForgotPasswordPage";
 import { NotFound } from "./components/NotFound";
 import { RBACPage } from "./components/rbac/rbac-page";
 import { VerificationStatusPage } from "./components/auth/VerificationStatusPage";
@@ -25,9 +27,9 @@ function UnauthenticatedRoutes() {
 
   return (
     <Routes>
-      <Route path="/signin" element={<SignInForm />} />
-      <Route path="/signup" element={<SignInForm />} />
-      <Route path="/forgot-password" element={<SignInForm />} />
+      <Route path="/signin" element={<SignInPage />} />
+      <Route path="/signup" element={<SignUpPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="*" element={<Navigate to="/signin" state={state} replace />} />
     </Routes>
   );
@@ -40,7 +42,7 @@ function UnauthenticatedRoutes() {
 function AuthenticatedApp() {
   const user = useQuery(api.myFunctions.getMyProfile);
   const status = user?.verificationStatus;
-  const { signOut } = useAuthActions(); // Get the signOut function
+  const { signOut } = useAuthActions();
 
   // Show a loading state while fetching the user's profile
   if (status === undefined) {
@@ -78,7 +80,7 @@ function AuthenticatedApp() {
           <VerificationStatusPage
             status={user?.verificationStatus}
             userEmail={user?.email}
-            onSignOut={signOut} // Pass signOut as a prop
+            onSignOut={signOut}
           />
         }
       />
