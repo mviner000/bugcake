@@ -15,6 +15,7 @@ import { EmptyTableState } from "./common/EmptyTableState";
 import { ResizeFeedback } from "./common/ResizeFeedback";
 import { ActivityHistorySheet } from "./ActivityHistorySheet";
 import { formatWithNumbering } from "../../utils/formatUtils";
+import { TestingStatusBadge } from "./common/statusBadgeHelper";
 
 interface FunctionalityTestCasesTableProps {
   testCases: (Doc<"functionalityTestCases"> & {
@@ -39,8 +40,6 @@ interface NewTestCase {
   status: "Passed" | "Failed" | "Not Run" | "Blocked" | "Not Available";
   jiraUserStory: string;
 }
-
-// REMOVED: Static activity data (hasActivity and activityData)
 
 export function FunctionalityTestCasesTable({
   testCases,
@@ -187,7 +186,6 @@ export function FunctionalityTestCasesTable({
     <div className="flex flex-col">
       {/* Top Bar with Activity Button */}
       <div className="flex justify-end mb-4 px-4">
-        {/* FIX: Only pass the required sheetId prop */}
         <ActivityHistorySheet sheetId={sheetId as any} /> 
       </div>
 
@@ -307,7 +305,7 @@ export function FunctionalityTestCasesTable({
                         style={{ width: `${getColumnWidth("status", 120)}px` }}
                         className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
                       >
-                        {testCase.status}
+                        <TestingStatusBadge status={testCase.status} />
                       </td>
                       {/* Executed By */}
                       <td
