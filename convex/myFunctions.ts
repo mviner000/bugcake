@@ -832,19 +832,27 @@ export const createFunctionalityTestCase = mutation({
     jiraUserStory: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // 1. Authentication and User Details Fetch
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error("User must be authenticated");
+      throw new Error("User must be authenticated to create a test case.");
     }
-
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new Error("Authenticated user record not found.");
+    }
+    
+    // Normalize sheetId for insertion
     const normalizedSheetId = ctx.db.normalizeId("sheets", args.sheetId);
     if (!normalizedSheetId) {
-      throw new Error("Invalid sheet ID");
+        throw new Error("Invalid Sheet ID provided.");
     }
 
     const now = Date.now();
+    const defaultRowHeight = 20; // Assuming a default row height
 
-    const testCaseId = await ctx.db.insert("functionalityTestCases", {
+    // 2. Insert the new functionalityTestCases document
+    const newTestCaseId = await ctx.db.insert("functionalityTestCases", {
       sheetId: normalizedSheetId,
       title: args.title,
       level: args.level,
@@ -856,13 +864,27 @@ export const createFunctionalityTestCase = mutation({
       expectedResults: args.expectedResults,
       status: args.status,
       jiraUserStory: args.jiraUserStory,
-      createdBy: userId,
+      createdBy: userId, // Set the creator
       createdAt: now,
       updatedAt: now,
-      rowHeight: 60,
+      rowHeight: defaultRowHeight,
+      // executedBy and executedAt remain optional/undefined
     });
 
-    return testCaseId;
+    // 3. Log the activity to the 'activityLogs' database
+    await ctx.db.insert("activityLogs", {
+      testCaseId: newTestCaseId.toString(), // Store the ID as a string for logging
+      testCaseType: "functionality",
+      action: "Created",
+      userId: userId,
+      username: user.name ?? user.email?.split('@')[0] ?? "Anonymous",
+      userEmail: user.email ?? "N/A",
+      sheetId: normalizedSheetId,
+      timestamp: now,
+      details: `New test case "${args.title}" created.`,
+    });
+
+    return newTestCaseId;
   },
 });
 
@@ -986,9 +1008,14 @@ export const createAltTextAriaLabelTestCase = mutation({
     jiraUserStory: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // 1. Authentication and User Details Fetch
     const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error("User must be authenticated to create a test case");
+    }
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new Error("Authenticated user record not found.");
     }
 
     const normalizedSheetId = ctx.db.normalizeId("sheets", args.sheetId);
@@ -998,17 +1025,61 @@ export const createAltTextAriaLabelTestCase = mutation({
 
     const { sheetId, ...restArgs } = args;
     const now = Date.now();
+    const defaultRowHeight = 20;
 
-    const testCaseId = await ctx.db.insert("altTextAriaLabelTestCases", {
+    // 2. Insert the new test case document
+    const newTestCaseId = await ctx.db.insert("altTextAriaLabelTestCases", {
       sheetId: normalizedSheetId,
-      createdBy: userId,
-      executedBy: userId,
-      rowHeight: 20,
+      createdBy: userId, // Set the creator
+      executedBy: userId, // Assuming creator is the initial executor, adjust if needed
+      rowHeight: defaultRowHeight,
       createdAt: now,
       updatedAt: now,
       ...restArgs,
     });
 
-    return testCaseId;
+    // 3. ⭐️ Log the activity to the 'activityLogs' database ⭐️
+    await ctx.db.insert("activityLogs", {
+      testCaseId: newTestCaseId.toString(),
+      testCaseType: "altTextAriaLabel",
+      action: "Created",
+
+      // User Identity from fetched user object
+      userId: userId,
+      username: user.name ?? user.email?.split('@')[0] ?? "Anonymous", // Logic from your functionality mutation [cite: 251]
+      userEmail: user.email ?? "N/A",
+
+      sheetId: normalizedSheetId,
+      timestamp: now,
+      details: `New test case for page section "${args.pageSection}" created.`,
+    });
+
+    return newTestCaseId;
+  },
+});
+
+// This query fetches activity logs for a specific sheet, filtered and sorted by timestamp descending.
+export const getActivityLogsForSheet = query({
+  args: {
+    sheetId: v.id("sheets"),
+    filter: v.union(v.literal("all"), v.literal("updates"), v.literal("creates")),
+  },
+  handler: async (ctx, args) => {
+    // 1. Build the base query, using the indexed fields and ordering by timestamp descending
+    let logsQuery = ctx.db
+      .query("activityLogs")
+      .withIndex("by_sheetId_timestamp", (q) => q.eq("sheetId", args.sheetId))
+      .order("desc");
+
+    // 2. Apply filtering based on the 'filter' argument
+    if (args.filter === "updates") {
+      // Assuming 'updates' means any action that is not 'Created'
+      logsQuery = logsQuery.filter((q) => q.neq("action", "Created"));
+    } else if (args.filter === "creates") {
+      logsQuery = logsQuery.filter((q) => q.eq("action", "Created"));
+    }
+
+    // 3. Execute the query
+    return logsQuery.collect();
   },
 });

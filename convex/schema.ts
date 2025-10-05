@@ -315,4 +315,32 @@ export default defineSchema({
   })
     .index("bySheetId", ["sheetId"])
     .index("bySheetAndType", ["sheetId", "testCaseType"]),
+
+  activityLogs: defineTable({
+    // Link to the specific item being acted upon
+    testCaseId: v.string(),
+    testCaseType: v.union(v.literal("functionality"), v.literal("altTextAriaLabel")),
+    // Data for the 'created by: email | username on datecreated' requirement
+    action: v.union(v.literal("Created"), v.literal("Updated"), v.literal("Deleted"), v.literal("Status Change")),
+    
+    // User Identity (assuming you have a 'users' table)
+    userId: v.id("users"),
+    username: v.string(),
+    userEmail: v.string(), // To fulfill the 'email | username' requirement
+    
+    sheetId: v.id("sheets"), // Add this field for efficient querying
+
+    // Timestamp (fulfills the 'on datecreated' part)
+    timestamp: v.number(), // Use the built-in system field _creationTime
+
+    // Optional: Context/detail about the change (useful for "Updated")
+    details: v.optional(v.string()), // e.g., "Updated Title and Status from Passed to Failed"
+  })
+    // Efficiently query all logs for a specific test case (for the Activity History Sheet)
+    .index("by_testCase", ["testCaseId", "testCaseType"])
+    // Efficiently query by user (e.g., to see all of a user's activity)
+    .index("by_user", ["userId"])
+    .index("by_sheet", ["sheetId"])
+    .index("by_sheetId_timestamp", ["sheetId", "timestamp"]),
 });
+

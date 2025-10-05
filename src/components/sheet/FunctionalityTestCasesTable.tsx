@@ -13,7 +13,7 @@ import { ResizeHandle } from "./common/ResizeHandle";
 import { TableActionButtons } from "./common/TableActionButtons";
 import { EmptyTableState } from "./common/EmptyTableState";
 import { ResizeFeedback } from "./common/ResizeFeedback";
-import { ActivityHistorySheet } from "./common/ActivityHistorySheet";
+import { ActivityHistorySheet } from "./ActivityHistorySheet";
 import { formatWithNumbering } from "../../utils/formatUtils";
 
 interface FunctionalityTestCasesTableProps {
@@ -40,29 +40,7 @@ interface NewTestCase {
   jiraUserStory: string;
 }
 
-// Static activity data - replace with backend data later
-const hasActivity = true;
-const activityData = [
-  {
-    month: 'April',
-    entries: [
-      {
-        id: '1',
-        timestamp: 'April 22, 2:23 PM',
-        isCurrent: true,
-        userName: 'Oscar Nogoy Jr',
-        action: 'Updated test case TC_001'
-      },
-      {
-        id: '2',
-        timestamp: 'April 22, 2:22 PM',
-        isCurrent: false,
-        userName: 'Oscar Nogoy Jr',
-        action: 'Created test case TC_001'
-      }
-    ]
-  }
-];
+// REMOVED: Static activity data (hasActivity and activityData)
 
 export function FunctionalityTestCasesTable({
   testCases,
@@ -209,7 +187,8 @@ export function FunctionalityTestCasesTable({
     <div className="flex flex-col">
       {/* Top Bar with Activity Button */}
       <div className="flex justify-end mb-4 px-4">
-        <ActivityHistorySheet hasActivity={hasActivity} activityData={activityData} />
+        {/* FIX: Only pass the required sheetId prop */}
+        <ActivityHistorySheet sheetId={sheetId as any} /> 
       </div>
 
       {/* Scrollable table container */}
