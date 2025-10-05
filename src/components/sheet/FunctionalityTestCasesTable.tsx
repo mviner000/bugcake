@@ -13,9 +13,9 @@ import { ResizeHandle } from "./common/ResizeHandle";
 import { TableActionButtons } from "./common/TableActionButtons";
 import { EmptyTableState } from "./common/EmptyTableState";
 import { ResizeFeedback } from "./common/ResizeFeedback";
-import { ActivityHistorySheet } from "./ActivityHistorySheet";
 import { formatWithNumbering } from "../../utils/formatUtils";
-import { TestingStatusBadge } from "./common/statusBadgeHelper";
+import { TestingStatusBadge } from "./common/StatusBadgeHelper";
+import ActivityApprovalsSheet from "./ActivityApprovalsSheet";
 
 interface FunctionalityTestCasesTableProps {
   testCases: (Doc<"functionalityTestCases"> & {
@@ -186,7 +186,8 @@ export function FunctionalityTestCasesTable({
     <div className="flex flex-col">
       {/* Top Bar with Activity Button */}
       <div className="flex justify-end mb-4 px-4">
-        <ActivityHistorySheet sheetId={sheetId as any} /> 
+        {/* <ActivityApprovalsSheet sheetId={sheetId as any} />  */}
+        <ActivityApprovalsSheet /> 
       </div>
 
       {/* Scrollable table container */}

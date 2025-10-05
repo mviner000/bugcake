@@ -14,7 +14,7 @@ import { EmptyTableState } from "./common/EmptyTableState";
 import { ResizeFeedback } from "./common/ResizeFeedback";
 import { ActivityHistorySheet } from "./ActivityHistorySheet";
 import { formatToList } from "../../utils/formatUtils";
-import { SEImplementationBadge, TestingStatusBadge } from "./common/statusBadgeHelper";
+import { SEImplementationBadge, TestingStatusBadge } from "./common/StatusBadgeHelper";
 
 
 // --- NumberedTextarea Component Definition ---
