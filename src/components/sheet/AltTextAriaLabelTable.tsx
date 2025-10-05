@@ -1,4 +1,4 @@
-// src/sheet/AltTextAriaLabelTable.tsx
+// src/components/sheet/AltTextAriaLabelTable.tsx
 
 import { Doc } from "convex/_generated/dataModel";
 import { api } from "../../../convex/_generated/api";
@@ -7,11 +7,12 @@ import React, { useState, useRef } from "react";
 import { useColumnResize } from "../../hooks/useColumnResize";
 import { useRowResize } from "../../hooks/useRowResize";
 import { useColumnWidths } from "../../hooks/useColumnWidths";
-import { TableHeaderCell } from "../common/TableHeaderCell";
-import { ResizeHandle } from "../common/ResizeHandle";
-import { TableActionButtons } from "../common/TableActionButtons";
-import { EmptyTableState } from "../common/EmptyTableState";
-import { ResizeFeedback } from "../common/ResizeFeedback";
+import { TableHeaderCell } from "./common/TableHeaderCell";
+import { ResizeHandle } from "./common/ResizeHandle";
+import { TableActionButtons } from "./common/TableActionButtons";
+import { EmptyTableState } from "./common/EmptyTableState";
+import { ResizeFeedback } from "./common/ResizeFeedback";
+import { ActivityHistorySheet } from "./common/ActivityHistorySheet";
 import { formatToList } from "../../utils/formatUtils";
 
 // --- NumberedTextarea Component Definition ---
@@ -95,6 +96,30 @@ const initialNewTestCaseState: NewTestCase = {
   imagesIcons: "", remarks: "", altTextAriaLabel: "", seImplementation: "Not yet",
   actualResults: "", testingStatus: "Not Run", notes: "", jiraUserStory: "",
 };
+
+// Static activity data for AltTextAriaLabelTable
+const hasActivity = true;
+const activityData = [
+  {
+    month: 'April',
+    entries: [
+      {
+        id: '1',
+        timestamp: 'April 22, 2:23 PM',
+        isCurrent: true,
+        userName: 'Oscar Nogoy Jr',
+        action: 'Updated test case TC_001'
+      },
+      {
+        id: '2',
+        timestamp: 'April 22, 2:22 PM',
+        isCurrent: false,
+        userName: 'Oscar Nogoy Jr',
+        action: 'Created test case TC_001'
+      }
+    ]
+  }
+];
 
 export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTableProps) {
   // Mutations
@@ -201,6 +226,11 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
 
   return (
     <div className="flex flex-col">
+      {/* Top Bar with Activity Button */}
+      <div className="flex justify-end mb-4 px-4">
+        <ActivityHistorySheet hasActivity={hasActivity} activityData={activityData} />
+      </div>
+
       {/* Scrollable table container */}
       <div className="overflow-x-auto overflow-y-visible" style={{ maxWidth: '100%' }}>
         <table ref={tableRef} className="w-full border-collapse" style={{ minWidth: 'max-content' }}>

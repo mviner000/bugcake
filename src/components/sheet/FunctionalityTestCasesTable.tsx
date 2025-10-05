@@ -8,11 +8,12 @@ import { NumberedTextarea } from "./NumberedTextarea";
 import { useColumnResize } from "../../hooks/useColumnResize";
 import { useRowResize } from "../../hooks/useRowResize";
 import { useColumnWidths } from "../../hooks/useColumnWidths";
-import { TableHeaderCell } from "../common/TableHeaderCell";
-import { ResizeHandle } from "../common/ResizeHandle";
-import { TableActionButtons } from "../common/TableActionButtons";
-import { EmptyTableState } from "../common/EmptyTableState";
-import { ResizeFeedback } from "../common/ResizeFeedback";
+import { TableHeaderCell } from "./common/TableHeaderCell";
+import { ResizeHandle } from "./common/ResizeHandle";
+import { TableActionButtons } from "./common/TableActionButtons";
+import { EmptyTableState } from "./common/EmptyTableState";
+import { ResizeFeedback } from "./common/ResizeFeedback";
+import { ActivityHistorySheet } from "./common/ActivityHistorySheet";
 import { formatWithNumbering } from "../../utils/formatUtils";
 
 interface FunctionalityTestCasesTableProps {
@@ -20,6 +21,8 @@ interface FunctionalityTestCasesTableProps {
     createdByName: string;
     executedByName: string;
     sequenceNumber: number;
+    rowHeight?: number;
+    createdAt: number;
   })[];
   sheetId: string;
 }
@@ -37,6 +40,30 @@ interface NewTestCase {
   jiraUserStory: string;
 }
 
+// Static activity data - replace with backend data later
+const hasActivity = true;
+const activityData = [
+  {
+    month: 'April',
+    entries: [
+      {
+        id: '1',
+        timestamp: 'April 22, 2:23 PM',
+        isCurrent: true,
+        userName: 'Oscar Nogoy Jr',
+        action: 'Updated test case TC_001'
+      },
+      {
+        id: '2',
+        timestamp: 'April 22, 2:22 PM',
+        isCurrent: false,
+        userName: 'Oscar Nogoy Jr',
+        action: 'Created test case TC_001'
+      }
+    ]
+  }
+];
+
 export function FunctionalityTestCasesTable({
   testCases,
   sheetId,
@@ -52,16 +79,14 @@ export function FunctionalityTestCasesTable({
     testCaseType: "functionality",
   });
   const updateColumnWidth = useMutation(api.myFunctions.updateColumnWidth);
-  
+
   // Custom Hooks
   const { getColumnWidth } = useColumnWidths(fetchedColumnWidths);
-  
   const { resizingRow, handleRowMouseDown } = useRowResize({
     onResizeComplete: async (testCaseId, rowHeight) => {
       await updateRowHeight({ testCaseId, rowHeight });
     }
   });
-
   const { resizingColumn, handleColumnMouseDown } = useColumnResize({
     onResizeComplete: async (columnName, width) => {
       await updateColumnWidth({
@@ -87,7 +112,6 @@ export function FunctionalityTestCasesTable({
     status: "Not Run",
     jiraUserStory: "",
   });
-  
   const tableRef = useRef<HTMLTableElement>(null);
 
   const handleAddNew = () => {
@@ -127,7 +151,6 @@ export function FunctionalityTestCasesTable({
         status: newTestCase.status,
         jiraUserStory: newTestCase.jiraUserStory ? newTestCase.jiraUserStory.trim() : undefined,
       });
-      
       setIsAdding(false);
       setNewTestCase({
         title: "",
@@ -184,6 +207,11 @@ export function FunctionalityTestCasesTable({
 
   return (
     <div className="flex flex-col">
+      {/* Top Bar with Activity Button */}
+      <div className="flex justify-end mb-4 px-4">
+        <ActivityHistorySheet hasActivity={hasActivity} activityData={activityData} />
+      </div>
+
       {/* Scrollable table container */}
       <div className="overflow-x-auto overflow-y-visible" style={{ maxWidth: '100%' }}>
         <table ref={tableRef} className="w-full border-collapse" style={{ minWidth: 'max-content' }}>
@@ -202,303 +230,338 @@ export function FunctionalityTestCasesTable({
             </tr>
           </thead>
           <tbody>
-            {testCases.length === 0 && !isAdding ? (
-              <EmptyTableState
-                message="No functionality test cases found."
-                onAdd={handleAddNew}
-                buttonText="Add First Test Case"
-                colSpan={14}
-              />
-            ) : (
-              <>
-                {testCases.map((testCase) => (
-                  <tr
-                    key={testCase._id}
-                    data-testcase-id={testCase._id}
-                    className="hover:bg-gray-50 relative"
-                    style={{ height: `${testCase.rowHeight || 20}px` }}
-                  >
-                    <td
-                      data-column="tcId"
-                      style={{ width: `${getColumnWidth("tcId", 80)}px` }}
-                      className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+            {testCases.length === 0 && !isAdding ?
+              (
+                <EmptyTableState
+                  message="No functionality test cases found."
+                  onAdd={handleAddNew}
+                  buttonText="Add First Test Case"
+                  colSpan={14}
+                />
+              ) : (
+                <>
+                  {testCases.map((testCase) => (
+                    <tr
+                      key={testCase._id}
+                      data-testcase-id={testCase._id}
+                      className="hover:bg-gray-50 relative"
+                      style={{ height: `${testCase.rowHeight || 20}px` }}
                     >
-                      TC_{String(testCase.sequenceNumber).padStart(3, '0')}
-                    </td>
-                    <td
-                      data-column="level"
-                      style={{ width: `${getColumnWidth("level", 100)}px` }}
-                      className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
-                    >
-                      {testCase.level}
-                    </td>
-                    <td
-                      data-column="scenario"
-                      style={{ width: `${getColumnWidth("scenario", 120)}px` }}
-                      className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
-                    >
-                      {testCase.scenario}
-                    </td>
-                    <td
-                      data-column="module"
-                      style={{ width: `${getColumnWidth("module", 150)}px` }}
-                      className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
-                    >
-                      {testCase.module ?? "N/A"}
-                    </td>
-                    <td
-                      data-column="subModule"
-                      style={{ width: `${getColumnWidth("subModule", 150)}px` }}
-                      className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
-                    >
-                      {testCase.subModule ?? "N/A"}
-                    </td>
-                    <td
-                      data-column="title"
-                      style={{ width: `${getColumnWidth("title", 200)}px` }}
-                      className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
-                    >
-                      {testCase.title}
-                    </td>
-                    <td
-                      data-column="preConditions"
-                      style={{ width: `${getColumnWidth("preConditions", 180)}px` }}
-                      className="border border-gray-300 px-3 py-2 text-sm text-gray-900 whitespace-pre-wrap"
-                    >
-                      {testCase.preConditions ?? "N/A"}
-                    </td>
-                    <td
-                      data-column="steps"
-                      style={{ width: `${getColumnWidth("steps", 250)}px` }}
-                      className="border border-gray-300 px-3 py-2 text-sm text-gray-900 whitespace-pre-wrap"
-                    >
-                      {testCase.steps}
-                    </td>
-                    <td
-                      data-column="expectedResults"
-                      style={{ width: `${getColumnWidth("expectedResults", 250)}px` }}
-                      className="border border-gray-300 px-3 py-2 text-sm text-gray-900 whitespace-pre-wrap"
-                    >
-                      {testCase.expectedResults}
-                    </td>
-                    <td
-                      data-column="status"
-                      style={{ width: `${getColumnWidth("status", 120)}px` }}
-                      className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
-                    >
-                      {testCase.status}
-                    </td>
-                    <td
-                      data-column="executedBy"
-                      style={{ width: `${getColumnWidth("executedBy", 150)}px` }}
-                      className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
-                    >
-                      {testCase.executedByName}
-                    </td>
-                    <td
-                      data-column="jiraUserStory"
-                      style={{ width: `${getColumnWidth("jiraUserStory", 180)}px` }}
-                      className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
-                    >
-                      {testCase.jiraUserStory}
-                    </td>
-                    <td
-                      data-column="createdBy"
-                      style={{ width: `${getColumnWidth("createdBy", 150)}px` }}
-                      className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
-                    >
-                      {testCase.createdByName}
-                    </td>
-                    <td
-                      data-column="createdAt"
-                      style={{ width: `${getColumnWidth("createdAt", 130)}px` }}
-                      className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
-                    >
-                      {new Date(testCase.createdAt).toLocaleDateString('en-US', {
-                        month: '2-digit',
-                        day: '2-digit',
-                        year: '2-digit'
-                      })}
-                    </td>
-                    <ResizeHandle
-                      direction="row"
-                      isResizing={resizingRow === testCase._id}
-                      onMouseDown={(e) => handleRowMouseDown(e, testCase._id, testCase.rowHeight || 20)}
-                    />
-                  </tr>
-                ))}
-                
-                {/* New Row Input */}
-                {isAdding && (
-                  <tr className="bg-blue-50">
-                    <td
-                      data-column="tcId"
-                      style={{ width: `${getColumnWidth("tcId", 80)}px` }}
-                      className="border border-gray-300 px-3 py-2 text-sm text-gray-500"
-                    >
-                      TC_{String(testCases.length + 1).padStart(3, '0')}
-                    </td>
-                    <td
-                      data-column="level"
-                      style={{ width: `${getColumnWidth("level", 100)}px` }}
-                      className="border border-gray-300 px-3 py-2"
-                    >
-                      <select
-                        value={newTestCase.level}
-                        onChange={(e) => setNewTestCase({...newTestCase, level: e.target.value as "High" | "Low"})}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      {/* TC ID */}
+                      <td
+                        data-column="tcId"
+                        style={{ width: `${getColumnWidth("tcId", 80)}px` }}
+                        className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
                       >
-                        <option value="High">High</option>
-                        <option value="Low">Low</option>
-                      </select>
-                    </td>
-                    <td
-                      data-column="scenario"
-                      style={{ width: `${getColumnWidth("scenario", 120)}px` }}
-                      className="border border-gray-300 px-3 py-2"
-                    >
-                      <select
-                        value={newTestCase.scenario}
-                        onChange={(e) => setNewTestCase({...newTestCase, scenario: e.target.value as "Happy Path" | "Unhappy Path"})}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        TC_{String(testCase.sequenceNumber).padStart(3, '0')}
+                      </td>
+                      {/* TC Level */}
+                      <td
+                        data-column="level"
+                        style={{ width: `${getColumnWidth("level", 100)}px` }}
+                        className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
                       >
-                        <option value="Happy Path">Happy Path</option>
-                        <option value="Unhappy Path">Unhappy Path</option>
-                      </select>
-                    </td>
-                    <td
-                      data-column="module"
-                      style={{ width: `${getColumnWidth("module", 150)}px` }} className="border border-gray-300 px-3 py-2"
-                    >
-                      <input
-                        type="text"
-                        value={newTestCase.module}
-                        onChange={(e) => setNewTestCase({...newTestCase, module: e.target.value})}
-                        placeholder="Module"
-                        maxLength={50}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </td>
-                    <td
-                      data-column="subModule"
-                      style={{ width: `${getColumnWidth("subModule", 150)}px` }}
-                      className="border border-gray-300 px-3 py-2"
-                    >
-                      <input
-                        type="text"
-                        value={newTestCase.subModule}
-                        onChange={(e) => setNewTestCase({...newTestCase, subModule: e.target.value})}
-                        placeholder="Sub Module"
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </td>
-                    <td
-                      data-column="title"
-                      style={{ width: `${getColumnWidth("title", 200)}px` }}
-                      className="border border-gray-300 px-3 py-2"
-                    >
-                      <input
-                        type="text"
-                        value={newTestCase.title}
-                        onChange={(e) => setNewTestCase({...newTestCase, title: e.target.value})}
-                        placeholder="Title *"
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </td>
-                    <td
-                      data-column="preConditions"
-                      style={{ width: `${getColumnWidth("preConditions", 180)}px` }}
-                      className="border border-gray-300 px-3 py-2"
-                    >
-                      <NumberedTextarea
-                        value={newTestCase.preConditions}
-                        onChange={(value) => setNewTestCase({...newTestCase, preConditions: value})}
-                        placeholder="Pre Conditions"
-                        rows={3}
-                        className="text-sm"
-                      />
-                    </td>
-                    <td
-                      data-column="steps"
-                      style={{ width: `${getColumnWidth("steps", 250)}px` }}
-                      className="border border-gray-300 px-3 py-2"
-                    >
-                      <NumberedTextarea
-                        value={newTestCase.steps}
-                        onChange={(value) => setNewTestCase({...newTestCase, steps: value})}
-                        placeholder="Test Steps *"
-                        rows={3}
-                        className="text-sm"
-                      />
-                    </td>
-                    <td
-                      data-column="expectedResults"
-                      style={{ width: `${getColumnWidth("expectedResults", 250)}px` }}
-                      className="border border-gray-300 px-3 py-2"
-                    >
-                      <NumberedTextarea
-                        value={newTestCase.expectedResults}
-                        onChange={(value) => setNewTestCase({...newTestCase, expectedResults: value})}
-                        placeholder="Expected Results *"
-                        rows={3}
-                        className="text-sm"
-                      />
-                    </td>
-                    <td
-                      data-column="status"
-                      style={{ width: `${getColumnWidth("status", 120)}px` }}
-                      className="border border-gray-300 px-3 py-2"
-                    >
-                      <select
-                        value={newTestCase.status}
-                        onChange={(e) => setNewTestCase({...newTestCase, status: e.target.value as NewTestCase['status']})}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        {testCase.level}
+                      </td>
+                      {/* Scenario */}
+                      <td
+                        data-column="scenario"
+                        style={{ width: `${getColumnWidth("scenario", 120)}px` }}
+                        className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
                       >
-                        <option value="Not Run">Not Run</option>
-                        <option value="Passed">Passed</option>
-                        <option value="Failed">Failed</option>
-                        <option value="Blocked">Blocked</option>
-                        <option value="Not Available">Not Available</option>
-                      </select>
-                    </td>
-                    <td
-                      data-column="executedBy"
-                      style={{ width: `${getColumnWidth("executedBy", 150)}px` }}
-                      className="border border-gray-300 px-3 py-2 text-sm text-gray-500"
-                    >
-                      N/A
-                    </td>
-                    <td
-                      data-column="jiraUserStory"
-                      style={{ width: `${getColumnWidth("jiraUserStory", 180)}px` }}
-                      className="border border-gray-300 px-3 py-2"
-                    >
-                      <input
-                        type="text"
-                        value={newTestCase.jiraUserStory}
-                        onChange={(e) => setNewTestCase({...newTestCase, jiraUserStory: e.target.value})}
-                        placeholder="Jira User Story"
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        {testCase.scenario}
+                      </td>
+                      {/* Module */}
+                      <td
+                        data-column="module"
+                        style={{ width: `${getColumnWidth("module", 150)}px` }}
+                        className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+                      >
+                        {testCase.module ??
+                          "N/A"}
+                      </td>
+                      {/* Sub Module */}
+                      <td
+                        data-column="subModule"
+                        style={{ width: `${getColumnWidth("subModule", 150)}px` }}
+                        className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+                      >
+                        {testCase.subModule ??
+                          "N/A"}
+                      </td>
+                      {/* Title */}
+                      <td
+                        data-column="title"
+                        style={{ width: `${getColumnWidth("title", 200)}px` }}
+                        className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+                      >
+                        {testCase.title}
+                      </td>
+                      {/* Pre Conditions */}
+                      <td
+                        data-column="preConditions"
+                        style={{ width: `${getColumnWidth("preConditions", 180)}px` }}
+                        className="border border-gray-300 px-3 py-2 text-sm text-gray-900 whitespace-pre-wrap"
+                      >
+                        {testCase.preConditions ??
+                          "N/A"}
+                      </td>
+                      {/* Steps */}
+                      <td
+                        data-column="steps"
+                        style={{ width: `${getColumnWidth("steps", 250)}px` }}
+                        className="border border-gray-300 px-3 py-2 text-sm text-gray-900 whitespace-pre-wrap"
+                      >
+                        {testCase.steps}
+                      </td>
+                      {/* Expected Results */}
+                      <td
+                        data-column="expectedResults"
+                        style={{ width: `${getColumnWidth("expectedResults", 250)}px` }}
+                        className="border border-gray-300 px-3 py-2 text-sm text-gray-900 whitespace-pre-wrap"
+                      >
+                        {testCase.expectedResults}
+                      </td>
+                      {/* Status */}
+                      <td
+                        data-column="status"
+                        style={{ width: `${getColumnWidth("status", 120)}px` }}
+                        className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+                      >
+                        {testCase.status}
+                      </td>
+                      {/* Executed By */}
+                      <td
+                        data-column="executedBy"
+                        style={{ width: `${getColumnWidth("executedBy", 150)}px` }}
+                        className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+                      >
+                        {testCase.executedByName}
+                      </td>
+                      {/* Jira User Story */}
+                      <td
+                        data-column="jiraUserStory"
+                        style={{ width: `${getColumnWidth("jiraUserStory", 180)}px` }}
+                        className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+                      >
+                        {testCase.jiraUserStory}
+                      </td>
+                      {/* Created By */}
+                      <td
+                        data-column="createdBy"
+                        style={{ width: `${getColumnWidth("createdBy", 150)}px` }}
+                        className="border border-gray-300 px-3
+                      py-2 text-sm text-gray-900"
+                      >
+                        {testCase.createdByName}
+                      </td>
+                      {/* Created At */}
+                      <td
+                        data-column="createdAt"
+                        style={{ width: `${getColumnWidth("createdAt", 130)}px` }}
+                        className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+                      >
+                        {new Date(testCase.createdAt).toLocaleDateString('en-US', {
+                          month: '2-digit',
+                          day: '2-digit',
+                          year: '2-digit'
+                        })}
+                      </td>
+                      <ResizeHandle
+                        direction="row"
+                        isResizing={resizingRow === testCase._id}
+                        onMouseDown={(e) => handleRowMouseDown(e, testCase._id, testCase.rowHeight ||
+                          20)}
                       />
-                    </td>
-                    <td
-                      data-column="createdBy"
-                      style={{ width: `${getColumnWidth("createdBy", 150)}px` }}
-                      className="border border-gray-300 px-3 py-2 text-sm text-gray-500"
-                    >
-                      You
-                    </td>
-                    <td
-                      data-column="createdAt"
-                      style={{ width: `${getColumnWidth("createdAt", 130)}px` }}
-                      className="border border-gray-300 px-3 py-2 text-sm text-gray-500"
-                    >
-                      Now
-                    </td>
-                  </tr>
-                )}
-              </>
-            )}
+                    </tr>
+                  ))}
+
+                  {/* New Row Input */}
+                  {isAdding && (
+                    <tr className="bg-blue-50">
+                      {/* TC ID - New */}
+                      <td
+                        data-column="tcId"
+                        style={{ width: `${getColumnWidth("tcId", 80)}px` }}
+                        className="border border-gray-300 px-3 py-2 text-sm text-gray-500"
+                      >
+                        TC_{String(testCases.length + 1).padStart(3, '0')}
+                      </td>
+                      {/* TC Level - New */}
+                      <td
+                        data-column="level"
+                        style={{ width: `${getColumnWidth("level", 100)}px` }}
+                        className="border border-gray-300 px-3 py-2"
+                      >
+                        <select
+                          value={newTestCase.level}
+                          onChange={(e) => setNewTestCase({ ...newTestCase, level: e.target.value as "High" | "Low" })}
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="High">High</option>
+                          <option value="Low">Low</option>
+                        </select>
+                      </td>
+                      {/* Scenario - New */}
+                      <td
+                        data-column="scenario"
+                        style={{ width: `${getColumnWidth("scenario", 120)}px` }}
+                        className="border border-gray-300 px-3 py-2"
+                      >
+                        <select
+                          value={newTestCase.scenario}
+                          onChange={(e) => setNewTestCase({ ...newTestCase, scenario: e.target.value as "Happy Path" |
+                            "Unhappy Path" })}
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="Happy Path">Happy Path</option>
+                          <option value="Unhappy Path">Unhappy Path</option>
+                        </select>
+                      </td>
+                      {/* Module - New */}
+                      <td
+                        data-column="module"
+                        style={{ width: `${getColumnWidth("module", 150)}px` }} className="border border-gray-300 px-3 py-2"
+                      >
+                        <input
+                          type="text"
+                          value={newTestCase.module}
+                          onChange={(e) => setNewTestCase({ ...newTestCase, module: e.target.value })}
+                          placeholder="Module"
+                          maxLength={50}
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </td>
+                      {/* Sub Module - New */}
+                      <td
+                        data-column="subModule"
+                        style={{ width: `${getColumnWidth("subModule", 150)}px` }}
+                        className="border border-gray-300 px-3 py-2"
+                      >
+                        <input
+                          type="text"
+                          value={newTestCase.subModule}
+                          onChange={(e) => setNewTestCase({ ...newTestCase, subModule: e.target.value })}
+                          placeholder="Sub Module"
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </td>
+                      {/* Title - New */}
+                      <td
+                        data-column="title"
+                        style={{ width: `${getColumnWidth("title", 200)}px` }}
+                        className="border border-gray-300 px-3 py-2"
+                      >
+                        <input
+                          type="text"
+                          value={newTestCase.title}
+                          onChange={(e) => setNewTestCase({ ...newTestCase, title: e.target.value })}
+                          placeholder="Title *"
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </td>
+                      {/* Pre Conditions - New */}
+                      <td
+                        data-column="preConditions"
+                        style={{ width: `${getColumnWidth("preConditions", 180)}px` }}
+                        className="border border-gray-300 px-3 py-2"
+                      >
+                        <NumberedTextarea
+                          value={newTestCase.preConditions}
+                          onChange={(value) => setNewTestCase({ ...newTestCase, preConditions: value })}
+                          placeholder="Pre Conditions"
+                          rows={3}
+                          className="text-sm"
+                        />
+                      </td>
+                      {/* Steps - New */}
+                      <td
+                        data-column="steps"
+                        style={{ width: `${getColumnWidth("steps", 250)}px` }}
+                        className="border border-gray-300 px-3 py-2"
+                      >
+                        <NumberedTextarea
+                          value={newTestCase.steps}
+                          onChange={(value) => setNewTestCase({ ...newTestCase, steps: value })}
+                          placeholder="Test Steps *"
+                          rows={3}
+                          className="text-sm"
+                        />
+                      </td>
+                      {/* Expected Results - New */}
+                      <td
+                        data-column="expectedResults"
+                        style={{ width: `${getColumnWidth("expectedResults", 250)}px` }}
+                        className="border border-gray-300 px-3 py-2"
+                      >
+                        <NumberedTextarea
+                          value={newTestCase.expectedResults}
+                          onChange={(value) => setNewTestCase({ ...newTestCase, expectedResults: value })}
+                          placeholder="Expected Results *"
+                          rows={3}
+                          className="text-sm"
+                        />
+                      </td>
+                      {/* Status - New */}
+                      <td
+                        data-column="status"
+                        style={{ width: `${getColumnWidth("status", 120)}px` }}
+                        className="border border-gray-300 px-3 py-2"
+                      >
+                        <select
+                          value={newTestCase.status}
+                          onChange={(e) => setNewTestCase({ ...newTestCase, status: e.target.value as NewTestCase['status'] })}
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="Not Run">Not Run</option>
+                          <option value="Passed">Passed</option>
+                          <option value="Failed">Failed</option>
+                          <option value="Blocked">Blocked</option>
+                          <option value="Not Available">Not Available</option>
+                        </select>
+                      </td>
+                      {/* Executed By - New */}
+                      <td
+                        data-column="executedBy"
+                        style={{ width: `${getColumnWidth("executedBy", 150)}px` }}
+                        className="border border-gray-300 px-3 py-2 text-sm text-gray-500"
+                      >
+                        N/A
+                      </td>
+                      {/* Jira User Story - New */}
+                      <td
+                        data-column="jiraUserStory"
+                        style={{ width: `${getColumnWidth("jiraUserStory", 180)}px` }}
+                        className="border border-gray-300 px-3 py-2"
+                      >
+                        <input
+                          type="text"
+                          value={newTestCase.jiraUserStory}
+                          onChange={(e) => setNewTestCase({ ...newTestCase, jiraUserStory: e.target.value })}
+                          placeholder="Jira User Story"
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </td>
+                      {/* Created By - New */}
+                      <td
+                        data-column="createdBy"
+                        style={{ width: `${getColumnWidth("createdBy", 150)}px` }}
+                        className="border border-gray-300 px-3 py-2 text-sm text-gray-500"
+                      >
+                        You
+                      </td>
+                      {/* Created At - New */}
+                      <td
+                        data-column="createdAt"
+                        style={{ width: `${getColumnWidth("createdAt", 130)}px` }}
+                        className="border border-gray-300 px-3 py-2 text-sm text-gray-500"
+                      >
+                        Now
+                      </td>
+                    </tr>
+                  )}
+                </>
+              )}
           </tbody>
         </table>
       </div>
