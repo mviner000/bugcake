@@ -1,17 +1,17 @@
 // components/sheet/share-modal.tsx
-// components/sheet/share-modal.tsx
 import { useState } from "react"
-import { Copy, Lock, Mail, LinkIcon, Check, X, Globe } from "lucide-react"
+import { Copy, Lock, Mail, LinkIcon, Check, X, Globe, ChevronDown, ChevronUp } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useQuery, useMutation } from "convex/react"
 import { api } from "../../../convex/_generated/api"
 import { Id } from "../../../convex/_generated/dataModel"
+import { OverlayScrollbarsComponent } from "overlayscrollbars-react"
+import "overlayscrollbars/overlayscrollbars.css"
 
 interface ShareModalProps {
   open: boolean
@@ -23,7 +23,7 @@ interface ShareModalProps {
 export function ShareModal({
   open,
   onOpenChange,
-  fileName = "PROD | IPP | Regression Testing [09-19-2025].xlsx",
+  fileName = "Regression Testing [09-19-2025].xlsx",
   sheetId,
 }: ShareModalProps) {
   const usersWithAccess = useQuery(api.myFunctions.getUsersWithAccess, { sheetId })
@@ -36,6 +36,91 @@ export function ShareModal({
   const [searchValue, setSearchValue] = useState("")
   const [isCopied, setIsCopied] = useState(false)
   const [isAddingUser, setIsAddingUser] = useState(false)
+  const [expandedRequestId, setExpandedRequestId] = useState<string | null>(null)
+
+  // Static dummy data for access requests
+  const accessRequests = [
+    {
+      id: "req-1",
+      name: "Sarah Johnson",
+      email: "sarah.johnson@company.com",
+      avatarUrl: null,
+      requestedAt: "2 hours ago",
+      requestMessage: "Hi, I need access to review the regression testing data for the upcoming release. This is urgent as I need to prepare the QA report by EOD.",
+      department: "Quality Assurance",
+      requestedRole: "Editor",
+    },
+    {
+      id: "req-2",
+      name: "Michael Chen",
+      email: "michael.chen@company.com",
+      avatarUrl: null,
+      requestedAt: "5 hours ago",
+      requestMessage: "Need access to collaborate on the IPP testing documentation. I'm working on related infrastructure changes.",
+      department: "DevOps",
+      requestedRole: "Viewer",
+    },
+    {
+      id: "req-3",
+      name: "Emily Rodriguez",
+      email: "emily.rodriguez@company.com",
+      avatarUrl: null,
+      requestedAt: "1 day ago",
+      requestMessage: "Requesting viewer access to stay updated on the testing progress for the production environment.",
+      department: "Product Management",
+      requestedRole: "Viewer",
+    },
+    {
+      id: "req-4",
+      name: "David Park",
+      email: "david.park@company.com",
+      avatarUrl: null,
+      requestedAt: "1 day ago",
+      requestMessage: "I'm part of the testing team and need to contribute to the regression test cases. Please grant me editor access.",
+      department: "Quality Assurance",
+      requestedRole: "Editor",
+    },
+    {
+      id: "req-5",
+      name: "Jessica Martinez",
+      email: "jessica.martinez@company.com",
+      avatarUrl: null,
+      requestedAt: "2 days ago",
+      requestMessage: "Need read access to review the test results for the upcoming client presentation.",
+      department: "Sales Engineering",
+      requestedRole: "Viewer",
+    },
+    {
+      id: "req-6",
+      name: "Robert Taylor",
+      email: "robert.taylor@company.com",
+      avatarUrl: null,
+      requestedAt: "3 days ago",
+      requestMessage: "As the backend lead, I need to verify the IPP testing scenarios align with our API changes.",
+      department: "Engineering",
+      requestedRole: "Editor",
+    },
+    {
+      id: "req-7",
+      name: "Amanda Foster",
+      email: "amanda.foster@company.com",
+      avatarUrl: null,
+      requestedAt: "3 days ago",
+      requestMessage: "Requesting access to track testing progress for sprint planning purposes.",
+      department: "Project Management",
+      requestedRole: "Viewer",
+    },
+    {
+      id: "req-8",
+      name: "Kevin Liu",
+      email: "kevin.liu@company.com",
+      avatarUrl: null,
+      requestedAt: "4 days ago",
+      requestMessage: "I need to review the test coverage for the security audit documentation.",
+      department: "Security",
+      requestedRole: "Viewer",
+    },
+  ]
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href).then(() => {
@@ -113,6 +198,19 @@ export function ShareModal({
       .slice(0, 2)
   }
 
+  const getAccessLevelLabel = (level: string) => {
+    switch (level) {
+      case "restricted":
+        return "Restricted"
+      case "anyoneWithLink":
+        return "Anyone with the link"
+      case "public":
+        return "Public"
+      default:
+        return "Restricted"
+    }
+  }
+
   const currentAccessLevel = sheet?.accessLevel || "restricted"
 
   return (
@@ -170,16 +268,10 @@ export function ShareModal({
                   All
                 </TabsTrigger>
                 <TabsTrigger
-                  value="guests"
+                  value="requests"
                   className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
                 >
-                  Guests
-                </TabsTrigger>
-                <TabsTrigger
-                  value="members"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
-                >
-                  Members
+                  Requests
                 </TabsTrigger>
               </TabsList>
 
@@ -238,12 +330,119 @@ export function ShareModal({
                 )}
               </TabsContent>
 
-              <TabsContent value="guests" className="mt-4">
-                <p className="text-sm text-muted-foreground">No guests</p>
-              </TabsContent>
+              <TabsContent value="requests" className="mt-4">
+                <OverlayScrollbarsComponent
+                  options={{
+                    scrollbars: {
+                      autoHide: "leave",
+                      autoHideDelay: 800,
+                      dragScroll: true,
+                    },
+                    overflow: {
+                      x: "hidden",
+                      y: "scroll",
+                    },
+                  }}
+                  style={{ maxHeight: "400px" }}
+                  className="space-y-3 pr-1"
+                >
+                  <div className="space-y-3">
+                    {accessRequests.map((request) => (
+                      <div key={request.id} className="rounded-lg border bg-muted/30 overflow-hidden">
+                        <div className="flex items-center justify-between gap-3 p-3">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <Avatar className="h-10 w-10 flex-shrink-0">
+                              <AvatarFallback className="bg-muted">
+                                {getInitials(request.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{request.name}</p>
+                              <p className="text-xs text-muted-foreground truncate">{request.email}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">Requested {request.requestedAt}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="h-9"
+                              onClick={() => setExpandedRequestId(expandedRequestId === request.id ? null : request.id)}
+                            >
+                              {expandedRequestId === request.id ? (
+                                <>
+                                  Hide Details
+                                  <ChevronUp className="h-4 w-4 ml-1" />
+                                </>
+                              ) : (
+                                <>
+                                  View Details
+                                  <ChevronDown className="h-4 w-4 ml-1" />
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        {expandedRequestId === request.id && (
+                          <div className="px-3 pb-3 pt-0 border-t mt-3 space-y-4">
+                            <div className="pt-3 space-y-3">
+                              <div>
+                                <p className="text-xs font-medium text-muted-foreground mb-1">Department</p>
+                                <p className="text-sm">{request.department}</p>
+                              </div>
+                              
+                              <div>
+                                <p className="text-xs font-medium text-muted-foreground mb-1">Requested Role</p>
+                                <p className="text-sm">{request.requestedRole}</p>
+                              </div>
+                              
+                              <div>
+                                <p className="text-xs font-medium text-muted-foreground mb-1">Message</p>
+                                <p className="text-sm text-muted-foreground leading-relaxed">
+                                  {request.requestMessage}
+                                </p>
+                              </div>
+                            </div>
 
-              <TabsContent value="members" className="mt-4">
-                <p className="text-sm text-muted-foreground">No members</p>
+                          <div className="flex items-center justify-between pt-2">
+  <Select defaultValue={request.requestedRole.toLowerCase()}>
+                              <SelectTrigger className="w-[130px] h-9">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="viewer">Viewer</SelectItem>
+                                <SelectItem value="editor">Editor</SelectItem>
+                                <SelectItem value="owner">Owner</SelectItem>
+                              </SelectContent>
+                            </Select>
+
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="default"
+                                size="sm"
+                                className="h-9"
+                                onClick={() => alert(`Approved access for ${request.name}`)}
+                              >
+                                Approve
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-9"
+                                onClick={() => alert(`Declined access for ${request.name}`)}
+                              >
+                                Decline
+                              </Button>
+                            </div>
+                          </div>
+
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </OverlayScrollbarsComponent>
               </TabsContent>
             </Tabs>
           </div>
@@ -252,55 +451,51 @@ export function ShareModal({
           <div className="space-y-3">
             <h3 className="text-sm font-medium">General access</h3>
             
-            <RadioGroup value={currentAccessLevel} onValueChange={(value) => handleAccessLevelChange(value as "restricted" | "anyoneWithLink" | "public")}>
-              {/* Restricted Option */}
-              <div className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50" onClick={() => handleAccessLevelChange("restricted")}>
-                <Lock className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <div>
+            <Select value={currentAccessLevel} onValueChange={(value) => handleAccessLevelChange(value as "restricted" | "anyoneWithLink" | "public")}>
+              <SelectTrigger className="w-full h-11">
+                <div className="flex items-center gap-3">
+                  {currentAccessLevel === "restricted" && <Lock className="h-4 w-4 flex-shrink-0" />}
+                  {currentAccessLevel === "anyoneWithLink" && <LinkIcon className="h-4 w-4 flex-shrink-0" />}
+                  {currentAccessLevel === "public" && <Globe className="h-4 w-4 flex-shrink-0" />}
+                  <span className="text-sm">{getAccessLevelLabel(currentAccessLevel)}</span>
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="restricted">
+                  <div className="flex items-start gap-3 py-1">
+                    <Lock className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
                       <p className="text-sm font-medium">Restricted</p>
                       <p className="text-xs text-muted-foreground">
                         Only people with access can open with the link
                       </p>
                     </div>
-                    <RadioGroupItem value="restricted" />
                   </div>
-                </div>
-              </div>
-
-              {/* Anyone with Link Option */}
-              <div className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50" onClick={() => handleAccessLevelChange("anyoneWithLink")}>
-                <LinkIcon className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <div>
+                </SelectItem>
+                <SelectItem value="anyoneWithLink">
+                  <div className="flex items-start gap-3 py-1">
+                    <LinkIcon className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
                       <p className="text-sm font-medium">Anyone with the link</p>
                       <p className="text-xs text-muted-foreground">
                         Anyone with the link can access
                       </p>
                     </div>
-                    <RadioGroupItem value="anyoneWithLink" />
                   </div>
-                </div>
-              </div>
-
-              {/* Public Option */}
-              <div className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50" onClick={() => handleAccessLevelChange("public")}>
-                <Globe className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <div>
+                </SelectItem>
+                <SelectItem value="public">
+                  <div className="flex items-start gap-3 py-1">
+                    <Globe className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
                       <p className="text-sm font-medium">Public</p>
                       <p className="text-xs text-muted-foreground">
                         Anyone on the internet can find and access
                       </p>
                     </div>
-                    <RadioGroupItem value="public" />
                   </div>
-                </div>
-              </div>
-            </RadioGroup>
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Action buttons */}
