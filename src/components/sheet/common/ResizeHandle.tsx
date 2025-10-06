@@ -16,7 +16,7 @@ export const ResizeHandle: React.FC<ResizeHandleProps> = ({
   const isRow = direction === "row";
   
   return (
-    <div
+    <span
       className={`absolute ${
         isRow
           ? "bottom-0 left-0 right-0 h-1 cursor-row-resize"

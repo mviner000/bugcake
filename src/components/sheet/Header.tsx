@@ -1,5 +1,6 @@
 // components/sheet/Header.tsx
 
+import { useState } from "react";
 import {
   ArrowLeft,
   Star,
@@ -23,9 +24,9 @@ import {
   Hash,
 } from "lucide-react";
 import { ShareModal } from "./share-modal";
-import { Button } from "../ui/button";
-import { useState } from "react";
 import { Id } from "convex/_generated/dataModel";
+import { Button } from "@/components/ui/button";
+import ActivityApprovalsSheet from "./right-side/ActivityApprovalsSheet";
 
 interface HeaderProps {
   sheetName?: string;
@@ -67,7 +68,7 @@ export function Header({ sheetName, onBack, sheetId }: HeaderProps & { sheetId: 
           </div>
         </div>
         <div className="flex items-center space-x-4">
-          {/* <History className="w-5 h-5 text-gray-400 cursor-pointer" /> */}
+          <ActivityApprovalsSheet sheetId={sheetId as any} />
           <Button onClick={() => setIsShareModalOpen(true)} size="sm" className="bg-blue-700 text-white hover:bg-blue-70">
             <Share className="w-4 h-4" />
             <span>Share</span>

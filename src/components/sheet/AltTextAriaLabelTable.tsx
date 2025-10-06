@@ -12,14 +12,13 @@ import { ResizeHandle } from "./common/ResizeHandle";
 import { TableActionButtons } from "./common/TableActionButtons";
 import { EmptyTableState } from "./common/EmptyTableState";
 import { ResizeFeedback } from "./common/ResizeFeedback";
-import ActivityApprovalsSheet from "./right-side/ActivityApprovalsSheet";
 import { formatWithNumbering } from "../../utils/formatUtils";
 import { SEImplementationBadge, TestingStatusBadge } from "./common/StatusBadgeHelper";
 import { NumberedTextarea } from "./NumberedTextarea";
+import { WorkflowStatusBadge, WorkflowStatus } from "./common/WorkflowStatusBadge";
+import { Button } from "@/components/ui/button";
 
 // --- AltTextAriaLabelTable Component ---
-
-type WorkflowStatus = "Open" | "Waiting for QA Lead Approval" | "Needs revision" | "In Progress" | "Approved" | "Declined" | "Reopen" | "Won't Do";
 
 interface AltTextAriaLabelTableProps {
   testCases: (Doc<"altTextAriaLabelTestCases"> & { 
@@ -53,22 +52,8 @@ const initialNewTestCaseState: NewTestCase = {
   actualResults: "", testingStatus: "Not Run", notes: "", jiraUserStory: "",
 };
 
-// Helper function to get workflow status badge color
-const getWorkflowStatusColor = (status: WorkflowStatus): string => {
-  const colors: Record<WorkflowStatus, string> = {
-    "Open": "bg-blue-100 text-blue-800",
-    "Waiting for QA Lead Approval": "bg-yellow-100 text-yellow-800",
-    "Needs revision": "bg-orange-100 text-orange-800",
-    "In Progress": "bg-purple-100 text-purple-800",
-    "Approved": "bg-green-100 text-green-800",
-    "Declined": "bg-red-100 text-red-800",
-    "Reopen": "bg-cyan-100 text-cyan-800",
-    "Won't Do": "bg-gray-100 text-gray-800",
-  };
-  return colors[status] || "bg-gray-100 text-gray-800";
-};
-
 const ALT_TEXT_ARIA_LABEL_COLUMNS = [
+  { key: "checkbox", label: "", width: 30 },
   { key: "workflowStatus", label: "Workflow Status", width: 200 },
   { key: "sequenceNumber", label: "TC ID", width: 80 },
   { key: "persona", label: "Persona", width: 150 },
@@ -123,9 +108,25 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
   const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [newTestCase, setNewTestCase] = useState<NewTestCase>(initialNewTestCaseState);
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const tableRef = useRef<HTMLTableElement>(null);
 
   // --- Event Handlers ---
+
+  const handleCheckboxChange = (testCaseId: string, checked: boolean) => {
+    setSelectedRows(prev => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(testCaseId);
+        console.log('Row selected:', testCaseId);
+      } else {
+        newSet.delete(testCaseId);
+        console.log('Row deselected:', testCaseId);
+      }
+      console.log('Currently selected rows:', Array.from(newSet));
+      return newSet;
+    });
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -172,11 +173,25 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
     setNewTestCase(initialNewTestCaseState);
   };
 
+  const handleSendToApproval = () => {
+    const selectedCount = selectedRows.size;
+    const selectedIds = Array.from(selectedRows);
+    
+    if (selectedCount === 0) {
+      alert('Please select at least one test case to send for approval.');
+      return;
+    }
+    
+    alert(`Selected ${selectedCount} test case(s) for approval:\n\nRow IDs:\n${selectedIds.join('\n')}`);
+  };
+
   return (
     <div className="flex flex-col">
-      {/* Top Bar with Activity Button */}
+      {/* Top Bar Button */}
       <div className="flex justify-end mb-4 px-4">
-        <ActivityApprovalsSheet sheetId={sheetId as any} /> 
+        <Button onClick={handleSendToApproval}>
+          Send To Approval for QA Lead {selectedRows.size > 0 && `(${selectedRows.size})`}
+        </Button>
       </div>
 
       {/* Scrollable table container */}
@@ -214,7 +229,26 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
                     style={{ height: `${testCase.rowHeight || 20}px` }}
                   >
                     {ALT_TEXT_ARIA_LABEL_COLUMNS.map(({ key, width }) => {
-                      // Special rendering for workflow status (first column)
+                      // Checkbox column (first column)
+                      if (key === 'checkbox') {
+                        return (
+                          <td
+                            key={key}
+                            data-column={key}
+                            style={{ width: `${getColumnWidth(key, width)}px` }}
+                            className="border border-gray-300 px-2 py-2 text-center"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedRows.has(testCase._id)}
+                              onChange={(e) => handleCheckboxChange(testCase._id, e.target.checked)}
+                              className="cursor-pointer"
+                            />
+                          </td>
+                        );
+                      }
+                      
+                      // Special rendering for workflow status (second column)
                       if (key === 'workflowStatus') {
                         return (
                           <td
@@ -223,9 +257,7 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
                             style={{ width: `${getColumnWidth(key, width)}px` }}
                             className="border border-gray-300 px-3 py-2"
                           >
-                            <div className={`w-full px-3 py-1.5 text-sm rounded text-center font-medium ${getWorkflowStatusColor(testCase.workflowStatus)}`}>
-                              {testCase.workflowStatus}
-                            </div>
+                            <WorkflowStatusBadge status={testCase.workflowStatus} />
                           </td>
                         );
                       }
@@ -259,15 +291,21 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
                 {/* New Row Input */}
                 {isAdding && (
                   <tr className="bg-blue-50">
+                    {/* Checkbox - Empty for new row */}
+                    <td
+                      data-column="checkbox"
+                      style={{ width: `${getColumnWidth("checkbox", 30)}px` }}
+                      className="border border-gray-300 px-2 py-2 text-center"
+                    >
+                      {/* Empty checkbox cell for new row */}
+                    </td>
                     {/* Workflow Status - New (defaults to Open, read-only) */}
                     <td
                       data-column="workflowStatus"
                       style={{ width: `${getColumnWidth("workflowStatus", 200)}px` }}
                       className="border border-gray-300 px-3 py-2"
                     >
-                      <div className={`w-full px-3 py-1.5 text-sm rounded text-center font-medium ${getWorkflowStatusColor("Open")}`}>
-                        Open
-                      </div>
+                      <WorkflowStatusBadge status="Open" />
                     </td>
                     <td
                       data-column="sequenceNumber"
