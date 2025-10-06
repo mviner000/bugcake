@@ -12,63 +12,10 @@ import { ResizeHandle } from "./common/ResizeHandle";
 import { TableActionButtons } from "./common/TableActionButtons";
 import { EmptyTableState } from "./common/EmptyTableState";
 import { ResizeFeedback } from "./common/ResizeFeedback";
-import { ActivityHistorySheet } from "./ActivityHistorySheet";
-import { formatToList } from "../../utils/formatUtils";
+import ActivityApprovalsSheet from "./right-side/ActivityApprovalsSheet";
+import { formatWithNumbering } from "../../utils/formatUtils";
 import { SEImplementationBadge, TestingStatusBadge } from "./common/StatusBadgeHelper";
-
-
-// --- NumberedTextarea Component Definition ---
-interface NumberedTextareaProps {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  className?: string;
-  rows?: number;
-}
-
-const NumberedTextarea: React.FC<NumberedTextareaProps> = ({
-  value,
-  onChange,
-  placeholder,
-  className = '',
-  rows = 4
-}) => {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const lines = value.split('\n');
-  const lineNumbers = Array.from({ length: Math.max(lines.length, 1) }, (_, i) => i + 1);
-
-  return (
-    <div className="flex border border-gray-300 rounded-md bg-white overflow-hidden">
-      {/* Line numbers */}
-      <div
-        className="flex flex-col items-end px-3 py-2 bg-gray-50 border-r border-gray-200 text-gray-500 text-sm select-none"
-        style={{ minWidth: '40px' }}
-      >
-        {lineNumbers.map((num) => (
-          <div key={num} className="leading-6 h-6">
-            {num}.
-          </div>
-        ))}
-      </div>
-      {/* Textarea */}
-      <div className="relative flex-1">
-        <textarea
-          ref={textareaRef}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          rows={rows}
-          className={`w-full px-3 py-2 text-sm border-0 focus:outline-none focus:ring-0 resize-none ${className}`}
-          style={{
-            fontFamily: 'monospace',
-            lineHeight: '1.5rem',
-            height: `${Math.max(rows, lineNumbers.length) * 1.5}rem`,
-          }}
-        />
-      </div>
-    </div>
-  );
-};
+import { NumberedTextarea } from "./NumberedTextarea";
 
 // --- AltTextAriaLabelTable Component ---
 
@@ -176,11 +123,11 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
     try {
       const payload = {
         ...newTestCase,
-        imagesIcons: formatToList(newTestCase.imagesIcons),
-        remarks: formatToList(newTestCase.remarks),
-        altTextAriaLabel: formatToList(newTestCase.altTextAriaLabel),
-        actualResults: formatToList(newTestCase.actualResults),
-        notes: formatToList(newTestCase.notes),
+        imagesIcons: formatWithNumbering(newTestCase.imagesIcons),
+        remarks: formatWithNumbering(newTestCase.remarks),
+        altTextAriaLabel: formatWithNumbering(newTestCase.altTextAriaLabel),
+        actualResults: formatWithNumbering(newTestCase.actualResults),
+        notes: formatWithNumbering(newTestCase.notes),
       };
       await createTestCase({ sheetId, ...payload });
       setNewTestCase(initialNewTestCaseState);
@@ -207,7 +154,7 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
     <div className="flex flex-col">
       {/* Top Bar with Activity Button */}
       <div className="flex justify-end mb-4 px-4">
-        <ActivityHistorySheet sheetId={sheetId as any} /> 
+        <ActivityApprovalsSheet sheetId={sheetId as any} /> 
       </div>
 
       {/* Scrollable table container */}
