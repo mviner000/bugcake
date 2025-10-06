@@ -1418,3 +1418,221 @@ export const getProtectedSheet = query({
     return { sheet, access };
   },
 });
+
+export const requestSheetAccess = mutation({
+  args: {
+    sheetId: v.string(),
+    accessLevel: v.union(
+      v.literal("viewer"),
+      v.literal("commenter"),
+      v.literal("editor"),
+    ),
+    message: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // 1. Authentication check
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("You must be signed in to request access.");
+    }
+
+    // 2. Normalize the sheet ID
+    const normalizedSheetId = ctx.db.normalizeId("sheets", args.sheetId);
+    if (!normalizedSheetId) {
+      throw new Error("Invalid sheet ID.");
+    }
+
+    // 3. Verify the sheet exists
+    const sheet = await ctx.db.get(normalizedSheetId);
+    if (!sheet) {
+      throw new Error("Sheet not found.");
+    }
+
+    // 4. Check if user already has a permission record (approved, pending, or declined)
+    const existingPermission = await ctx.db
+      .query("permissions")
+      .withIndex("bySheetAndUser", (q) =>
+        q.eq("sheetId", normalizedSheetId).eq("userId", userId)
+      )
+      .unique();
+
+    if (existingPermission) {
+      // Handle different existing states
+      if (existingPermission.status === "approved") {
+        throw new Error("You already have access to this sheet.");
+      }
+      if (existingPermission.status === "pending") {
+        throw new Error("You already have a pending access request for this sheet.");
+      }
+      if (existingPermission.status === "declined") {
+        // Allow re-requesting if previously declined
+        await ctx.db.patch(existingPermission._id, {
+          level: args.accessLevel,
+          status: "pending",
+          message: args.message,
+        });
+        return { 
+          success: true, 
+          message: "Your access request has been resubmitted." 
+        };
+      }
+    }
+
+    // 5. Create new permission request with "pending" status
+    await ctx.db.insert("permissions", {
+      sheetId: normalizedSheetId,
+      userId: userId,
+      level: args.accessLevel,
+      status: "pending",
+      message: args.message,
+    });
+
+    return { 
+      success: true, 
+      message: "Access request submitted successfully. The owner will be notified." 
+    };
+  },
+});
+
+export const getPendingAccessRequests = query({
+  args: {
+    sheetId: v.id("sheets"),
+  },
+  handler: async (ctx, args) => {
+    // 1. Check if current user has permission to view requests (owner/editor only)
+    const currentUserId = await getAuthUserId(ctx);
+    if (!currentUserId) {
+      throw new Error("Authentication required.");
+    }
+
+    const currentUserPermission = await ctx.db
+      .query("sheetPermissions")
+      .withIndex("by_sheet_and_user", (q) =>
+        q.eq("sheetId", args.sheetId).eq("userId", currentUserId)
+      )
+      .unique();
+
+    // Only owners and editors can view access requests
+    if (!currentUserPermission || 
+        (currentUserPermission.role !== "owner" && currentUserPermission.role !== "editor")) {
+      throw new Error("Permission denied. Only owners/editors can view access requests.");
+    }
+
+    // 2. Fetch all pending permissions for this sheet
+    const pendingPermissions = await ctx.db
+      .query("permissions")
+      .withIndex("bySheetId", (q) => q.eq("sheetId", args.sheetId))
+      .filter((q) => q.eq(q.field("status"), "pending"))
+      .collect();
+
+    // 3. Enhance with user details
+    const requestsWithDetails = await Promise.all(
+      pendingPermissions.map(async (permission) => {
+        const user = await ctx.db.get(permission.userId);
+        
+        return {
+          id: permission._id,
+          userId: permission.userId,
+          name: user?.name || user?.email?.split('@')[0] || "Unknown User",
+          email: user?.email || "N/A",
+          avatarUrl: user?.image || null,
+          requestedAt: permission._creationTime, // Use creation time for "requested at"
+          requestMessage: permission.message || "No message provided",
+          requestedRole: permission.level,
+        };
+      })
+    );
+
+    // Sort by most recent first
+    requestsWithDetails.sort((a, b) => b.requestedAt - a.requestedAt);
+
+    return requestsWithDetails;
+  },
+});
+
+// Mutation to approve access request
+export const approveAccessRequest = mutation({
+  args: {
+    permissionId: v.id("permissions"),
+    finalRole: v.union(v.literal("viewer"), v.literal("commenter"), v.literal("editor")),
+  },
+  handler: async (ctx, args) => {
+    const currentUserId = await getAuthUserId(ctx);
+    if (!currentUserId) {
+      throw new Error("Authentication required.");
+    }
+
+    // Get the permission request
+    const permission = await ctx.db.get(args.permissionId);
+    if (!permission) {
+      throw new Error("Permission request not found.");
+    }
+
+    // Check if current user can approve (owner/editor only)
+    const currentUserPermission = await ctx.db
+      .query("sheetPermissions")
+      .withIndex("by_sheet_and_user", (q) =>
+        q.eq("sheetId", permission.sheetId).eq("userId", currentUserId)
+      )
+      .unique();
+
+    if (!currentUserPermission || 
+        (currentUserPermission.role !== "owner" && currentUserPermission.role !== "editor")) {
+      throw new Error("Permission denied. Only owners/editors can approve requests.");
+    }
+
+    // Update the permission status to approved and update the level
+    await ctx.db.patch(args.permissionId, {
+      status: "approved",
+      level: args.finalRole,
+    });
+
+    // Add to sheetPermissions for actual access
+    await ctx.db.insert("sheetPermissions", {
+      sheetId: permission.sheetId,
+      userId: permission.userId,
+      role: args.finalRole as "viewer" | "editor" | "owner", // Map commenter to viewer for simplicity
+    });
+
+    return { success: true, message: "Access request approved successfully." };
+  },
+});
+
+// Mutation to decline access request
+export const declineAccessRequest = mutation({
+  args: {
+    permissionId: v.id("permissions"),
+  },
+  handler: async (ctx, args) => {
+    const currentUserId = await getAuthUserId(ctx);
+    if (!currentUserId) {
+      throw new Error("Authentication required.");
+    }
+
+    // Get the permission request
+    const permission = await ctx.db.get(args.permissionId);
+    if (!permission) {
+      throw new Error("Permission request not found.");
+    }
+
+    // Check if current user can decline (owner/editor only)
+    const currentUserPermission = await ctx.db
+      .query("sheetPermissions")
+      .withIndex("by_sheet_and_user", (q) =>
+        q.eq("sheetId", permission.sheetId).eq("userId", currentUserId)
+      )
+      .unique();
+
+    if (!currentUserPermission || 
+        (currentUserPermission.role !== "owner" && currentUserPermission.role !== "editor")) {
+      throw new Error("Permission denied. Only owners/editors can decline requests.");
+    }
+
+    // Update the permission status to declined
+    await ctx.db.patch(args.permissionId, {
+      status: "declined",
+    });
+
+    return { success: true, message: "Access request declined." };
+  },
+});

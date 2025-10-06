@@ -1,9 +1,9 @@
 // src/components/sheet/AltTextAriaLabelTable.tsx
 
+import React, { useState, useRef } from "react";
 import { Doc } from "convex/_generated/dataModel";
 import { api } from "../../../convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
-import React, { useState, useRef } from "react";
 import { useColumnResize } from "../../hooks/useColumnResize";
 import { useRowResize } from "../../hooks/useRowResize";
 import { useColumnWidths } from "../../hooks/useColumnWidths";
