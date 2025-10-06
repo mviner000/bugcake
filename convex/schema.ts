@@ -3,6 +3,17 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+const workflowStatusEnum = v.union(
+  v.literal("Open"),
+  v.literal("Waiting for QA Lead Approval"),
+  v.literal("Needs revision"),
+  v.literal("In Progress"),
+  v.literal("Approved"),
+  v.literal("Declined"),
+  v.literal("Reopen"),
+  v.literal("Won't Do")
+);
+
 export default defineSchema({
   users: defineTable({
     name: v.optional(v.string()),
@@ -212,6 +223,8 @@ export default defineSchema({
 
     // New field
     rowHeight: v.number(),
+    // NEW: Workflow Status field
+    workflowStatus: workflowStatusEnum,
   })
     .index("createdBy", ["createdBy"])
     .index("executedBy", ["executedBy"])
@@ -271,6 +284,8 @@ export default defineSchema({
 
     // New field
     rowHeight: v.number(),
+    // NEW: Workflow Status field
+    workflowStatus: workflowStatusEnum,
   })
     .index("sheetId", ["sheetId"])
     .index("persona", ["persona"])
@@ -358,6 +373,6 @@ export default defineSchema({
     // Index for quickly checking a user's permission on a sheet (Critical for Step 5)
     .index("by_sheet_and_user", ["sheetId", "userId"])
     // Index for quickly fetching all users who have access to a specific sheet (Critical for Share Modal)
-    .index("by_sheet", ["sheetId"])
+    .index("by_sheet", ["sheetId"]),
 });
 

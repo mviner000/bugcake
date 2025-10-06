@@ -19,8 +19,14 @@ import { NumberedTextarea } from "./NumberedTextarea";
 
 // --- AltTextAriaLabelTable Component ---
 
+type WorkflowStatus = "Open" | "Waiting for QA Lead Approval" | "Needs revision" | "In Progress" | "Approved" | "Declined" | "Reopen" | "Won't Do";
+
 interface AltTextAriaLabelTableProps {
-  testCases: (Doc<"altTextAriaLabelTestCases"> & { createdByName: string; sequenceNumber: number; })[];
+  testCases: (Doc<"altTextAriaLabelTestCases"> & { 
+    createdByName: string; 
+    sequenceNumber: number;
+    workflowStatus: WorkflowStatus;
+  })[];
   sheetId: string;
 }
 
@@ -47,7 +53,23 @@ const initialNewTestCaseState: NewTestCase = {
   actualResults: "", testingStatus: "Not Run", notes: "", jiraUserStory: "",
 };
 
+// Helper function to get workflow status badge color
+const getWorkflowStatusColor = (status: WorkflowStatus): string => {
+  const colors: Record<WorkflowStatus, string> = {
+    "Open": "bg-blue-100 text-blue-800",
+    "Waiting for QA Lead Approval": "bg-yellow-100 text-yellow-800",
+    "Needs revision": "bg-orange-100 text-orange-800",
+    "In Progress": "bg-purple-100 text-purple-800",
+    "Approved": "bg-green-100 text-green-800",
+    "Declined": "bg-red-100 text-red-800",
+    "Reopen": "bg-cyan-100 text-cyan-800",
+    "Won't Do": "bg-gray-100 text-gray-800",
+  };
+  return colors[status] || "bg-gray-100 text-gray-800";
+};
+
 const ALT_TEXT_ARIA_LABEL_COLUMNS = [
+  { key: "workflowStatus", label: "Workflow Status", width: 200 },
   { key: "sequenceNumber", label: "TC ID", width: 80 },
   { key: "persona", label: "Persona", width: 150 },
   { key: "module", label: "Module", width: 150 },
@@ -191,22 +213,41 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
                     className="hover:bg-gray-50 relative"
                     style={{ height: `${testCase.rowHeight || 20}px` }}
                   >
-                    {ALT_TEXT_ARIA_LABEL_COLUMNS.map(({ key, width }) => (
-                      <td
-                        key={key}
-                        data-column={key}
-                        style={{ width: `${getColumnWidth(key, width)}px` }}
-                        className="border border-gray-300 px-3 py-2 text-sm text-gray-900 align-top break-words whitespace-pre-wrap"
-                      >
-                        {key === 'testingStatus' ? (
-                          <TestingStatusBadge status={testCase[key] as any} />
-                        ) : key === 'seImplementation' ? (
-                          <SEImplementationBadge status={testCase[key] as any} />
-                        ) : (
-                          testCase[key as keyof typeof testCase] ?? "N/A"
-                        )}
-                      </td>
-                    ))}
+                    {ALT_TEXT_ARIA_LABEL_COLUMNS.map(({ key, width }) => {
+                      // Special rendering for workflow status (first column)
+                      if (key === 'workflowStatus') {
+                        return (
+                          <td
+                            key={key}
+                            data-column={key}
+                            style={{ width: `${getColumnWidth(key, width)}px` }}
+                            className="border border-gray-300 px-3 py-2"
+                          >
+                            <div className={`w-full px-3 py-1.5 text-sm rounded text-center font-medium ${getWorkflowStatusColor(testCase.workflowStatus)}`}>
+                              {testCase.workflowStatus}
+                            </div>
+                          </td>
+                        );
+                      }
+                      
+                      // Regular rendering for other columns
+                      return (
+                        <td
+                          key={key}
+                          data-column={key}
+                          style={{ width: `${getColumnWidth(key, width)}px` }}
+                          className="border border-gray-300 px-3 py-2 text-sm text-gray-900 align-top break-words whitespace-pre-wrap"
+                        >
+                          {key === 'testingStatus' ? (
+                            <TestingStatusBadge status={testCase[key] as any} />
+                          ) : key === 'seImplementation' ? (
+                            <SEImplementationBadge status={testCase[key] as any} />
+                          ) : (
+                            testCase[key as keyof typeof testCase] ?? "N/A"
+                          )}
+                        </td>
+                      );
+                    })}
                     <ResizeHandle
                       direction="row"
                       isResizing={resizingRow === testCase._id}
@@ -218,6 +259,16 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
                 {/* New Row Input */}
                 {isAdding && (
                   <tr className="bg-blue-50">
+                    {/* Workflow Status - New (defaults to Open, read-only) */}
+                    <td
+                      data-column="workflowStatus"
+                      style={{ width: `${getColumnWidth("workflowStatus", 200)}px` }}
+                      className="border border-gray-300 px-3 py-2"
+                    >
+                      <div className={`w-full px-3 py-1.5 text-sm rounded text-center font-medium ${getWorkflowStatusColor("Open")}`}>
+                        Open
+                      </div>
+                    </td>
                     <td
                       data-column="sequenceNumber"
                       style={{ width: `${getColumnWidth("sequenceNumber", 80)}px` }}
@@ -427,7 +478,7 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
         </table>
       </div>
 
-      {/* Add New Row Button - FIXED: Now shows when adding OR when testCases exist */}
+      {/* Add New Row Button */}
       {(testCases.length > 0 || isAdding) && (
         <TableActionButtons
           isAdding={isAdding}

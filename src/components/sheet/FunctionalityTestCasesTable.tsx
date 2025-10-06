@@ -24,6 +24,7 @@ interface FunctionalityTestCasesTableProps {
     sequenceNumber: number;
     rowHeight?: number;
     createdAt: number;
+    workflowStatus: "Open" | "Waiting for QA Lead Approval" | "Needs revision" | "In Progress" | "Approved" | "Declined" | "Reopen" | "Won't Do";
   })[];
   sheetId: string;
 }
@@ -40,6 +41,23 @@ interface NewTestCase {
   status: "Passed" | "Failed" | "Not Run" | "Blocked" | "Not Available";
   jiraUserStory: string;
 }
+
+type WorkflowStatus = "Open" | "Waiting for QA Lead Approval" | "Needs revision" | "In Progress" | "Approved" | "Declined" | "Reopen" | "Won't Do";
+
+// Helper function to get workflow status badge color
+const getWorkflowStatusColor = (status: WorkflowStatus): string => {
+  const colors: Record<WorkflowStatus, string> = {
+    "Open": "bg-blue-100 text-blue-800",
+    "Waiting for QA Lead Approval": "bg-yellow-100 text-yellow-800",
+    "Needs revision": "bg-orange-100 text-orange-800",
+    "In Progress": "bg-purple-100 text-purple-800",
+    "Approved": "bg-green-100 text-green-800",
+    "Declined": "bg-red-100 text-red-800",
+    "Reopen": "bg-cyan-100 text-cyan-800",
+    "Won't Do": "bg-gray-100 text-gray-800",
+  };
+  return colors[status] || "bg-gray-100 text-gray-800";
+};
 
 export function FunctionalityTestCasesTable({
   testCases,
@@ -166,6 +184,7 @@ export function FunctionalityTestCasesTable({
   };
 
   const columns = [
+    { key: "workflowStatus", label: "Workflow Status", width: 200 },
     { key: "tcId", label: "TC ID", width: 80 },
     { key: "level", label: "TC Level", width: 100 },
     { key: "scenario", label: "Scenarios", width: 120 },
@@ -186,7 +205,6 @@ export function FunctionalityTestCasesTable({
     <div className="flex flex-col">
       {/* Top Bar with Activity Button */}
       <div className="flex justify-end mb-4 px-4">
-        {/* <ActivityApprovalsSheet sheetId={sheetId as any} />  */}
         <ActivityApprovalsSheet sheetId={sheetId as any}/> 
       </div>
 
@@ -214,7 +232,7 @@ export function FunctionalityTestCasesTable({
                   message="No functionality test cases found."
                   onAdd={handleAddNew}
                   buttonText="Add First Test Case"
-                  colSpan={14}
+                  colSpan={15}
                 />
               ) : (
                 <>
@@ -225,6 +243,16 @@ export function FunctionalityTestCasesTable({
                       className="hover:bg-gray-50 relative"
                       style={{ height: `${testCase.rowHeight || 20}px` }}
                     >
+                      {/* Workflow Status - FIRST COLUMN (Read-only) */}
+                      <td
+                        data-column="workflowStatus"
+                        style={{ width: `${getColumnWidth("workflowStatus", 200)}px` }}
+                        className="border border-gray-300 px-3 py-2"
+                      >
+                        <div className={`w-full px-3 py-1.5 text-sm rounded text-center font-medium ${getWorkflowStatusColor(testCase.workflowStatus)}`}>
+                          {testCase.workflowStatus}
+                        </div>
+                      </td>
                       {/* TC ID */}
                       <td
                         data-column="tcId"
@@ -255,8 +283,7 @@ export function FunctionalityTestCasesTable({
                         style={{ width: `${getColumnWidth("module", 150)}px` }}
                         className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
                       >
-                        {testCase.module ??
-                          "N/A"}
+                        {testCase.module ?? "N/A"}
                       </td>
                       {/* Sub Module */}
                       <td
@@ -264,8 +291,7 @@ export function FunctionalityTestCasesTable({
                         style={{ width: `${getColumnWidth("subModule", 150)}px` }}
                         className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
                       >
-                        {testCase.subModule ??
-                          "N/A"}
+                        {testCase.subModule ?? "N/A"}
                       </td>
                       {/* Title */}
                       <td
@@ -281,8 +307,7 @@ export function FunctionalityTestCasesTable({
                         style={{ width: `${getColumnWidth("preConditions", 180)}px` }}
                         className="border border-gray-300 px-3 py-2 text-sm text-gray-900 whitespace-pre-wrap"
                       >
-                        {testCase.preConditions ??
-                          "N/A"}
+                        {testCase.preConditions ?? "N/A"}
                       </td>
                       {/* Steps */}
                       <td
@@ -328,8 +353,7 @@ export function FunctionalityTestCasesTable({
                       <td
                         data-column="createdBy"
                         style={{ width: `${getColumnWidth("createdBy", 150)}px` }}
-                        className="border border-gray-300 px-3
-                      py-2 text-sm text-gray-900"
+                        className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
                       >
                         {testCase.createdByName}
                       </td>
@@ -348,8 +372,7 @@ export function FunctionalityTestCasesTable({
                       <ResizeHandle
                         direction="row"
                         isResizing={resizingRow === testCase._id}
-                        onMouseDown={(e) => handleRowMouseDown(e, testCase._id, testCase.rowHeight ||
-                          20)}
+                        onMouseDown={(e) => handleRowMouseDown(e, testCase._id, testCase.rowHeight || 20)}
                       />
                     </tr>
                   ))}
@@ -357,6 +380,16 @@ export function FunctionalityTestCasesTable({
                   {/* New Row Input */}
                   {isAdding && (
                     <tr className="bg-blue-50">
+                      {/* Workflow Status - New (defaults to Open, read-only) */}
+                      <td
+                        data-column="workflowStatus"
+                        style={{ width: `${getColumnWidth("workflowStatus", 200)}px` }}
+                        className="border border-gray-300 px-3 py-2"
+                      >
+                        <div className={`w-full px-3 py-1.5 text-sm rounded text-center font-medium ${getWorkflowStatusColor("Open")}`}>
+                          Open
+                        </div>
+                      </td>
                       {/* TC ID - New */}
                       <td
                         data-column="tcId"
@@ -388,8 +421,7 @@ export function FunctionalityTestCasesTable({
                       >
                         <select
                           value={newTestCase.scenario}
-                          onChange={(e) => setNewTestCase({ ...newTestCase, scenario: e.target.value as "Happy Path" |
-                            "Unhappy Path" })}
+                          onChange={(e) => setNewTestCase({ ...newTestCase, scenario: e.target.value as "Happy Path" | "Unhappy Path" })}
                           className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="Happy Path">Happy Path</option>
@@ -399,7 +431,8 @@ export function FunctionalityTestCasesTable({
                       {/* Module - New */}
                       <td
                         data-column="module"
-                        style={{ width: `${getColumnWidth("module", 150)}px` }} className="border border-gray-300 px-3 py-2"
+                        style={{ width: `${getColumnWidth("module", 150)}px` }}
+                        className="border border-gray-300 px-3 py-2"
                       >
                         <input
                           type="text"
@@ -544,7 +577,7 @@ export function FunctionalityTestCasesTable({
         </table>
       </div>
 
-      {/* Add New Row Button - FIXED: Now shows when adding OR when testCases exist */}
+      {/* Add New Row Button */}
       {(testCases.length > 0 || isAdding) && (
         <TableActionButtons
           isAdding={isAdding}

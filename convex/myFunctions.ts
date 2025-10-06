@@ -826,9 +826,9 @@ export const createFunctionalityTestCase = mutation({
     }
 
     const now = Date.now();
-    const defaultRowHeight = 20; // Assuming a default row height
+    const defaultRowHeight = 20;
 
-    // 2. Insert the new functionalityTestCases document
+    // 2. Insert the new functionalityTestCases document with default "Open" workflow status
     const newTestCaseId = await ctx.db.insert("functionalityTestCases", {
       sheetId: normalizedSheetId,
       title: args.title,
@@ -841,16 +841,16 @@ export const createFunctionalityTestCase = mutation({
       expectedResults: args.expectedResults,
       status: args.status,
       jiraUserStory: args.jiraUserStory,
-      createdBy: userId, // Set the creator
+      createdBy: userId,
       createdAt: now,
       updatedAt: now,
       rowHeight: defaultRowHeight,
-      // executedBy and executedAt remain optional/undefined
+      workflowStatus: "Open", // ✅ DEFAULT: Set to "Open" on creation
     });
 
     // 3. Log the activity to the 'activityLogs' database
     await ctx.db.insert("activityLogs", {
-      testCaseId: newTestCaseId.toString(), // Store the ID as a string for logging
+      testCaseId: newTestCaseId.toString(),
       testCaseType: "functionality",
       action: "Created",
       userId: userId,
@@ -858,7 +858,7 @@ export const createFunctionalityTestCase = mutation({
       userEmail: user.email ?? "N/A",
       sheetId: normalizedSheetId,
       timestamp: now,
-      details: `New test case "${args.title}" created.`,
+      details: `New test case "${args.title}" created with workflow status "Open".`,
     });
 
     return newTestCaseId;
@@ -1004,36 +1004,35 @@ export const createAltTextAriaLabelTestCase = mutation({
     const now = Date.now();
     const defaultRowHeight = 20;
 
-    // 2. Insert the new test case document
+    // 2. Insert the new test case document with default "Open" workflow status
     const newTestCaseId = await ctx.db.insert("altTextAriaLabelTestCases", {
       sheetId: normalizedSheetId,
-      createdBy: userId, // Set the creator
-      executedBy: userId, // Assuming creator is the initial executor, adjust if needed
+      createdBy: userId,
+      executedBy: userId,
       rowHeight: defaultRowHeight,
       createdAt: now,
       updatedAt: now,
+      workflowStatus: "Open", // ✅ DEFAULT: Set to "Open" on creation
       ...restArgs,
     });
 
-    // 3. ⭐️ Log the activity to the 'activityLogs' database ⭐️
+    // 3. Log the activity to the 'activityLogs' database
     await ctx.db.insert("activityLogs", {
       testCaseId: newTestCaseId.toString(),
       testCaseType: "altTextAriaLabel",
       action: "Created",
-
-      // User Identity from fetched user object
       userId: userId,
-      username: user.name ?? user.email?.split('@')[0] ?? "Anonymous", // Logic from your functionality mutation [cite: 251]
+      username: user.name ?? user.email?.split('@')[0] ?? "Anonymous",
       userEmail: user.email ?? "N/A",
-
       sheetId: normalizedSheetId,
       timestamp: now,
-      details: `New test case for page section "${args.pageSection}" created.`,
+      details: `New test case for page section "${args.pageSection}" created with workflow status "Open".`,
     });
 
     return newTestCaseId;
   },
 });
+
 
 // This query fetches activity logs for a specific sheet, filtered and sorted by timestamp descending.
 export const getActivityLogsForSheet = query({
@@ -1634,5 +1633,135 @@ export const declineAccessRequest = mutation({
     });
 
     return { success: true, message: "Access request declined." };
+  },
+});
+
+// NEW: Mutation to update workflow status for functionality test cases
+export const updateFunctionalityWorkflowStatus = mutation({
+  args: {
+    testCaseId: v.string(),
+    workflowStatus: v.union(
+      v.literal("Open"),
+      v.literal("Waiting for QA Lead Approval"),
+      v.literal("Needs revision"),
+      v.literal("In Progress"),
+      v.literal("Approved"),
+      v.literal("Declined"),
+      v.literal("Reopen"),
+      v.literal("Won't Do")
+    ),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("User must be authenticated");
+    }
+
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const normalizedTestCaseId = ctx.db.normalizeId(
+      "functionalityTestCases",
+      args.testCaseId
+    );
+    if (!normalizedTestCaseId) {
+      throw new Error("Invalid test case ID");
+    }
+
+    const testCase = await ctx.db.get(normalizedTestCaseId);
+    if (!testCase) {
+      throw new Error("Test case not found");
+    }
+
+    const now = Date.now();
+    const oldStatus = testCase.workflowStatus;
+
+    // Update the workflow status
+    await ctx.db.patch(normalizedTestCaseId, {
+      workflowStatus: args.workflowStatus,
+      updatedAt: now,
+    });
+
+    // Log the activity
+    await ctx.db.insert("activityLogs", {
+      testCaseId: args.testCaseId,
+      testCaseType: "functionality",
+      action: "Status Change",
+      userId: userId,
+      username: user.name ?? user.email?.split('@')[0] ?? "Anonymous",
+      userEmail: user.email ?? "N/A",
+      sheetId: testCase.sheetId,
+      timestamp: now,
+      details: `Workflow status changed from "${oldStatus}" to "${args.workflowStatus}".`,
+    });
+
+    return { success: true, newStatus: args.workflowStatus };
+  },
+});
+
+// NEW: Mutation to update workflow status for alt text aria label test cases
+export const updateAltTextAriaLabelWorkflowStatus = mutation({
+  args: {
+    testCaseId: v.string(),
+    workflowStatus: v.union(
+      v.literal("Open"),
+      v.literal("Waiting for QA Lead Approval"),
+      v.literal("Needs revision"),
+      v.literal("In Progress"),
+      v.literal("Approved"),
+      v.literal("Declined"),
+      v.literal("Reopen"),
+      v.literal("Won't Do")
+    ),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("User must be authenticated");
+    }
+
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const normalizedTestCaseId = ctx.db.normalizeId(
+      "altTextAriaLabelTestCases",
+      args.testCaseId
+    );
+    if (!normalizedTestCaseId) {
+      throw new Error("Invalid test case ID");
+    }
+
+    const testCase = await ctx.db.get(normalizedTestCaseId);
+    if (!testCase) {
+      throw new Error("Test case not found");
+    }
+
+    const now = Date.now();
+    const oldStatus = testCase.workflowStatus;
+
+    // Update the workflow status
+    await ctx.db.patch(normalizedTestCaseId, {
+      workflowStatus: args.workflowStatus,
+      updatedAt: now,
+    });
+
+    // Log the activity
+    await ctx.db.insert("activityLogs", {
+      testCaseId: args.testCaseId,
+      testCaseType: "altTextAriaLabel",
+      action: "Status Change",
+      userId: userId,
+      username: user.name ?? user.email?.split('@')[0] ?? "Anonymous",
+      userEmail: user.email ?? "N/A",
+      sheetId: testCase.sheetId,
+      timestamp: now,
+      details: `Workflow status changed from "${oldStatus}" to "${args.workflowStatus}".`,
+    });
+
+    return { success: true, newStatus: args.workflowStatus };
   },
 });
