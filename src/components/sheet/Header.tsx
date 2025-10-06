@@ -23,6 +23,9 @@ import {
   DollarSign,
   Hash,
 } from "lucide-react";
+import { ShareModal } from "./share-modal";
+import { Button } from "../ui/button";
+import { useState } from "react";
 
 interface HeaderProps {
   sheetName?: string;
@@ -30,8 +33,13 @@ interface HeaderProps {
 }
 
 export function Header({ sheetName, onBack }: HeaderProps) {
+  
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false)
+
   return (
-    <header className="border-b border-gray-200">
+    <>
+      <ShareModal open={isShareModalOpen} onOpenChange={setIsShareModalOpen} />
+      <header className="border-b border-gray-200">
       <div className="px-4 py-2 flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Menu className="w-6 h-6 text-gray-600 cursor-pointer" />
@@ -53,11 +61,11 @@ export function Header({ sheetName, onBack }: HeaderProps) {
           </div>
         </div>
         <div className="flex items-center space-x-4">
-          <History className="w-5 h-5 text-gray-400 cursor-pointer" />
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 flex items-center space-x-2">
+          {/* <History className="w-5 h-5 text-gray-400 cursor-pointer" /> */}
+          <Button onClick={() => setIsShareModalOpen(true)} size="sm" className="bg-blue-700 text-white hover:bg-blue-70">
             <Share className="w-4 h-4" />
             <span>Share</span>
-          </button>
+          </Button>
           <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white font-medium text-sm cursor-pointer">
             A
           </div>
@@ -161,6 +169,7 @@ export function Header({ sheetName, onBack }: HeaderProps) {
           </button>
         </div>
       </div>
-    </header>
+      </header>
+    </>
   );
 }
