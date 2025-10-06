@@ -1,12 +1,14 @@
 // components/sheet/share-modal.tsx
+// components/sheet/share-modal.tsx
 import { useState } from "react"
-import { Copy, Lock, Mail, LinkIcon, Check, X } from "lucide-react"
+import { Copy, Lock, Mail, LinkIcon, Check, X, Globe } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useQuery, useMutation } from "convex/react"
 import { api } from "../../../convex/_generated/api"
 import { Id } from "../../../convex/_generated/dataModel"
@@ -25,9 +27,11 @@ export function ShareModal({
   sheetId,
 }: ShareModalProps) {
   const usersWithAccess = useQuery(api.myFunctions.getUsersWithAccess, { sheetId })
+  const sheet = useQuery(api.myFunctions.getSheetById, { id: sheetId })
   const addUserAccess = useMutation(api.myFunctions.addUserAccessToSheet)
   const removeUserAccess = useMutation(api.myFunctions.removeUserAccessFromSheet)
   const updateUserRole = useMutation(api.myFunctions.updatePermission)
+  const updateAccessLevel = useMutation(api.myFunctions.updateSheetAccessLevel)
 
   const [searchValue, setSearchValue] = useState("")
   const [isCopied, setIsCopied] = useState(false)
@@ -89,6 +93,17 @@ export function ShareModal({
     }
   }
 
+  const handleAccessLevelChange = async (newLevel: "restricted" | "anyoneWithLink" | "public") => {
+    try {
+      await updateAccessLevel({
+        sheetId: sheetId,
+        accessLevel: newLevel
+      })
+    } catch (error: any) {
+      alert("Failed to update access level: " + error.message)
+    }
+  }
+
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -97,6 +112,8 @@ export function ShareModal({
       .toUpperCase()
       .slice(0, 2)
   }
+
+  const currentAccessLevel = sheet?.accessLevel || "restricted"
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -234,22 +251,56 @@ export function ShareModal({
           {/* General access section */}
           <div className="space-y-3">
             <h3 className="text-sm font-medium">General access</h3>
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-              <Lock className="h-5 w-5 mt-0.5 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <Select defaultValue="restricted">
-                  <SelectTrigger className="w-[140px] h-8 mb-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="restricted">Restricted</SelectItem>
-                    <SelectItem value="anyone">Anyone with link</SelectItem>
-                    <SelectItem value="public">Public</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">Only people with access can open with the link</p>
+            
+            <RadioGroup value={currentAccessLevel} onValueChange={(value) => handleAccessLevelChange(value as "restricted" | "anyoneWithLink" | "public")}>
+              {/* Restricted Option */}
+              <div className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50" onClick={() => handleAccessLevelChange("restricted")}>
+                <Lock className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">Restricted</p>
+                      <p className="text-xs text-muted-foreground">
+                        Only people with access can open with the link
+                      </p>
+                    </div>
+                    <RadioGroupItem value="restricted" />
+                  </div>
+                </div>
               </div>
-            </div>
+
+              {/* Anyone with Link Option */}
+              <div className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50" onClick={() => handleAccessLevelChange("anyoneWithLink")}>
+                <LinkIcon className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">Anyone with the link</p>
+                      <p className="text-xs text-muted-foreground">
+                        Anyone with the link can access
+                      </p>
+                    </div>
+                    <RadioGroupItem value="anyoneWithLink" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Public Option */}
+              <div className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50" onClick={() => handleAccessLevelChange("public")}>
+                <Globe className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">Public</p>
+                      <p className="text-xs text-muted-foreground">
+                        Anyone on the internet can find and access
+                      </p>
+                    </div>
+                    <RadioGroupItem value="public" />
+                  </div>
+                </div>
+              </div>
+            </RadioGroup>
           </div>
 
           {/* Action buttons */}

@@ -142,6 +142,12 @@ export default defineSchema({
       v.literal("functionality"),
       v.literal("altTextAriaLabel"),
     ),
+
+    accessLevel: v.union(
+      v.literal("restricted"), // Only explicitly added users
+      v.literal("anyoneWithLink"), // Anyone with the link
+      v.literal("public") // Fully public
+    ),
   }),
 
   // =======================================================

@@ -203,94 +203,52 @@ export const listTestCasesBySheetId = query({
   },
 });
 
-export const getTestCasesForSheet = query({
+export const updateSheetAccessLevel = mutation({
   args: {
     sheetId: v.string(),
+    accessLevel: v.union(
+      v.literal("restricted"),
+      v.literal("anyoneWithLink"), 
+      v.literal("public")
+    )
   },
   handler: async (ctx, args) => {
+    // Normalize the sheet ID
     const normalizedSheetId = ctx.db.normalizeId("sheets", args.sheetId);
     if (!normalizedSheetId) {
-      return null;
+      throw new Error("Invalid sheet ID");
     }
 
-    // ✅ Check if user has access
+    // ✅ Check if user is authenticated
     const currentUserId = await getAuthUserId(ctx);
     if (!currentUserId) {
-      return { accessDenied: true, reason: "authentication" };
+      throw new Error("Authentication required");
     }
 
-    const hasAccess = await ctx.db
+    // ✅ Verify user has permission to change access (owners/editors only)
+    const userPermission = await ctx.db
       .query("sheetPermissions")
       .withIndex("by_sheet_and_user", (q) =>
         q.eq("sheetId", normalizedSheetId).eq("userId", currentUserId)
       )
       .unique();
 
-    if (!hasAccess) {
-      // ✅ RETURN an object instead of throwing an error
-      return { accessDenied: true, reason: "permission" };
+    if (!userPermission) {
+      throw new Error("You don't have access to this sheet");
     }
 
-    // Continue with existing logic
-    const sheet = await ctx.db.get(normalizedSheetId);
-    if (!sheet) {
-      return null;
+    if (!["owner", "editor"].includes(userPermission.role)) {
+      throw new Error("Only owners and editors can change access levels");
     }
 
-    let testCases: any[] = [];
+    // ✅ Update the sheet's access level
+    await ctx.db.patch(normalizedSheetId, {
+      accessLevel: args.accessLevel
+    });
 
-    if (sheet.testCaseType === "functionality") {
-      const rawTestCases = await ctx.db
-        .query("functionalityTestCases")
-        .filter((q) => q.eq(q.field("sheetId"), normalizedSheetId))
-        .collect();
-
-      testCases = await Promise.all(
-        rawTestCases.map(async (testCase, index) => {
-          const createdByUser = await ctx.db.get(testCase.createdBy);
-          const executedByUser = testCase.executedBy
-            ? await ctx.db.get(testCase.executedBy)
-            : null;
-
-          return {
-            ...testCase,
-            createdByName: createdByUser?.email || "Unknown User",
-            executedByName: executedByUser?.email || "N/A",
-            sequenceNumber: index + 1,
-          };
-        })
-      );
-    } else if (sheet.testCaseType === "altTextAriaLabel") {
-      const rawTestCases = await ctx.db
-        .query("altTextAriaLabelTestCases")
-        .filter((q) => q.eq(q.field("sheetId"), normalizedSheetId))
-        .collect();
-
-      testCases = await Promise.all(
-        rawTestCases.map(async (testCase, index) => {
-          const createdByUser = await ctx.db.get(testCase.createdBy);
-          const executedByUser = testCase.executedBy
-            ? await ctx.db.get(testCase.executedBy)
-            : null;
-
-          return {
-            ...testCase,
-            createdByName: createdByUser?.email || "Unknown User",
-            executedByName: executedByUser?.email || "N/A",
-            sequenceNumber: index + 1,
-          };
-        })
-      );
-    }
-
-    return {
-      sheet,
-      testCaseType: sheet.testCaseType,
-      testCases,
-    };
+    return { success: true };
   },
 });
-
 // Mutation to update row height for functionality test cases
 export const updateFunctionalityTestCaseRowHeight = mutation({
   args: {
@@ -504,9 +462,10 @@ export const createSheet = mutation({
       testCaseType: args.testCaseType,
       isPublic: args.isPublic ?? false,
       requestable: args.requestable ?? false,
+      accessLevel: "restricted", // ✅ ADD THIS LINE - new sheets default to restricted
     });
 
-    // ✅ NEW: Auto-add the creator as "owner" in sheetPermissions
+    // ✅ Auto-add the creator as "owner" in sheetPermissions
     await ctx.db.insert("sheetPermissions", {
       sheetId: sheetId,
       userId: normalizedUserId,
@@ -1314,5 +1273,148 @@ export const removeUserAccessFromSheet = mutation({
     }
 
     return { success: true };
+  },
+});
+
+export const checkSheetAccess = async (
+  ctx: QueryCtx | MutationCtx,
+  sheetId: Id<"sheets">
+) => {
+  const sheet = await ctx.db.get(sheetId);
+  if (!sheet) return { allowed: false, reason: "not_found" };
+
+  // Public sheets are accessible to anyone
+  if (sheet.accessLevel === "public") {
+    return { allowed: true, public: true };
+  }
+
+  const userId = await getAuthUserId(ctx);
+  
+  // Anyone with link access (authenticated users only)
+  if (sheet.accessLevel === "anyoneWithLink" && userId) {
+    return { allowed: true, viaLink: true };
+  }
+
+  // Restricted access - check explicit permissions
+  if (userId) {
+    const permission = await ctx.db
+      .query("sheetPermissions")
+      .withIndex("by_sheet_and_user", (q) =>
+        q.eq("sheetId", sheetId).eq("userId", userId)
+      )
+      .unique();
+
+    if (permission) {
+      return { 
+        allowed: true, 
+        restricted: true, 
+        role: permission.role 
+      };
+    }
+  }
+
+  return { allowed: false, reason: "no_access" };
+};
+
+export const getTestCasesForSheet = query({
+  args: {
+    sheetId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const normalizedSheetId = ctx.db.normalizeId("sheets", args.sheetId);
+    if (!normalizedSheetId) {
+      return null;
+    }
+
+    // ✅ Use the centralized authorization check
+    const access = await checkSheetAccess(ctx, normalizedSheetId);
+    
+    if (!access.allowed) {
+      return { 
+        accessDenied: true, 
+        reason: access.reason,
+        requiresAuth: access.reason === "no_access" && !(await getAuthUserId(ctx))
+      };
+    }
+
+    // User has access - continue with existing logic
+    const sheet = await ctx.db.get(normalizedSheetId);
+    if (!sheet) {
+      return null;
+    }
+
+    let testCases: any[] = [];
+
+    if (sheet.testCaseType === "functionality") {
+      const rawTestCases = await ctx.db
+        .query("functionalityTestCases")
+        .filter((q) => q.eq(q.field("sheetId"), normalizedSheetId))
+        .collect();
+
+      testCases = await Promise.all(
+        rawTestCases.map(async (testCase, index) => {
+          const createdByUser = await ctx.db.get(testCase.createdBy);
+          const executedByUser = testCase.executedBy
+            ? await ctx.db.get(testCase.executedBy)
+            : null;
+
+          return {
+            ...testCase,
+            createdByName: createdByUser?.email || "Unknown User",
+            executedByName: executedByUser?.email || "N/A",
+            sequenceNumber: index + 1,
+          };
+        })
+      );
+    } else if (sheet.testCaseType === "altTextAriaLabel") {
+      const rawTestCases = await ctx.db
+        .query("altTextAriaLabelTestCases")
+        .filter((q) => q.eq(q.field("sheetId"), normalizedSheetId))
+        .collect();
+
+      testCases = await Promise.all(
+        rawTestCases.map(async (testCase, index) => {
+          const createdByUser = await ctx.db.get(testCase.createdBy);
+          const executedByUser = testCase.executedBy
+            ? await ctx.db.get(testCase.executedBy)
+            : null;
+
+          return {
+            ...testCase,
+            createdByName: createdByUser?.email || "Unknown User",
+            executedByName: executedByUser?.email || "N/A",
+            sequenceNumber: index + 1,
+          };
+        })
+      );
+    }
+
+    return {
+      sheet,
+      testCaseType: sheet.testCaseType,
+      testCases,
+      access, // Include access info (useful for frontend to know if user has edit rights, etc.)
+    };
+  },
+});
+
+// Protected query that uses the authorization check
+export const getProtectedSheet = query({
+  args: { sheetId: v.id("sheets") },
+  handler: async (ctx, args) => {
+    const access = await checkSheetAccess(ctx, args.sheetId);
+    
+    if (!access.allowed) {
+      // Return access denied instead of throwing for better UX
+      return { 
+        accessDenied: true, 
+        reason: access.reason,
+        requiresAuth: access.reason === "no_access" 
+      };
+    }
+
+    // User has access - return the sheet data
+    const sheet = await ctx.db.get(args.sheetId);
+    return { sheet, access };
   },
 });
