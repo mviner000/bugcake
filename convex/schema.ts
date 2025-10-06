@@ -342,5 +342,16 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_sheet", ["sheetId"])
     .index("by_sheetId_timestamp", ["sheetId", "timestamp"]),
+
+  sheetPermissions: defineTable({
+    sheetId: v.id("sheets"),
+    userId: v.id("users"),
+    // Define the roles for access control
+    role: v.union(v.literal("owner"), v.literal("editor"), v.literal("viewer")),
+  })
+    // Index for quickly checking a user's permission on a sheet (Critical for Step 5)
+    .index("by_sheet_and_user", ["sheetId", "userId"])
+    // Index for quickly fetching all users who have access to a specific sheet (Critical for Share Modal)
+    .index("by_sheet", ["sheetId"])
 });
 

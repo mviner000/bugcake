@@ -1,11 +1,10 @@
-// src/sheet/Header.tsx
+// components/sheet/Header.tsx
 
 import {
   ArrowLeft,
   Star,
   Share,
   Folder,
-  History,
   Menu,
   Undo,
   Redo,
@@ -26,19 +25,26 @@ import {
 import { ShareModal } from "./share-modal";
 import { Button } from "../ui/button";
 import { useState } from "react";
+import { Id } from "convex/_generated/dataModel";
 
 interface HeaderProps {
   sheetName?: string;
   onBack: () => void;
 }
 
-export function Header({ sheetName, onBack }: HeaderProps) {
+export function Header({ sheetName, onBack, sheetId }: HeaderProps & { sheetId: string }) {
   
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
+  const normalizedSheetId = sheetId as Id<"sheets">;
 
   return (
     <>
-      <ShareModal open={isShareModalOpen} onOpenChange={setIsShareModalOpen} />
+      <ShareModal 
+        open={isShareModalOpen} 
+        onOpenChange={setIsShareModalOpen} 
+        fileName={sheetName} 
+        sheetId={normalizedSheetId}
+      />
       <header className="border-b border-gray-200">
       <div className="px-4 py-2 flex items-center justify-between">
         <div className="flex items-center space-x-4">

@@ -1,84 +1,92 @@
+// components/sheet/share-modal.tsx
 import { useState } from "react"
-import { Copy, Lock, Mail, LinkIcon } from "lucide-react"
+import { Copy, Lock, Mail, LinkIcon, Check, X } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-
-interface Person {
-  id: string
-  name: string
-  email: string
-  role: string
-  avatarUrl?: string
-  avatarColor?: string
-  isCurrentUser?: boolean
-}
-
-const dummyPeople: Person[] = [
-  {
-    id: "1",
-    name: "Melvin Nogoy",
-    email: "melvin.nogoy@mph-intl.com",
-    role: "Editor",
-    avatarUrl: "/professional-man.jpg",
-    isCurrentUser: true,
-  },
-  {
-    id: "2",
-    name: "Armie Bargado",
-    email: "armie.bargado@mph-intl.com",
-    role: "Editor",
-    avatarUrl: "/professional-woman-diverse.png",
-  },
-  {
-    id: "3",
-    name: "Carl Sabile",
-    email: "carl.sabile@mph-intl.com",
-    role: "Editor",
-    avatarColor: "bg-orange-500",
-  },
-  {
-    id: "4",
-    name: "Charissa Arellano",
-    email: "charissa.arellano@mph-intl.com",
-    role: "Editor",
-    avatarUrl: "/professional-woman-2.png",
-  },
-  {
-    id: "5",
-    name: "Dave Guardian",
-    email: "dave.guardian@mph-intl.com",
-    role: "Editor",
-    avatarColor: "bg-purple-500",
-  },
-  {
-    id: "6",
-    name: "Diana Rivera",
-    email: "diana.rivera@mph-intl.com",
-    role: "Editor",
-    avatarColor: "bg-amber-700",
-  },
-]
+import { useQuery, useMutation } from "convex/react"
+import { api } from "../../../convex/_generated/api"
+import { Id } from "../../../convex/_generated/dataModel"
 
 interface ShareModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   fileName?: string
+  sheetId: Id<"sheets">
 }
 
 export function ShareModal({
   open,
   onOpenChange,
   fileName = "PROD | IPP | Regression Testing [09-19-2025].xlsx",
+  sheetId,
 }: ShareModalProps) {
+  const usersWithAccess = useQuery(api.myFunctions.getUsersWithAccess, { sheetId })
+  const addUserAccess = useMutation(api.myFunctions.addUserAccessToSheet)
+  const removeUserAccess = useMutation(api.myFunctions.removeUserAccessFromSheet)
+  const updateUserRole = useMutation(api.myFunctions.updatePermission)
+
   const [searchValue, setSearchValue] = useState("")
+  const [isCopied, setIsCopied] = useState(false)
+  const [isAddingUser, setIsAddingUser] = useState(false)
 
   const handleCopyLink = () => {
-    // Copy link logic here
-    console.log("Link copied!")
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      setIsCopied(true)
+      setTimeout(() => setIsCopied(false), 2000)
+    })
+  }
+
+  const handleAddUser = async () => {
+    if (!searchValue.trim()) {
+      alert("Please enter an email address")
+      return
+    }
+    
+    setIsAddingUser(true)
+    try {
+      await addUserAccess({
+        sheetId,
+        userEmail: searchValue.trim(),
+        role: "viewer",
+      })
+      setSearchValue("")
+      alert("User added successfully!")
+    } catch (error: any) {
+      alert(error.message || "Failed to add user")
+    } finally {
+      setIsAddingUser(false)
+    }
+  }
+
+  const handleRoleChange = async (userId: Id<"users">, newRole: "owner" | "editor" | "viewer") => {
+    try {
+      await updateUserRole({
+        sheetId,
+        targetUserId: userId,
+        role: newRole,
+      })
+    } catch (error: any) {
+      alert(error.message || "Failed to update role")
+    }
+  }
+
+  const handleRemoveUser = async (userId: Id<"users">) => {
+    if (!confirm("Are you sure you want to remove this user's access?")) {
+      return
+    }
+
+    try {
+      await removeUserAccess({
+        sheetId,
+        targetUserId: userId,
+      })
+    } catch (error: any) {
+      alert(error.message || "Failed to remove user")
+    }
   }
 
   const getInitials = (name: string) => {
@@ -101,12 +109,26 @@ export function ShareModal({
 
         <div className="px-6 pb-6 space-y-6">
           {/* Search Input */}
-          <Input
-            placeholder="Add people, groups, spaces, and calendar events"
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            className="h-12"
-          />
+          <div className="flex gap-2">
+            <Input
+              placeholder="Add people by email"
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              className="h-12"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleAddUser()
+                }
+              }}
+            />
+            <Button 
+              onClick={handleAddUser} 
+              disabled={isAddingUser || !searchValue.trim()}
+              className="h-12"
+            >
+              {isAddingUser ? "Adding..." : "Add"}
+            </Button>
+          </div>
 
           {/* People with access section */}
           <div className="space-y-4">
@@ -145,37 +167,58 @@ export function ShareModal({
               </TabsList>
 
               <TabsContent value="all" className="mt-4 space-y-3">
-                {dummyPeople.map((person) => (
-                  <div key={person.id} className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <Avatar className="h-10 w-10 flex-shrink-0">
-                        {person.avatarUrl ? (
-                          <AvatarImage src={person.avatarUrl || "/placeholder.svg"} alt={person.name} />
-                        ) : null}
-                        <AvatarFallback className={person.avatarColor || "bg-muted"}>
-                          {getInitials(person.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {person.name}
-                          {person.isCurrentUser && <span className="text-muted-foreground font-normal"> (you)</span>}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">{person.email}</p>
+                {usersWithAccess === undefined ? (
+                  <p className="text-sm text-muted-foreground">Loading users...</p>
+                ) : usersWithAccess.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No users have access yet</p>
+                ) : (
+                  usersWithAccess.map((person) => (
+                    <div key={person.id} className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <Avatar className="h-10 w-10 flex-shrink-0">
+                          {person.avatarUrl ? (
+                            <AvatarImage src={person.avatarUrl || "/placeholder.svg"} alt={person.name} />
+                          ) : null}
+                          <AvatarFallback className="bg-muted">
+                            {getInitials(person.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {person.name}
+                            {person.isCurrentUser && <span className="text-muted-foreground font-normal"> (you)</span>}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">{person.email}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Select 
+                          defaultValue={person.role}
+                          onValueChange={(value) => handleRoleChange(person.id, value as "owner" | "editor" | "viewer")}
+                        >
+                          <SelectTrigger className="w-[110px] h-9">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="viewer">Viewer</SelectItem>
+                            <SelectItem value="editor">Editor</SelectItem>
+                            <SelectItem value="owner">Owner</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {!person.isCurrentUser && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9"
+                            onClick={() => handleRemoveUser(person.id)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
-                    <Select defaultValue={person.role.toLowerCase()}>
-                      <SelectTrigger className="w-[110px] h-9">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="viewer">Viewer</SelectItem>
-                        <SelectItem value="editor">Editor</SelectItem>
-                        <SelectItem value="owner">Owner</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
+                  ))
+                )}
               </TabsContent>
 
               <TabsContent value="guests" className="mt-4">
@@ -211,9 +254,13 @@ export function ShareModal({
 
           {/* Action buttons */}
           <div className="flex items-center justify-between pt-2">
-            <Button variant="outline" onClick={handleCopyLink}>
-              <Copy className="h-4 w-4 mr-2" />
-              Copy link
+            <Button variant="outline" onClick={handleCopyLink} disabled={isCopied}>
+              {isCopied ? (
+                <Check className="h-4 w-4 mr-2 text-green-600" />
+              ) : (
+                <Copy className="h-4 w-4 mr-2" />
+              )}
+              {isCopied ? "Copied!" : "Copy link"}
             </Button>
             <Button onClick={() => onOpenChange(false)}>Done</Button>
           </div>

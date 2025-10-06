@@ -1,7 +1,7 @@
-// convex/myFunctions.ts
+// code convex/myFunctions.ts
 
 import { v } from "convex/values";
-import { query, mutation, action } from "./_generated/server";
+import { query, mutation, action, QueryCtx, MutationCtx } from "./_generated/server";
 import { api } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { Doc } from "./_generated/dataModel";
@@ -209,11 +209,29 @@ export const getTestCasesForSheet = query({
   },
   handler: async (ctx, args) => {
     const normalizedSheetId = ctx.db.normalizeId("sheets", args.sheetId);
-
     if (!normalizedSheetId) {
       return null;
     }
 
+    // ✅ Check if user has access
+    const currentUserId = await getAuthUserId(ctx);
+    if (!currentUserId) {
+      return { accessDenied: true, reason: "authentication" };
+    }
+
+    const hasAccess = await ctx.db
+      .query("sheetPermissions")
+      .withIndex("by_sheet_and_user", (q) =>
+        q.eq("sheetId", normalizedSheetId).eq("userId", currentUserId)
+      )
+      .unique();
+
+    if (!hasAccess) {
+      // ✅ RETURN an object instead of throwing an error
+      return { accessDenied: true, reason: "permission" };
+    }
+
+    // Continue with existing logic
     const sheet = await ctx.db.get(normalizedSheetId);
     if (!sheet) {
       return null;
@@ -227,7 +245,6 @@ export const getTestCasesForSheet = query({
         .filter((q) => q.eq(q.field("sheetId"), normalizedSheetId))
         .collect();
 
-      // Enrich with user information AND sequence number
       testCases = await Promise.all(
         rawTestCases.map(async (testCase, index) => {
           const createdByUser = await ctx.db.get(testCase.createdBy);
@@ -239,7 +256,7 @@ export const getTestCasesForSheet = query({
             ...testCase,
             createdByName: createdByUser?.email || "Unknown User",
             executedByName: executedByUser?.email || "N/A",
-            sequenceNumber: index + 1, // Simple incremental number based on array position
+            sequenceNumber: index + 1,
           };
         })
       );
@@ -249,7 +266,6 @@ export const getTestCasesForSheet = query({
         .filter((q) => q.eq(q.field("sheetId"), normalizedSheetId))
         .collect();
 
-      // Enrich with user information AND sequence number
       testCases = await Promise.all(
         rawTestCases.map(async (testCase, index) => {
           const createdByUser = await ctx.db.get(testCase.createdBy);
@@ -261,7 +277,7 @@ export const getTestCasesForSheet = query({
             ...testCase,
             createdByName: createdByUser?.email || "Unknown User",
             executedByName: executedByUser?.email || "N/A",
-            sequenceNumber: index + 1, // Simple incremental number based on array position
+            sequenceNumber: index + 1,
           };
         })
       );
@@ -460,18 +476,15 @@ export const createSheet = mutation({
       v.literal("altTextAriaLabel"),
     ),
     shared: v.boolean(),
-    // Optional fields you might add later
     isPublic: v.optional(v.boolean()),
     requestable: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    // 1. Authenticate and identify the user
     const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error("Unauthorized: You must be logged in to create a sheet.");
     }
 
-    // We must normalize the ID to ensure it's a valid Doc<"users"> ID
     const normalizedUserId = ctx.db.normalizeId("users", userId);
     if (!normalizedUserId) {
       throw new Error("Invalid user session.");
@@ -479,22 +492,27 @@ export const createSheet = mutation({
 
     const now = Date.now();
 
-    // 2. Insert the new document into the 'sheets' table
+    // Insert the new sheet
     const sheetId = await ctx.db.insert("sheets", {
       name: args.name,
       type: args.type,
-      owner: normalizedUserId, // Automatically set the owner to the logged-in user
+      owner: normalizedUserId,
       last_opened_at: now,
       created_at: now,
       updated_at: now,
       shared: args.shared,
       testCaseType: args.testCaseType,
-      // Use defaults for optional fields if not provided
       isPublic: args.isPublic ?? false,
       requestable: args.requestable ?? false,
     });
 
-    // 3. Return the ID of the new sheet for the frontend to navigate
+    // ✅ NEW: Auto-add the creator as "owner" in sheetPermissions
+    await ctx.db.insert("sheetPermissions", {
+      sheetId: sheetId,
+      userId: normalizedUserId,
+      role: "owner",
+    });
+
     return sheetId;
   },
 });
@@ -1081,5 +1099,220 @@ export const getActivityLogsForSheet = query({
 
     // 3. Execute the query
     return logsQuery.collect();
+  },
+});
+
+// Helper to get the current user's ID
+const getUserId = async (ctx: QueryCtx | MutationCtx): Promise<Id<"users"> | null> => {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity || !identity.email) {
+    return null; 
+  }
+  const user = await ctx.db
+    .query("users")
+    .withIndex("email", (q) => q.eq("email", identity.email!))
+    .unique();
+
+  return user ? user._id : null;
+};
+
+// 💡 FIX APPLIED HERE: Use the union type (QueryCtx | MutationCtx)
+type Role = "owner" | "editor" | "viewer" | null;
+
+const checkAccessRoleInternal = async (
+  ctx: QueryCtx | MutationCtx, 
+  sheetId: Id<"sheets">
+): Promise<Role> => {
+  // Logic remains the same, using only methods available on both contexts (auth, db.query)
+  const userId = await getUserId(ctx);
+  if (!userId) return null;
+
+  const permission = await ctx.db
+    .query("sheetPermissions")
+    .withIndex("by_sheet_and_user", (q) =>
+      q.eq("sheetId", sheetId).eq("userId", userId)
+    )
+    .unique();
+
+  return permission ? permission.role : null;
+};
+
+// --- Step 2b: getAccessRole (Now works) ---
+export const getAccessRole = query({
+  args: { sheetId: v.id("sheets") },
+  handler: async (ctx, args) => {
+    // ctx is QueryCtx, which is assignable to QueryCtx | MutationCtx
+    return await checkAccessRoleInternal(ctx, args.sheetId);
+  },
+});
+
+// --- Step 3b: updatePermission (Now works) ---
+export const updatePermission = mutation({
+  args: {
+    sheetId: v.id("sheets"),
+    targetUserId: v.id("users"),
+    role: v.union(v.literal("owner"), v.literal("editor"), v.literal("viewer")),
+  },
+  handler: async (ctx, args) => {
+    const sharerId = await getUserId(ctx);
+    if (!sharerId) {
+        throw new Error("Authentication required.");
+    }
+    // ctx is MutationCtx, which is assignable to QueryCtx | MutationCtx
+    const sharerPermission = await checkAccessRoleInternal(ctx, args.sheetId);
+    
+    // ... rest of the updatePermission logic
+    if (sharerPermission !== "owner" && sharerPermission !== "editor") {
+      throw new Error("Permission denied. Only owners/editors can share.");
+    }
+
+    const existingPermission = await ctx.db
+      .query("sheetPermissions")
+      .withIndex("by_sheet_and_user", (q) =>
+        q.eq("sheetId", args.sheetId).eq("userId", args.targetUserId)
+      )
+      .unique();
+
+    if (existingPermission) {
+      await ctx.db.patch(existingPermission._id, { role: args.role });
+    } else {
+      await ctx.db.insert("sheetPermissions", {
+        sheetId: args.sheetId,
+        userId: args.targetUserId,
+        role: args.role,
+      });
+    }
+  },
+});
+
+export const getUsersWithAccess = query({
+  args: { sheetId: v.id("sheets") },
+  handler: async (ctx, args) => {
+    // Get all permissions for this sheet
+    const permissions = await ctx.db
+      .query("sheetPermissions")
+      .withIndex("by_sheet", (q) => q.eq("sheetId", args.sheetId))
+      .collect();
+
+    // Fetch user details for each permission
+    const usersWithAccess = await Promise.all(
+      permissions.map(async (permission) => {
+        const user = await ctx.db.get(permission.userId);
+        
+        // Get current logged-in user to mark "you"
+        const currentUserId = await getAuthUserId(ctx);
+        const isCurrentUser = currentUserId === permission.userId;
+
+        return {
+          id: permission.userId,
+          name: user?.name || user?.email?.split('@')[0] || "Unknown User",
+          email: user?.email || "N/A",
+          role: permission.role,
+          avatarUrl: user?.image,
+          isCurrentUser: isCurrentUser,
+        };
+      })
+    );
+
+    return usersWithAccess;
+  },
+});
+
+
+export const addUserAccessToSheet = mutation({
+  args: {
+    sheetId: v.id("sheets"),
+    userEmail: v.string(),
+    role: v.union(v.literal("owner"), v.literal("editor"), v.literal("viewer")),
+  },
+  handler: async (ctx, args) => {
+    // 1. Check if current user has permission to share
+    const currentUserId = await getAuthUserId(ctx);
+    if (!currentUserId) {
+      throw new Error("Authentication required.");
+    }
+
+    const currentUserPermission = await ctx.db
+      .query("sheetPermissions")
+      .withIndex("by_sheet_and_user", (q) =>
+        q.eq("sheetId", args.sheetId).eq("userId", currentUserId)
+      )
+      .unique();
+
+    // Only owners and editors can add people
+    if (!currentUserPermission || 
+        (currentUserPermission.role !== "owner" && currentUserPermission.role !== "editor")) {
+      throw new Error("Permission denied. Only owners/editors can share.");
+    }
+
+    // 2. Find the user by email
+    const targetUser = await ctx.db
+      .query("users")
+      .withIndex("email", (q) => q.eq("email", args.userEmail))
+      .unique();
+
+    if (!targetUser) {
+      throw new Error("User not found with that email.");
+    }
+
+    // 3. Check if user already has access
+    const existingPermission = await ctx.db
+      .query("sheetPermissions")
+      .withIndex("by_sheet_and_user", (q) =>
+        q.eq("sheetId", args.sheetId).eq("userId", targetUser._id)
+      )
+      .unique();
+
+    if (existingPermission) {
+      throw new Error("User already has access to this sheet.");
+    }
+
+    // 4. Add the permission
+    await ctx.db.insert("sheetPermissions", {
+      sheetId: args.sheetId,
+      userId: targetUser._id,
+      role: args.role,
+    });
+
+    return { success: true, message: `Access granted to ${args.userEmail}` };
+  },
+});
+
+export const removeUserAccessFromSheet = mutation({
+  args: {
+    sheetId: v.id("sheets"),
+    targetUserId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const currentUserId = await getAuthUserId(ctx);
+    if (!currentUserId) {
+      throw new Error("Authentication required.");
+    }
+
+    // Check if current user is owner
+    const currentUserPermission = await ctx.db
+      .query("sheetPermissions")
+      .withIndex("by_sheet_and_user", (q) =>
+        q.eq("sheetId", args.sheetId).eq("userId", currentUserId)
+      )
+      .unique();
+
+    if (!currentUserPermission || currentUserPermission.role !== "owner") {
+      throw new Error("Only owners can remove access.");
+    }
+
+    // Find and delete the target user's permission
+    const targetPermission = await ctx.db
+      .query("sheetPermissions")
+      .withIndex("by_sheet_and_user", (q) =>
+        q.eq("sheetId", args.sheetId).eq("userId", args.targetUserId)
+      )
+      .unique();
+
+    if (targetPermission) {
+      await ctx.db.delete(targetPermission._id);
+    }
+
+    return { success: true };
   },
 });
