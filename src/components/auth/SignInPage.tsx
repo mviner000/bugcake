@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/form";
 import { AuthLayout } from "./AuthLayout";
 import { ErrorMessage } from "./ErrorMessage";
+import { TestCredentialsBanner } from "./TestCredentialsBanner";
 
 const signInSchema = z.object({
     email: z.string().email("Please enter a valid email address"),
@@ -28,11 +29,13 @@ const signInSchema = z.object({
 
 type SignInFormData = z.infer<typeof signInSchema>;
 
+// Note: Uncomment all references related to SignInWithGoogle for later use.
+
 export function SignInPage() {
     const { signIn } = useAuthActions();
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+    // const [isGoogleLoading, setIsGoogleLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
     const location = useLocation();
@@ -68,21 +71,21 @@ export function SignInPage() {
         }
     };
 
-    const handleGoogleSignIn = async () => {
-        if (isGoogleLoading) return;
+    // const handleGoogleSignIn = async () => {
+    //     if (isGoogleLoading) return;
 
-        setError(null);
-        setIsGoogleLoading(true);
+    //     setError(null);
+    //     setIsGoogleLoading(true);
 
-        try {
-            await signIn("google");
-            navigate(from, { replace: true });
-        } catch (error: any) {
-            setError(error.message || error.toString());
-        } finally {
-            setIsGoogleLoading(false);
-        }
-    };
+    //     try {
+    //         await signIn("google");
+    //         navigate(from, { replace: true });
+    //     } catch (error: any) {
+    //         setError(error.message || error.toString());
+    //     } finally {
+    //         setIsGoogleLoading(false);
+    //     }
+    // };
 
     return (
         <AuthLayout flow="signIn">
@@ -106,10 +109,18 @@ export function SignInPage() {
                                     Email
                                 </FormLabel>
                                 <FormControl>
-                                    <Input
+                                    {/* <Input
                                         {...field}
                                         type="email"
                                         disabled={isSubmitting || isGoogleLoading}
+                                        placeholder=""
+                                        className="h-[50px] w-full px-4 py-3 bg-orange-50 border-0 rounded-lg text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-orange-500 disabled:opacity-50"
+                                    /> */}
+                                    
+                                    <Input
+                                        {...field}
+                                        type="email"
+                                        disabled={isSubmitting}
                                         placeholder=""
                                         className="h-[50px] w-full px-4 py-3 bg-orange-50 border-0 rounded-lg text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-orange-500 disabled:opacity-50"
                                     />
@@ -129,7 +140,7 @@ export function SignInPage() {
                                 </FormLabel>
                                 <FormControl>
                                     <div className="relative">
-                                        <Input
+                                        {/* <Input
                                             {...field}
                                             type={showPassword ? "text" : "password"}
                                             disabled={isSubmitting || isGoogleLoading}
@@ -140,6 +151,21 @@ export function SignInPage() {
                                             type="button"
                                             onClick={() => setShowPassword(!showPassword)}
                                             disabled={isSubmitting || isGoogleLoading}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                                        >
+                                            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                        </button> */}
+                                        <Input
+                                            {...field}
+                                            type={showPassword ? "text" : "password"}
+                                            disabled={isSubmitting}
+                                            placeholder="••••••••••••"
+                                            className="h-[50px] w-full px-4 py-3 bg-orange-50 border-0 rounded-lg text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-orange-500 pr-12 disabled:opacity-50"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            disabled={isSubmitting}
                                             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 disabled:opacity-50"
                                         >
                                             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -172,16 +198,16 @@ export function SignInPage() {
                         Sign in
                     </LoadingButton>
 
-                    <div className="relative my-6">
+                    {/* <div className="relative my-6">
                         <div className="absolute inset-0 flex items-center">
                             <div className="w-full border-t border-gray-300" />
                         </div>
                         <div className="relative flex justify-center text-sm">
                             <span className="px-4 bg-white text-gray-500">OR</span>
                         </div>
-                    </div>
+                    </div> */}
 
-                    <LoadingButton
+                    {/* <LoadingButton
                         type="button"
                         loading={isGoogleLoading}
                         loadingText="Connecting to Google..."
@@ -190,16 +216,28 @@ export function SignInPage() {
                         className="w-full h-[64px] bg-gray-900 hover:bg-gray-800 text-white border-gray-900 py-3 rounded-full text-base font-medium"
                     >
                         Sign in with Google
-                    </LoadingButton>
+                    </LoadingButton> */}
+
+                    <TestCredentialsBanner />
 
                     <div className="text-center">
                         <p className="text-gray-600 mb-4">
                             Doesn't have an account?
                         </p>
-                        <Button
+                        {/* <Button
                             type="button"
                             variant="outline"
                             disabled={isSubmitting || isGoogleLoading}
+                            onClick={() => navigate("/signup")}
+                            className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 py-3 rounded-full text-base font-medium bg-transparent disabled:opacity-50"
+                        >
+                            Sign up
+                        </Button> */}
+
+                        <Button
+                            type="button"
+                            variant="outline"
+                            disabled={isSubmitting}
                             onClick={() => navigate("/signup")}
                             className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 py-3 rounded-full text-base font-medium bg-transparent disabled:opacity-50"
                         >

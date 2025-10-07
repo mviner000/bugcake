@@ -1,45 +1,102 @@
-# Welcome to your Convex + React (Vite) + Convex Auth app
+# 🧁 Welcome to **BugCake**
 
-This is a [Convex](https://convex.dev/) project created with [`npm create convex`](https://www.npmjs.com/package/create-convex).
+BugCake is a modern **Quality Assurance (QA) Management Platform** that helps QA Analysts and software teams **plan, execute, and manage test cases** — all in one centralized and intuitive environment.
 
-After the initial setup (<2 minutes) you'll have a working full-stack app using:
+---
 
-- Convex as your backend (database, server logic)
-- [React](https://react.dev/) as your frontend (web page interactivity)
-- [Vite](https://vitest.dev/) for optimized web hosting
-- [Tailwind](https://tailwindcss.com/) for building great looking UI
-- [Convex Auth](https://labs.convex.dev/auth) for authentication
+## 🚀 Overview
 
-## Get started
+BugCake simplifies quality assurance by centralizing test case creation, defect tracking, and test run management.  
+It bridges collaboration between **QA teams, developers, and product managers**, ensuring software releases are reliable, consistent, and transparent.
 
-If you just cloned this codebase and didn't use `npm create convex`, run:
+With BugCake, organizations can:
+- Improve test visibility and traceability.
+- Reduce redundant manual efforts.
+- Ensure faster, higher-quality releases.
 
-```
-npm install
-npm run dev
-```
+---
 
-If you're reading this README on GitHub and want to use this template, run:
+## 💡 Vision
 
-```
-npm create convex@latest -- -t react-vite-convexauth
-```
+> Empower QA Analysts and software teams to deliver reliable software through a unified, transparent, and scalable QA management platform.
 
-For more information on how to configure Convex Auth, check out the [Convex Auth docs](https://labs.convex.dev/auth/).
+BugCake provides tools to:
+- Document test requirements and link them to test cases.
+- Execute test runs and track real-time results.
+- Identify and log defects efficiently.
+- Analyze quality metrics through reporting and dashboards.
 
-For more examples of different Convex Auth flows, check out this [example repo](https://www.convex.dev/templates/convex-auth).
+---
 
-## Learn more
+## 👥 Personas
 
-To learn more about developing your project with Convex, check out:
+### 🧠 QA Lead (Super Admin)
+- Full access to all projects, test cases, and user management.
+- Manages reports, analytics, and user permissions.
 
-- The [Tour of Convex](https://docs.convex.dev/get-started) for a thorough introduction to Convex principles.
-- The rest of [Convex docs](https://docs.convex.dev/) to learn about all Convex features.
-- [Stack](https://stack.convex.dev/) for in-depth articles on advanced topics.
+### 🧩 QA Tester (Innovation Stakeholder)
+- Manages their own test cases within assigned projects.
+- Receives notifications related to assigned work.
 
-## Join the community
+---
 
-Join thousands of developers building full-stack apps with Convex:
+## 🎯 Phase 1 (MVP)
 
-- Join the [Convex Discord community](https://convex.dev/community) to get help in real-time.
-- Follow [Convex on GitHub](https://github.com/get-convex/), star and contribute to the open-source implementation of Convex.
+### 🎨 **Account Management**
+- Sign Up, Sign In, and Password Reset (with 30-min expiry links)
+- Super Admin approval for new accounts
+- Role-based access (QA Lead / QA Tester)
+- Profile management with picture upload and password change
+
+### 🧭 **Innovations Dashboard**
+- Central hub for all QA activities
+- Displays projects, test cases, and test runs
+- Real-time progress indicators for test runs
+- List and Card view modes for better data visualization
+
+### 🔐 **Role-Based Access Control (RBAC)**
+- Super Admin approval for sign-ups
+- QA Tester has limited access to assigned projects
+- Strict permission enforcement at UI and API levels
+
+---
+
+## 🔮 Phase 2 (Future Enhancements)
+
+### 📈 **Advanced Reporting & Analytics**
+- Customizable dashboards with historical data
+- Metrics such as defect density, test coverage, and velocity
+- Export reports to PDF and Excel
+
+### 🧩 **Enhanced Test Planning & Management**
+- Multi-sprint milestone tracking
+- Requirements Traceability Matrix (RTM)
+- Bulk operations on test cases
+
+### 🌐 **Cross-Browser & Platform Testing**
+- Track environment (browser, OS, device)
+- Matrix view for comparing test results across environments
+
+### 🔒 **Advanced Access Control & Workflows**
+- Custom roles and approval workflows
+- Granular permission settings for enterprise use
+
+### 🔔 **Notifications & Subscriptions**
+- In-app notification center
+- Email alerts for test runs, defects, and assignments
+- Scheduled reports for managers and stakeholders
+
+---
+
+## ⚙️ Tech Stack (Planned / In Use)
+
+| Layer | Technology |
+|-------|-------------|
+| **Frontend** | React / Next.js, TypeScript, Tailwind CSS |
+| **Backend** | Rust / Tauri API (Future: Node.js or Go microservices) |
+| **Database** | Convex |
+| **Email** | Resend |
+| **Auth** | JWT / Role-Based Access Control |
+| **Testing** | Manual + Automation Integration Ready |
+
+---
