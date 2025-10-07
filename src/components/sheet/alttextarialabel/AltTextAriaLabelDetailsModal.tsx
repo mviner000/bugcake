@@ -18,6 +18,10 @@ import {
   ChevronDown
 } from "lucide-react";
 
+interface AltTextAriaLabelDetailsModalProps {
+  sheetId: string;
+}
+
 // --- Dummy Data ---
 const DUMMY_TEST_CASES = [
   {
@@ -160,11 +164,11 @@ function getStatusVariant(
 }
 
 // --- Main Component ---
-export default function AltTextAriaLabelDetailsModal() {
+export default function AltTextAriaLabelDetailsModal({ sheetId: _sheetId }: AltTextAriaLabelDetailsModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedTestCase, setSelectedTestCase] = useState<
     (typeof DUMMY_TEST_CASES)[0] | null
-  >(DUMMY_TEST_CASES[0]);
+  >(DUMMY_TEST_CASES.length > 0 ? DUMMY_TEST_CASES[0] : null); // FIXED: Robust state initialization
 
   return (
     <>
@@ -258,9 +262,10 @@ export default function AltTextAriaLabelDetailsModal() {
                           </div>
                         </ContentSection>
 
+                        {/* Persona */}
                         <ContentSection title="Persona">
                           <div className="flex items-center gap-2 text-muted-foreground">
-                            <Layers3 className="w-4 h-4 mt-0.5 self-start flex-shrink-0" />
+                            <User className="w-4 h-4 mt-0.5 self-start flex-shrink-0" /> {/* FIXED: Icon changed to User */}
                             <div>
                               {selectedTestCase.persona}
                             </div>
