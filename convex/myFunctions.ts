@@ -1970,7 +1970,7 @@ export const updateFunctionalityWorkflowStatusToApproval = mutation({
 });
 
 // ============================================
-// ALT TEXT ARIA LABEL TEST CASES - Batch Update
+// ALT TEXT ARIA LABEL TEST CASES - Batch Update 
 // ============================================
 export const batchUpdateAltTextAriaLabelWorkflowStatus = mutation({
   args: {
@@ -2111,5 +2111,229 @@ export const updateAltTextAriaLabelWorkflowStatusToApproval = mutation({
     });
 
     return { success: true, newStatus };
+  },
+});
+
+// ============================================
+// FUNCTIONALITY TEST CASES - Single Update to Approved
+// ============================================
+export const updateFunctionalityWorkflowStatusToApproved = mutation({
+  args: {
+    testCaseId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("User must be authenticated");
+    }
+
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const normalizedTestCaseId = ctx.db.normalizeId(
+      "functionalityTestCases",
+      args.testCaseId
+    );
+    if (!normalizedTestCaseId) {
+      throw new Error("Invalid test case ID");
+    }
+
+    const testCase = await ctx.db.get(normalizedTestCaseId);
+    if (!testCase) {
+      throw new Error("Test case not found");
+    }
+
+    const now = Date.now();
+    const oldStatus = testCase.workflowStatus;
+    const newStatus = "Approved";
+
+    // Update workflow status
+    await ctx.db.patch(normalizedTestCaseId, {
+      workflowStatus: newStatus,
+      updatedAt: now,
+    });
+
+    // Log the activity
+    await ctx.db.insert("activityLogs", {
+      testCaseId: args.testCaseId,
+      testCaseType: "functionality",
+      action: "Status Change",
+      userId: userId,
+      username: user.name ?? user.email?.split("@")[0] ?? "Anonymous",
+      userEmail: user.email ?? "N/A",
+      sheetId: testCase.sheetId,
+      timestamp: now,
+      details: `Workflow status changed from "${oldStatus}" to "${newStatus}".`,
+    });
+
+    return { success: true, newStatus };
+  },
+});
+
+
+// ============================================
+// ALT TEXT ARIA LABEL TEST CASES - Single Update to Approved
+// ============================================
+export const updateAltTextAriaLabelWorkflowStatusToApproved = mutation({
+  args: {
+    testCaseId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("User must be authenticated");
+    }
+
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const normalizedTestCaseId = ctx.db.normalizeId(
+      "altTextAriaLabelTestCases",
+      args.testCaseId
+    );
+    if (!normalizedTestCaseId) {
+      throw new Error("Invalid test case ID");
+    }
+
+    const testCase = await ctx.db.get(normalizedTestCaseId);
+    if (!testCase) {
+      throw new Error("Test case not found");
+    }
+
+    const now = Date.now();
+    const oldStatus = testCase.workflowStatus;
+    const newStatus = "Approved";
+
+    // Update workflow status
+    await ctx.db.patch(normalizedTestCaseId, {
+      workflowStatus: newStatus,
+      updatedAt: now,
+    });
+
+    // Log the activity
+    await ctx.db.insert("activityLogs", {
+      testCaseId: args.testCaseId,
+      testCaseType: "altTextAriaLabel",
+      action: "Status Change",
+      userId: userId,
+      username: user.name ?? user.email?.split("@")[0] ?? "Anonymous",
+      userEmail: user.email ?? "N/A",
+      sheetId: testCase.sheetId,
+      timestamp: now,
+      details: `Workflow status changed from "${oldStatus}" to "${newStatus}".`,
+    });
+
+    return { success: true, newStatus };
+  },
+});
+
+export const getAltTextAriaLabelTestCasesAwaitingApproval = query({
+  args: {
+    sheetId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      return { testCases: [], viewer: null };
+    }
+
+    // Normalize the sheetId
+    const normalizedSheetId = ctx.db.normalizeId("sheets", args.sheetId);
+    if (!normalizedSheetId) {
+      return { testCases: [], viewer: null };
+    }
+
+    // Query test cases with "Waiting for QA Lead Approval" status
+    const testCasesQuery = ctx.db
+      .query("altTextAriaLabelTestCases")
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("sheetId"), normalizedSheetId),
+          q.eq(q.field("workflowStatus"), "Waiting for QA Lead Approval")
+        )
+      );
+
+    const rawTestCases = await testCasesQuery.order("desc").collect();
+
+    // Enhance test cases with user information
+    const testCasesWithUsers = await Promise.all(
+      rawTestCases.map(async (testCase) => {
+        const createdByUser = await ctx.db.get(testCase.createdBy);
+        const executedByUser = testCase.executedBy
+          ? await ctx.db.get(testCase.executedBy)
+          : null;
+
+        return {
+          ...testCase,
+          createdByName: createdByUser?.email || "Unknown User",
+          executedByName: executedByUser?.email || "N/A",
+        };
+      })
+    );
+
+    const user = await ctx.db.get(userId);
+
+    return {
+      viewer: user?.email ?? null,
+      testCases: testCasesWithUsers,
+    };
+  },
+});
+
+// NEW: Query for Functionality Test Cases awaiting approval
+export const getFunctionalityTestCasesAwaitingApproval = query({
+  args: {
+    sheetId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      return { testCases: [], viewer: null };
+    }
+
+    // Normalize the sheetId
+    const normalizedSheetId = ctx.db.normalizeId("sheets", args.sheetId);
+    if (!normalizedSheetId) {
+      return { testCases: [], viewer: null };
+    }
+
+    // Query test cases with "Waiting for QA Lead Approval" status
+    const testCasesQuery = ctx.db
+      .query("functionalityTestCases")
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("sheetId"), normalizedSheetId),
+          q.eq(q.field("workflowStatus"), "Waiting for QA Lead Approval")
+        )
+      );
+
+    const rawTestCases = await testCasesQuery.order("desc").collect();
+
+    // Enhance test cases with user information
+    const testCasesWithUsers = await Promise.all(
+      rawTestCases.map(async (testCase) => {
+        const createdByUser = await ctx.db.get(testCase.createdBy);
+        const executedByUser = testCase.executedBy
+          ? await ctx.db.get(testCase.executedBy)
+          : null;
+
+        return {
+          ...testCase,
+          createdByName: createdByUser?.email || "Unknown User",
+          executedByName: executedByUser?.email || "N/A",
+        };
+      })
+    );
+
+    const user = await ctx.db.get(userId);
+
+    return {
+      viewer: user?.email ?? null,
+      testCases: testCasesWithUsers,
+    };
   },
 });

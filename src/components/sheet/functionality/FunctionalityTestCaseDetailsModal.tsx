@@ -1,6 +1,6 @@
 // src/components/sheet/functionality/FunctionalityTestCasesDetailsModal.tsx
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { api } from "../../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,95 +23,6 @@ import { Id } from "convex/_generated/dataModel";
 interface FunctionalityTestCasesDetailsModalProps {
   sheetId: string;
 }
-
-// --- Dummy Data ---
-const DUMMY_TEST_CASES = [
-  {
-    id: "TC_001",
-    workflowStatus: "Open",
-    level: "High",
-    scenario: "Happy Path",
-    module: "User Management",
-    subModule: "User Registration",
-    title: "User should successfully register with valid credentials",
-    preConditions: "1. Application is deployed\n2. Database is accessible\n3. No network issues",
-    steps: "1. Navigate to registration page\n2. Enter valid email\n3. Enter strong password\n4. Click register button",
-    expectedResults: "1. User account created successfully\n2. Confirmation email sent\n3. User redirected to login page",
-    status: "Not Run",
-    executedBy: "John Doe",
-    jiraUserStory: "US-1234",
-    createdBy: "Jane Smith",
-    createdAt: "2025-10-01"
-  },
-  {
-    id: "TC_002",
-    workflowStatus: "In Progress",
-    level: "High",
-    scenario: "Unhappy Path",
-    module: "User Management",
-    subModule: "User Registration",
-    title: "User should see error when entering invalid email",
-    preConditions: "1. User is on registration page\n2. System is responsive",
-    steps: "1. Enter invalid email format\n2. Enter valid password\n3. Click register button",
-    expectedResults: "1. Error message displayed\n2. Form not submitted\n3. User remains on page",
-    status: "Not Run",
-    executedBy: "Jane Smith",
-    jiraUserStory: "US-1234",
-    createdBy: "John Doe",
-    createdAt: "2025-10-02"
-  },
-  {
-    id: "TC_003",
-    workflowStatus: "Approved",
-    level: "Medium",
-    scenario: "Happy Path",
-    module: "Dashboard",
-    subModule: "Analytics",
-    title: "Dashboard should load and display all widgets",
-    preConditions: "1. User is logged in\n2. User has analytics permissions\n3. Data is available in database",
-    steps: "1. Navigate to dashboard\n2. Wait for page to load\n3. Verify all widgets are visible",
-    expectedResults: "1. Dashboard loads within 3 seconds\n2. All widgets display correctly\n3. Data is up to date",
-    status: "Not Run",
-    executedBy: "Mike Johnson",
-    jiraUserStory: "US-2345",
-    createdBy: "Sarah Williams",
-    createdAt: "2025-09-28"
-  },
-  {
-    id: "TC_004",
-    workflowStatus: "Open",
-    level: "Low",
-    scenario: "Happy Path",
-    module: "Reports",
-    subModule: "Report Generation",
-    title: "User should generate and download report successfully",
-    preConditions: "1. User is logged in\n2. Report data exists\n3. File storage is available",
-    steps: "1. Navigate to reports section\n2. Select report type\n3. Apply filters if needed\n4. Click generate\n5. Download report",
-    expectedResults: "1. Report generated within 5 seconds\n2. File downloaded successfully\n3. File format is correct",
-    status: "Not Run",
-    executedBy: "N/A",
-    jiraUserStory: "US-3456",
-    createdBy: "David Brown",
-    createdAt: "2025-10-03"
-  },
-  {
-    id: "TC_005",
-    workflowStatus: "In Review",
-    level: "High",
-    scenario: "Unhappy Path",
-    module: "Payment",
-    subModule: "Checkout",
-    title: "System should handle payment failure gracefully",
-    preConditions: "1. User has items in cart\n2. Payment gateway is configured\n3. Network connection available",
-    steps: "1. Proceed to checkout\n2. Enter payment details\n3. Simulate payment failure\n4. Submit payment",
-    expectedResults: "1. Error message displayed\n2. Transaction not processed\n3. Cart items retained",
-    status: "Not Run",
-    executedBy: "Sarah Williams",
-    jiraUserStory: "US-4567",
-    createdBy: "Mike Johnson",
-    createdAt: "2025-10-04"
-  }
-];
 
 // --- Badge Helper ---
 function getStatusVariant(
@@ -151,31 +62,59 @@ function getLevelVariant(level: string): "default" | "secondary" | "destructive"
 // --- Main Component ---
 export default function FunctionalityTestCasesDetailsModal({ sheetId }: FunctionalityTestCasesDetailsModalProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedTestCase, setSelectedTestCase] = useState<
-    (typeof DUMMY_TEST_CASES)[0] | null
-  >(DUMMY_TEST_CASES[0]);
+  const [selectedTestCase, setSelectedTestCase] = useState<any | null>(null);
 
   // Ensure we use the correct type from the Convex model
   const normalizedSheetId = sheetId as Id<"sheets">;
+  
+  // Fetch users with access to determine role
   const usersWithAccess = useQuery(api.myFunctions.getUsersWithAccess, {
     sheetId: normalizedSheetId,
   });
 
+  // 🎯 DYNAMIC DATA: Fetch test cases awaiting approval
+  const testCasesData = useQuery(
+    api.myFunctions.getFunctionalityTestCasesAwaitingApproval,
+    { sheetId }
+  );
+
+  const testCases = testCasesData?.testCases || [];
+  
+  // Set the first test case as selected when modal opens and data loads
+  const handleOpen = () => {
+    setIsOpen(true);
+    if (testCases.length > 0 && !selectedTestCase) {
+      setSelectedTestCase(testCases[0]);
+    }
+  };
+
+  // Update selected test case when test cases change
+  useEffect(() => {
+    if (testCases.length > 0 && !selectedTestCase) {
+      setSelectedTestCase(testCases[0]);
+    }
+  }, [testCases, selectedTestCase]);
+
+  // Determine current user's role
+  const currentUser = usersWithAccess?.find((u) => u.isCurrentUser);
+  const isQALeadOrOwner = currentUser?.role === "qa_lead" || currentUser?.role === "owner";
+
   return (
     <>
-      <Button variant="outline" size="sm" onClick={() => setIsOpen(true)} className="relative">
+      <Button 
+        variant="outline" 
+        size="sm" 
+        onClick={handleOpen} 
+        className="relative"
+        disabled={testCases.length === 0}
+      >
         <ListChecks className="w-4 h-4 mr-2" />
-        {(() => {
-          const currentUser = usersWithAccess?.find((u) => u.isCurrentUser);
-          const isQALeadOrOwner = currentUser?.role === "qa_lead" || currentUser?.role === "owner";
-          
-          return isQALeadOrOwner 
-            ? "Please approve this now" 
-            : "Need Approval for QA Lead/Owner Approval";
-        })()}
-        {DUMMY_TEST_CASES.length > 0 && (
+        {isQALeadOrOwner 
+          ? "Please approve this now" 
+          : "Need Approval for QA Lead/Owner"}
+        {testCases.length > 0 && (
           <span className="absolute -top-2 -right-2 flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold text-white bg-red-500 rounded-full">
-            {DUMMY_TEST_CASES.length}
+            {testCases.length}
           </span>
         )}
       </Button>
@@ -184,7 +123,7 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
         <div className="w-[92vw] h-[90vh] flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-3 border-b">
-            <h2 className="text-lg font-semibold">Test Case Details</h2>
+            <h2 className="text-lg font-semibold">Test Cases Awaiting Approval</h2>
             <Button
               variant="ghost"
               size="icon"
@@ -200,28 +139,42 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
             {/* Sidebar */}
             <div className="w-72 border-r bg-muted/20">
               <ScrollArea className="h-full p-4">
-                <div className="space-y-2">
-                  {DUMMY_TEST_CASES.map((testCase) => (
-                    <Card
-                      key={testCase.id}
-                      className={`cursor-pointer transition-colors hover:bg-accent ${
-                        selectedTestCase?.id === testCase.id
-                          ? "bg-accent border-primary"
-                          : ""
-                      }`}
-                      onClick={() => setSelectedTestCase(testCase)}
-                    >
-                      <CardHeader className="p-3">
-                        <CardTitle className="text-sm font-medium">
-                          {testCase.id}
-                        </CardTitle>
-                        <p className="text-xs text-muted-foreground line-clamp-1">
-                          {testCase.title}
-                        </p>
-                      </CardHeader>
-                    </Card>
-                  ))}
-                </div>
+                {testCases.length === 0 ? (
+                  <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
+                    No test cases awaiting approval
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {testCases.map((testCase: any, index: number) => (
+                      <Card
+                        key={testCase._id}
+                        className={`cursor-pointer transition-colors hover:bg-accent ${
+                          selectedTestCase?._id === testCase._id
+                            ? "bg-accent border-primary"
+                            : ""
+                        }`}
+                        onClick={() => setSelectedTestCase(testCase)}
+                      >
+                        <CardHeader className="p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-semibold text-primary">
+                              TC_{String(index + 1).padStart(3, '0')}
+                            </span>
+                          </div>
+                          <CardTitle className="text-sm font-medium mb-1">
+                            {testCase.title}
+                          </CardTitle>
+                          <p className="text-xs text-muted-foreground line-clamp-1">
+                            {testCase.module}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Created by: {testCase.createdByName}
+                          </p>
+                        </CardHeader>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </ScrollArea>
             </div>
 
@@ -233,7 +186,7 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
                     {/* Header */}
                     <div className="flex items-center justify-between mb-6">
                       <p className="text-sm text-muted-foreground">
-                        {selectedTestCase.id}
+                        Created {new Date(selectedTestCase.createdAt).toLocaleDateString()}
                       </p>
                       <div className="flex items-center gap-2">
                         <Button variant="outline" size="icon">
@@ -258,8 +211,8 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <Layers3 className="w-4 h-4 mt-0.5 self-start flex-shrink-0" />
                             <div>
-                              {selectedTestCase.module} /{" "}
-                              {selectedTestCase.subModule}
+                              {selectedTestCase.module}
+                              {selectedTestCase.subModule && ` / ${selectedTestCase.subModule}`}
                             </div>
                           </div>
                         </ContentSection>
@@ -296,11 +249,13 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
                           </div>
                         </div>
 
-                        <ContentSection title="Pre Conditions">
-                          <p className="whitespace-pre-wrap text-muted-foreground">
-                            {selectedTestCase.preConditions}
-                          </p>
-                        </ContentSection>
+                        {selectedTestCase.preConditions && (
+                          <ContentSection title="Pre Conditions">
+                            <p className="whitespace-pre-wrap text-muted-foreground">
+                              {selectedTestCase.preConditions}
+                            </p>
+                          </ContentSection>
+                        )}
 
                         <ContentSection title="Test Steps">
                           <p className="whitespace-pre-wrap text-muted-foreground">
@@ -325,24 +280,26 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
                           <h4 className="text-base font-semibold">Details</h4>
                           <MetadataField label="Created By">
                             <div className="flex items-center gap-2">
-                              <User className="w-4 h-4 text-muted-foreground" />{" "}
-                              {selectedTestCase.createdBy}
+                              <User className="w-4 h-4 text-muted-foreground" />
+                              {selectedTestCase.createdByName}
                             </div>
                           </MetadataField>
                           <MetadataField label="Executed By">
                             <div className="flex items-center gap-2">
-                              <User className="w-4 h-4 text-muted-foreground" />{" "}
-                              {selectedTestCase.executedBy}
+                              <User className="w-4 h-4 text-muted-foreground" />
+                              {selectedTestCase.executedByName}
                             </div>
                           </MetadataField>
                           <MetadataField label="Created At">
-                            <p>{selectedTestCase.createdAt}</p>
+                            <p>{new Date(selectedTestCase.createdAt).toLocaleString()}</p>
                           </MetadataField>
-                          <MetadataField label="Jira User Story">
-                            <p className="text-primary font-medium">
-                              {selectedTestCase.jiraUserStory}
-                            </p>
-                          </MetadataField>
+                          {selectedTestCase.jiraUserStory && (
+                            <MetadataField label="Jira User Story">
+                              <p className="text-primary font-medium">
+                                {selectedTestCase.jiraUserStory}
+                              </p>
+                            </MetadataField>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -350,7 +307,9 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
                 ) : (
                   <div className="flex items-center justify-center h-full">
                     <p className="text-muted-foreground">
-                      Select a test case to view details
+                      {testCases.length === 0 
+                        ? "No test cases awaiting approval"
+                        : "Select a test case to view details"}
                     </p>
                   </div>
                 )}

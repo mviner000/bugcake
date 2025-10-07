@@ -1,13 +1,9 @@
 // src/components/sheet/alttextarialabel/AltTextAriaLabelDetailsModal.tsx
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { api } from "../../../../convex/_generated/api";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { DetailsModal } from "@/components/ui/mod/DetailsModal";
-import { ContentSection, MetadataField } from "@/components/ui/mod/ModalHelpers";
+import { useQuery } from "convex/react";
+import { Id } from "convex/_generated/dataModel";
 import {
   ListChecks,
   X,
@@ -16,135 +12,20 @@ import {
   MoreHorizontal,
   Share2,
   Link,
-  ChevronDown
+  ChevronDown,
 } from "lucide-react";
-import { useQuery } from "convex/react";
-import { Id } from "convex/_generated/dataModel";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { DetailsModal } from "@/components/ui/mod/DetailsModal";
+import { ContentSection, MetadataField } from "@/components/ui/mod/ModalHelpers";
 
 interface AltTextAriaLabelDetailsModalProps {
   sheetId: string;
 }
 
-// --- Dummy Data ---
-const DUMMY_TEST_CASES = [
-  {
-    id: "TC_001",
-    workflowStatus: "Open",
-    persona: "Admin",
-    module: "User Management",
-    subModule: "User Profile",
-    pageSection: "Profile Header",
-    wireframeLink: "https://figma.com/design/user-profile",
-    imagesIcons: "https://placehold.co/150x150",
-    altTextAriaLabel: "User avatar placeholder",
-    remarks:
-      "1. Ensure proper contrast ratio\n2. Test with screen readers\n3. Verify keyboard navigation",
-    seImplementation: "Not Yet",
-    actualResults:
-      "1. Alt text properly announced\n2. ARIA labels correctly set\n3. Focus indicators visible",
-    testingStatus: "Not Run",
-    notes:
-      "1. All accessibility checks passed\n2. Works well with NVDA and JAWS\n3. Mobile testing completed",
-    jiraUserStory: "US-1234",
-    createdBy: "John Doe",
-    executedBy: "Jane Smith",
-    createdAt: "2025-10-01"
-  },
-  {
-    id: "TC_002",
-    workflowStatus: "In Progress",
-    persona: "User",
-    module: "Dashboard",
-    subModule: "Analytics Widget",
-    pageSection: "Chart Section",
-    wireframeLink: "https://figma.com/design/dashboard-analytics",
-    imagesIcons: "https://placehold.co/150x150",
-    altTextAriaLabel: "Analytics bar chart placeholder",
-    remarks:
-      "1. Complex data visualization\n2. Multiple interactive elements\n3. Requires detailed descriptions",
-    seImplementation: "Not Yet",
-    actualResults:
-      "1. Chart description needs improvement\n2. Download button accessible\n3. Filter controls working",
-    testingStatus: "Not Run",
-    notes:
-      "1. Chart needs more descriptive alt text\n2. Consider adding data table alternative\n3. Retest after fixes",
-    jiraUserStory: "US-2345",
-    createdBy: "Jane Smith",
-    executedBy: "Mike Johnson",
-    createdAt: "2025-10-02"
-  },
-  {
-    id: "TC_003",
-    workflowStatus: "Open",
-    persona: "Super Admin",
-    module: "Settings",
-    subModule: "System Configuration",
-    pageSection: "Security Settings",
-    wireframeLink: "https://figma.com/design/security-settings",
-    imagesIcons: "https://placehold.co/150x150",
-    altTextAriaLabel: "Security lock icon placeholder",
-    remarks:
-      "1. Critical security features\n2. Must be fully accessible\n3. Clear warning messages needed",
-    seImplementation: "Not Yet",
-    actualResults: "",
-    testingStatus: "Not Run",
-    notes:
-      "1. Pending implementation\n2. High priority for next sprint\n3. Coordinate with security team",
-    jiraUserStory: "US-3456",
-    createdBy: "Mike Johnson",
-    executedBy: "N/A",
-    createdAt: "2025-10-03"
-  },
-  {
-    id: "TC_004",
-    workflowStatus: "Approved",
-    persona: "Employee",
-    module: "Time Tracking",
-    subModule: "Timesheet Entry",
-    pageSection: "Time Entry Form",
-    wireframeLink: "https://figma.com/design/timesheet",
-    imagesIcons: "https://placehold.co/150x150",
-    altTextAriaLabel: "Clock icon for time tracking",
-    remarks:
-      "1. Form validation required\n2. Error messages must be accessible\n3. Success confirmation needed",
-    seImplementation: "Not Yet",
-    actualResults:
-      "1. All form fields properly labeled\n2. Error messages announced correctly\n3. Success message accessible",
-    testingStatus: "Not Run",
-    notes:
-      "1. Excellent accessibility implementation\n2. No issues found during testing\n3. Ready for production",
-    jiraUserStory: "US-4567",
-    createdBy: "Sarah Williams",
-    executedBy: "David Brown",
-    createdAt: "2025-10-04"
-  },
-  {
-    id: "TC_005",
-    workflowStatus: "In Review",
-    persona: "Manager",
-    module: "Reports",
-    subModule: "Team Performance",
-    pageSection: "Performance Metrics",
-    wireframeLink:
-      "https://figma.com/design/team-performance-metrics-and-other-long-links",
-    imagesIcons: "https://placehold.co/150x150",
-    altTextAriaLabel: "Team performance graph placeholder",
-    remarks:
-      "1. Data-heavy interface\n2. Multiple chart types\n3. Export functionality critical",
-    seImplementation: "Not Yet",
-    actualResults:
-      "1. Graph description too generic\n2. Export button works well\n3. Print preview accessible",
-    testingStatus: "Not Run",
-    notes:
-      "1. Waiting for design clarification\n2. Graph alt text needs stakeholder input\n3. On hold until next review",
-    jiraUserStory: "US-5678",
-    createdBy: "David Brown",
-    executedBy: "Sarah Williams",
-    createdAt: "2025-10-05"
-  }
-];
-
-// --- Badge Helper ---
+// --- Helper ---
 function getStatusVariant(
   status: string
 ): "default" | "secondary" | "destructive" | "outline" {
@@ -167,42 +48,73 @@ function getStatusVariant(
 }
 
 // --- Main Component ---
-export default function AltTextAriaLabelDetailsModal({ sheetId }: AltTextAriaLabelDetailsModalProps) {
+export default function AltTextAriaLabelDetailsModal({
+  sheetId,
+}: AltTextAriaLabelDetailsModalProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedTestCase, setSelectedTestCase] = useState<
-    (typeof DUMMY_TEST_CASES)[0] | null
-  >(DUMMY_TEST_CASES.length > 0 ? DUMMY_TEST_CASES[0] : null);
+  const [selectedTestCase, setSelectedTestCase] = useState<any | null>(null);
 
-  // Ensure we use the correct type from the Convex model
   const normalizedSheetId = sheetId as Id<"sheets">;
+
+  // Fetch users (for role check)
   const usersWithAccess = useQuery(api.myFunctions.getUsersWithAccess, {
     sheetId: normalizedSheetId,
   });
 
+  // 🎯 Fetch real Alt Text test cases waiting for approval
+  const testCasesData = useQuery(
+    api.myFunctions.getAltTextAriaLabelTestCasesAwaitingApproval,
+    { sheetId }
+  );
+  const testCases = testCasesData?.testCases || [];
+
+  // Select first test case when modal opens
+  const handleOpen = () => {
+    setIsOpen(true);
+    if (testCases.length > 0 && !selectedTestCase) {
+      setSelectedTestCase(testCases[0]);
+    }
+  };
+
+  // Auto-set selection on data change
+  useEffect(() => {
+    if (testCases.length > 0 && !selectedTestCase) {
+      setSelectedTestCase(testCases[0]);
+    }
+  }, [testCases, selectedTestCase]);
+
+  // Current user role logic
+  const currentUser = usersWithAccess?.find((u) => u.isCurrentUser);
+  const isQALeadOrOwner =
+    currentUser?.role === "qa_lead" || currentUser?.role === "owner";
+
   return (
     <>
-      <Button variant="outline" size="sm" onClick={() => setIsOpen(true)} className="relative">
+      {/* --- Trigger Button --- */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleOpen}
+        className="relative"
+        disabled={!testCases || testCases.length === 0}
+      >
         <ListChecks className="w-4 h-4 mr-2" />
-        {(() => {
-          const currentUser = usersWithAccess?.find((u) => u.isCurrentUser);
-          const isQALeadOrOwner = currentUser?.role === "qa_lead" || currentUser?.role === "owner";
-          
-          return isQALeadOrOwner 
-            ? "Please approve this now" 
-            : "Need Approval for QA Lead/Owner Approval";
-        })()}
-        {DUMMY_TEST_CASES.length > 0 && (
+        {isQALeadOrOwner
+          ? "Please approve this now"
+          : "Need Approval for QA Lead/Owner"}
+        {testCases.length > 0 && (
           <span className="absolute -top-2 -right-2 flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold text-white bg-red-500 rounded-full">
-            {DUMMY_TEST_CASES.length}
+            {testCases.length}
           </span>
         )}
       </Button>
 
+      {/* --- Modal --- */}
       <DetailsModal isOpen={isOpen} onClose={() => setIsOpen(false)}>
         <div className="w-[92vw] h-[90vh] flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-3 border-b">
-            <h2 className="text-lg font-semibold">Test Case Details</h2>
+            <h2 className="text-lg font-semibold">Alt Text & Aria Label Details</h2>
             <Button
               variant="ghost"
               size="icon"
@@ -213,45 +125,67 @@ export default function AltTextAriaLabelDetailsModal({ sheetId }: AltTextAriaLab
             </Button>
           </div>
 
-          {/* Content */}
+          {/* Body */}
           <div className="flex flex-1 overflow-hidden">
             {/* Sidebar */}
             <div className="w-72 border-r bg-muted/20">
               <ScrollArea className="h-full p-4">
-                <div className="space-y-2">
-                  {DUMMY_TEST_CASES.map((testCase) => (
-                    <Card
-                      key={testCase.id}
-                      className={`cursor-pointer transition-colors hover:bg-accent ${
-                        selectedTestCase?.id === testCase.id
-                          ? "bg-accent border-primary"
-                          : ""
-                      }`}
-                      onClick={() => setSelectedTestCase(testCase)}
-                    >
-                      <CardHeader className="p-3">
-                        <CardTitle className="text-sm font-medium">
-                          {testCase.id}
-                        </CardTitle>
-                        <p className="text-xs text-muted-foreground line-clamp-1">
-                          {testCase.module}
-                        </p>
-                      </CardHeader>
-                    </Card>
-                  ))}
-                </div>
+                {!testCases || testCases.length === 0 ? (
+                  <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
+                    No test cases awaiting approval
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {testCases.map((testCase: any, index: number) => (
+                      <Card
+                        key={testCase._id}
+                        className={`cursor-pointer transition-colors hover:bg-accent ${
+                          selectedTestCase?._id === testCase._id
+                            ? "bg-accent border-primary"
+                            : ""
+                        }`}
+                        onClick={() => setSelectedTestCase(testCase)}
+                      >
+                        <CardHeader className="p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-semibold text-primary">
+                              TC_{String(index + 1).padStart(3, "0")}
+                            </span>
+                            <Badge variant={getStatusVariant(testCase.workflowStatus)}>
+                              {testCase.workflowStatus}
+                            </Badge>
+                          </div>
+                          <CardTitle className="text-sm font-medium mb-1">
+                            {testCase.pageSection || "Unnamed Section"}
+                          </CardTitle>
+                          <p className="text-xs text-muted-foreground line-clamp-1">
+                            {testCase.module}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Created by: {testCase.createdByName || "N/A"}
+                          </p>
+                        </CardHeader>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </ScrollArea>
             </div>
 
-            {/* Main Content */}
+            {/* Main content */}
             <div className="flex-1 min-w-0">
               <ScrollArea className="h-full">
                 {selectedTestCase ? (
                   <div className="p-8">
-                    {/* Header */}
+                    {/* Header info */}
                     <div className="flex items-center justify-between mb-6">
                       <p className="text-sm text-muted-foreground">
-                        {selectedTestCase.id}
+                        Created{" "}
+                        {selectedTestCase._creationTime
+                          ? new Date(
+                              selectedTestCase._creationTime
+                            ).toLocaleDateString()
+                          : ""}
                       </p>
                       <div className="flex items-center gap-2">
                         <Button variant="outline" size="icon">
@@ -264,17 +198,15 @@ export default function AltTextAriaLabelDetailsModal({ sheetId }: AltTextAriaLab
                     </div>
 
                     <h3 className="text-2xl font-bold mb-6">
-                      {selectedTestCase.subModule}
+                      {selectedTestCase.pageSection}
                     </h3>
 
-                    {/* Grid */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                      {/* Left */}
+                      {/* Left section */}
                       <div className="lg:col-span-2 space-y-8">
-                        {/* Module Hierarchy */}
                         <ContentSection title="Module Hierarchy">
                           <div className="flex items-center gap-2 text-muted-foreground">
-                            <Layers3 className="w-4 h-4 mt-0.5 self-start flex-shrink-0" />
+                            <Layers3 className="w-4 h-4 mt-0.5 flex-shrink-0" />
                             <div>
                               {selectedTestCase.module} /{" "}
                               {selectedTestCase.subModule} /{" "}
@@ -283,28 +215,30 @@ export default function AltTextAriaLabelDetailsModal({ sheetId }: AltTextAriaLab
                           </div>
                         </ContentSection>
 
-                        {/* Persona */}
                         <ContentSection title="Persona">
                           <div className="flex items-center gap-2 text-muted-foreground">
-                            <User className="w-4 h-4 mt-0.5 self-start flex-shrink-0" />
-                            <div>
-                              {selectedTestCase.persona}
-                            </div>
+                            <User className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                            <div>{selectedTestCase.persona}</div>
                           </div>
                         </ContentSection>
 
-                        {/* Status badges in one line */}
                         <div className="space-y-2">
-                          <h4 className="text-sm font-semibold text-muted-foreground">Status Overview</h4>
+                          <h4 className="text-sm font-semibold text-muted-foreground">
+                            Status Overview
+                          </h4>
                           <div className="flex flex-wrap items-center gap-4">
                             <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-muted-foreground">TESTING STATUS:</span>
+                              <span className="text-xs font-bold text-muted-foreground">
+                                TESTING STATUS:
+                              </span>
                               <Badge variant={getStatusVariant(selectedTestCase.testingStatus)}>
                                 {selectedTestCase.testingStatus}
                               </Badge>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-muted-foreground">SE IMPLEMENTATION:</span>
+                              <span className="text-xs font-bold text-muted-foreground">
+                                SE IMPLEMENTATION:
+                              </span>
                               <Badge variant={getStatusVariant(selectedTestCase.seImplementation)}>
                                 {selectedTestCase.seImplementation}
                               </Badge>
@@ -321,19 +255,21 @@ export default function AltTextAriaLabelDetailsModal({ sheetId }: AltTextAriaLab
                         <ContentSection title="Images, Icons & Alt Text">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg">
                             <div>
-                              <h5 className="font-semibold mb-2">
-                                Images/Icons
-                              </h5>
-                              <img
-                                src={selectedTestCase.imagesIcons}
-                                alt={selectedTestCase.altTextAriaLabel}
-                                className="rounded-md border object-cover w-full h-32"
-                              />
+                              <h5 className="font-semibold mb-2">Images/Icons</h5>
+                              {selectedTestCase.imagesIcons ? (
+                                <img
+                                  src={selectedTestCase.imagesIcons}
+                                  alt={selectedTestCase.altTextAriaLabel}
+                                  className="rounded-md border object-cover w-full h-32"
+                                />
+                              ) : (
+                                <p className="text-xs text-muted-foreground italic">
+                                  No image provided
+                                </p>
+                              )}
                             </div>
                             <div>
-                              <h5 className="font-semibold mb-2">
-                                Alt Text/Aria Label
-                              </h5>
+                              <h5 className="font-semibold mb-2">Alt Text / Aria Label</h5>
                               <p className="whitespace-pre-wrap text-muted-foreground">
                                 {selectedTestCase.altTextAriaLabel}
                               </p>
@@ -341,19 +277,21 @@ export default function AltTextAriaLabelDetailsModal({ sheetId }: AltTextAriaLab
                           </div>
                         </ContentSection>
 
-                        <ContentSection title="Wireframe">
-                          <a
-                            href={selectedTestCase.wireframeLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 text-primary hover:underline"
-                          >
-                            <Link className="w-4 h-4" />
-                            <span className="break-all">
-                              {selectedTestCase.wireframeLink}
-                            </span>
-                          </a>
-                        </ContentSection>
+                        {selectedTestCase.wireframeLink && (
+                          <ContentSection title="Wireframe">
+                            <a
+                              href={selectedTestCase.wireframeLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 text-primary hover:underline"
+                            >
+                              <Link className="w-4 h-4" />
+                              <span className="break-all">
+                                {selectedTestCase.wireframeLink}
+                              </span>
+                            </a>
+                          </ContentSection>
+                        )}
 
                         {selectedTestCase.actualResults && (
                           <ContentSection title="Actual Results">
@@ -363,14 +301,16 @@ export default function AltTextAriaLabelDetailsModal({ sheetId }: AltTextAriaLab
                           </ContentSection>
                         )}
 
-                        <ContentSection title="Notes">
-                          <p className="whitespace-pre-wrap text-muted-foreground">
-                            {selectedTestCase.notes}
-                          </p>
-                        </ContentSection>
+                        {selectedTestCase.notes && (
+                          <ContentSection title="Notes">
+                            <p className="whitespace-pre-wrap text-muted-foreground">
+                              {selectedTestCase.notes}
+                            </p>
+                          </ContentSection>
+                        )}
                       </div>
 
-                      {/* Right */}
+                      {/* Right section */}
                       <div className="lg:col-span-1 space-y-6">
                         <Button className="w-full justify-between">
                           {selectedTestCase.workflowStatus}
@@ -381,23 +321,31 @@ export default function AltTextAriaLabelDetailsModal({ sheetId }: AltTextAriaLab
                           <MetadataField label="Created By">
                             <div className="flex items-center gap-2">
                               <User className="w-4 h-4 text-muted-foreground" />{" "}
-                              {selectedTestCase.createdBy}
+                              {selectedTestCase.createdByName || "N/A"}
                             </div>
                           </MetadataField>
                           <MetadataField label="Executed By">
                             <div className="flex items-center gap-2">
                               <User className="w-4 h-4 text-muted-foreground" />{" "}
-                              {selectedTestCase.executedBy}
+                              {selectedTestCase.executedByName || "N/A"}
                             </div>
                           </MetadataField>
                           <MetadataField label="Created At">
-                            <p>{selectedTestCase.createdAt}</p>
-                          </MetadataField>
-                          <MetadataField label="Jira User Story">
-                            <p className="text-primary font-medium">
-                              {selectedTestCase.jiraUserStory}
+                            <p>
+                              {selectedTestCase._creationTime
+                                ? new Date(
+                                    selectedTestCase._creationTime
+                                  ).toLocaleString()
+                                : "N/A"}
                             </p>
                           </MetadataField>
+                          {selectedTestCase.jiraUserStory && (
+                            <MetadataField label="Jira User Story">
+                              <p className="text-primary font-medium">
+                                {selectedTestCase.jiraUserStory}
+                              </p>
+                            </MetadataField>
+                          )}
                         </div>
                       </div>
                     </div>
