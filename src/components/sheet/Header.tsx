@@ -23,12 +23,15 @@ import {
   DollarSign,
   Hash,
 } from "lucide-react";
+import { api } from "../../../convex/_generated/api"
 import { ShareModal } from "./share-modal";
 import { Id } from "convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import ActivityApprovalsSheet from "./right-side/ActivityApprovalsSheet";
 import AltTextAriaLabelDetailsModal from "./alttextarialabel/AltTextAriaLabelDetailsModal";
 import FunctionalityTestCasesDetailsModal from "./functionality/FunctionalityTestCaseDetailsModal";
+import { UserRoleDisplay } from "./UserRoleDisplay";
+import { useQuery } from "convex/react";
 
 // 💡 NEW: Define the possible types for strong typing
 type SheetType = "altTextAriaLabel" | "functionality";
@@ -46,6 +49,10 @@ export function Header({ sheetName, onBack, sheetId, sheetType }: HeaderProps & 
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
   // Ensure we use the correct type from the Convex model
   const normalizedSheetId = sheetId as Id<"sheets">;
+
+  const usersWithAccess = useQuery(api.myFunctions.getUsersWithAccess, {
+    sheetId: normalizedSheetId,
+  })
 
   return (
     <>
@@ -66,9 +73,7 @@ export function Header({ sheetName, onBack, sheetId, sheetType }: HeaderProps & 
             <span className="text-xl text-gray-700 font-normal">
               {sheetName}
             </span>
-            <div className="px-2 py-1 bg-green-600 text-white text-xs rounded font-medium">
-              XLSX
-            </div>
+              <UserRoleDisplay usersWithAccess={usersWithAccess} />
           </div>
           <div className="flex items-center space-x-2">
             <Star className="w-5 h-5 text-gray-400 cursor-pointer hover:text-yellow-500" />

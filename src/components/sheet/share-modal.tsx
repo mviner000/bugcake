@@ -12,6 +12,7 @@ import { api } from "../../../convex/_generated/api"
 import { Id } from "../../../convex/_generated/dataModel"
 import { OverlayScrollbarsComponent } from "overlayscrollbars-react"
 import "overlayscrollbars/overlayscrollbars.css"
+import { UserRoleDisplay } from "./UserRoleDisplay"
 
 interface ShareModalProps {
   open: boolean
@@ -229,10 +230,15 @@ export function ShareModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[520px] p-0 gap-0">
         <DialogHeader className="px-6 pt-6 pb-4 space-y-0">
-          <div className="flex items-start justify-between">
-            <DialogTitle className="text-xl font-normal pr-8">Share &quot;{fileName}&quot;</DialogTitle>
+          <div className="flex items-start justify-between w-full">
+            <div>
+              <DialogTitle className="text-xl font-normal">Share &quot;{fileName}&quot;</DialogTitle>
+              <UserRoleDisplay usersWithAccess={usersWithAccess} />
+            </div>
           </div>
         </DialogHeader>
+
+
 
         <div className="px-6 pb-6 space-y-6">
           {/* Search Input */}
