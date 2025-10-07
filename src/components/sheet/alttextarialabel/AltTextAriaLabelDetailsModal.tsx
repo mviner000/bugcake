@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { api } from "../../../../convex/_generated/api";
-import { useQuery } from "convex/react";
+// 👇 IMPORT useMutation from convex/react
+import { useQuery, useMutation } from "convex/react";
 import { Id } from "convex/_generated/dataModel";
 import {
   ListChecks,
@@ -53,6 +54,9 @@ export default function AltTextAriaLabelDetailsModal({
 }: AltTextAriaLabelDetailsModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedTestCase, setSelectedTestCase] = useState<any | null>(null);
+  
+  // 👇 1. INITIALIZE MUTATION HOOK
+  const approveTestCase = useMutation(api.myFunctions.updateAltTextAriaLabelWorkflowStatusToApproved);
 
   const normalizedSheetId = sheetId as Id<"sheets">;
 
@@ -75,6 +79,25 @@ export default function AltTextAriaLabelDetailsModal({
       setSelectedTestCase(testCases[0]);
     }
   };
+
+  // 👇 2. UPDATE HANDLER TO CALL BACKEND MUTATION
+  const handleApproveClick = async () => {
+    if (!selectedTestCase) return;
+
+    try {
+      await approveTestCase({
+        testCaseId: selectedTestCase._id,
+      });
+
+      // Show native alert after successful backend update
+      alert('the test case is updated to "Approved"');
+
+    } catch (error) {
+      console.error("Failed to approve test case:", error);
+      alert("Error: Could not update test case status.");
+    }
+  };
+
 
   // Auto-set selection on data change
   useEffect(() => {
@@ -312,6 +335,19 @@ export default function AltTextAriaLabelDetailsModal({
 
                       {/* Right section */}
                       <div className="lg:col-span-1 space-y-6">
+                        
+                        {/* The Approved Button */}
+                        {isQALeadOrOwner && (
+                          <Button 
+                            className="w-full bg-green-600 hover:bg-green-700 text-white" 
+                            onClick={handleApproveClick}
+                            // Optionally disable the button if the status is already Approved
+                            disabled={selectedTestCase.workflowStatus === "Approved"}
+                          >
+                            Approved
+                          </Button>
+                        )}
+
                         <Button className="w-full justify-between">
                           {selectedTestCase.workflowStatus}
                           <ChevronDown className="w-4 h-4" />

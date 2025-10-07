@@ -1,5 +1,3 @@
-// src/components/sheet/functionality/FunctionalityTestCasesDetailsModal.tsx
-
 import { useState, useEffect } from "react";
 import { api } from "../../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
@@ -17,7 +15,8 @@ import {
   Share2,
   ChevronDown
 } from "lucide-react";
-import { useQuery } from "convex/react";
+// 👇 Import useMutation
+import { useQuery, useMutation } from "convex/react"; 
 import { Id } from "convex/_generated/dataModel";
 
 interface FunctionalityTestCasesDetailsModalProps {
@@ -64,6 +63,9 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
   const [isOpen, setIsOpen] = useState(false);
   const [selectedTestCase, setSelectedTestCase] = useState<any | null>(null);
 
+  // 👇 Initialize mutation hook for functionality approval
+  const approveTestCase = useMutation(api.myFunctions.updateFunctionalityWorkflowStatusToApproved);
+
   // Ensure we use the correct type from the Convex model
   const normalizedSheetId = sheetId as Id<"sheets">;
   
@@ -85,6 +87,25 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
     setIsOpen(true);
     if (testCases.length > 0 && !selectedTestCase) {
       setSelectedTestCase(testCases[0]);
+    }
+  };
+
+  // 👇 Handler to call the Convex mutation
+  const handleApproveClick = async () => {
+    if (!selectedTestCase) return;
+
+    try {
+      await approveTestCase({
+        testCaseId: selectedTestCase._id,
+      });
+
+      // Show native alert after successful backend update
+      // The UI will automatically refresh due to the useQuery
+      alert('the test case is updated to "Approved"');
+
+    } catch (error) {
+      console.error("Failed to approve functionality test case:", error);
+      alert("Error: Could not update functionality test case status.");
     }
   };
 
@@ -272,6 +293,16 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
 
                       {/* Right */}
                       <div className="lg:col-span-1 space-y-6">
+                        {/* 👇 ADDED: The Approved Button */}
+                        {isQALeadOrOwner && (
+                          <Button
+                            className="w-full bg-green-600 hover:bg-green-700 text-white"
+                            onClick={handleApproveClick}
+                            disabled={selectedTestCase.workflowStatus === "Approved"}
+                          >
+                            Approved
+                          </Button>
+                        )}
                         <Button className="w-full justify-between">
                           {selectedTestCase.workflowStatus}
                           <ChevronDown className="w-4 h-4" />
