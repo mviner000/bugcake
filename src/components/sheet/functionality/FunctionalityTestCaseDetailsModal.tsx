@@ -39,7 +39,10 @@ function getStatusVariant(
     case "Ongoing":
     case "In Review":
     case "Has Concerns":
+    case "Needs revision": // <-- ADDED: Needs revision uses secondary style
       return "secondary";
+    case "Declined":
+        return "outline";
     default:
       return "outline";
   }
@@ -63,8 +66,10 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
   const [isOpen, setIsOpen] = useState(false);
   const [selectedTestCase, setSelectedTestCase] = useState<any | null>(null);
 
-  // 👇 Initialize mutation hook for functionality approval
+  // 👇 Initialize mutation hooks
   const approveTestCase = useMutation(api.myFunctions.updateFunctionalityWorkflowStatusToApproved);
+  const declineTestCase = useMutation(api.myFunctions.updateFunctionalityWorkflowStatusToDeclined); // Added Decline hook
+  const needsRevisionTestCase = useMutation(api.myFunctions.updateFunctionalityWorkflowStatusToNeedsRevision); // <-- NEW: Needs Revision hook
 
   // Ensure we use the correct type from the Convex model
   const normalizedSheetId = sheetId as Id<"sheets">;
@@ -90,7 +95,7 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
     }
   };
 
-  // 👇 Handler to call the Convex mutation
+  // 👇 Handler to call the Convex mutation for Approval
   const handleApproveClick = async () => {
     if (!selectedTestCase) return;
 
@@ -100,7 +105,6 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
       });
 
       // Show native alert after successful backend update
-      // The UI will automatically refresh due to the useQuery
       alert('the test case is updated to "Approved"');
 
     } catch (error) {
@@ -108,6 +112,41 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
       alert("Error: Could not update functionality test case status.");
     }
   };
+
+  // 👇 Handler to call the Convex mutation for Decline (Re-added based on previous steps)
+  const handleDeclineClick = async () => {
+    if (!selectedTestCase) return;
+
+    try {
+      await declineTestCase({
+        testCaseId: selectedTestCase._id,
+      });
+
+      alert('the test case is updated to "Declined"');
+
+    } catch (error) {
+      console.error("Failed to decline functionality test case:", error);
+      alert("Error: Could not update functionality test case status to Declined.");
+    }
+  };
+
+  // 👇 NEW: Handler to call the Convex mutation for Needs Revision
+  const handleNeedsRevisionClick = async () => {
+    if (!selectedTestCase) return;
+
+    try {
+      await needsRevisionTestCase({
+        testCaseId: selectedTestCase._id,
+      });
+
+      alert('the test case is updated to "Needs revision"');
+
+    } catch (error) {
+      console.error("Failed to set functionality test case to Needs revision:", error);
+      alert("Error: Could not update functionality test case status to Needs revision.");
+    }
+  };
+
 
   // Update selected test case when test cases change
   useEffect(() => {
@@ -267,6 +306,12 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
                                 {selectedTestCase.status}
                               </Badge>
                             </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-muted-foreground">WORKFLOW STATUS:</span>
+                              <Badge variant={getStatusVariant(selectedTestCase.workflowStatus)}>
+                                {selectedTestCase.workflowStatus}
+                              </Badge>
+                            </div>
                           </div>
                         </div>
 
@@ -293,16 +338,39 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
 
                       {/* Right */}
                       <div className="lg:col-span-1 space-y-6">
-                        {/* 👇 ADDED: The Approved Button */}
+                        {/* The Action Buttons (Approve, Needs Revision, Decline) */}
                         {isQALeadOrOwner && (
-                          <Button
-                            className="w-full bg-green-600 hover:bg-green-700 text-white"
-                            onClick={handleApproveClick}
-                            disabled={selectedTestCase.workflowStatus === "Approved"}
-                          >
-                            Approved
-                          </Button>
+                          <>
+                            <Button
+                              className="w-full bg-green-600 hover:bg-green-700 text-white"
+                              onClick={handleApproveClick}
+                              disabled={selectedTestCase.workflowStatus === "Approved"}
+                            >
+                              Approved
+                            </Button>
+                            
+                            {/* NEW: Needs Revision Button */}
+                            <Button
+                                variant="secondary"
+                                className="w-full mt-2"
+                                onClick={handleNeedsRevisionClick}
+                                disabled={selectedTestCase.workflowStatus === "Needs revision"}
+                            >
+                                Needs Revision
+                            </Button>
+
+                            {/* Decline Button */}
+                            <Button
+                                variant="destructive"
+                                className="w-full mt-2"
+                                onClick={handleDeclineClick}
+                                disabled={selectedTestCase.workflowStatus === "Declined"}
+                            >
+                                Decline
+                            </Button>
+                          </>
                         )}
+
                         <Button className="w-full justify-between">
                           {selectedTestCase.workflowStatus}
                           <ChevronDown className="w-4 h-4" />

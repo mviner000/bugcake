@@ -1,8 +1,5 @@
-// src/components/sheet/alttextarialabel/AltTextAriaLabelDetailsModal.tsx
-
 import { useState, useEffect } from "react";
 import { api } from "../../../../convex/_generated/api";
-// 👇 IMPORT useMutation from convex/react
 import { useQuery, useMutation } from "convex/react";
 import { Id } from "convex/_generated/dataModel";
 import {
@@ -42,7 +39,10 @@ function getStatusVariant(
     case "Ongoing":
     case "In Review":
     case "Has Concerns":
+    case "Need Revision": // <-- ADDED: Need Revision status
       return "secondary";
+    case "Declined":
+      return "outline";
     default:
       return "outline";
   }
@@ -54,9 +54,12 @@ export default function AltTextAriaLabelDetailsModal({
 }: AltTextAriaLabelDetailsModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedTestCase, setSelectedTestCase] = useState<any | null>(null);
-  
-  // 👇 1. INITIALIZE MUTATION HOOK
+
+  // 1. INITIALIZE MUTATION HOOKS
   const approveTestCase = useMutation(api.myFunctions.updateAltTextAriaLabelWorkflowStatusToApproved);
+  const declineTestCase = useMutation(api.myFunctions.updateAltTextAriaLabelWorkflowStatusToDeclined);
+  // NEW: Initialize the request revision mutation hook
+  const requestRevision = useMutation(api.myFunctions.updateAltTextAriaLabelWorkflowStatusToNeedsRevision);
 
   const normalizedSheetId = sheetId as Id<"sheets">;
 
@@ -80,7 +83,7 @@ export default function AltTextAriaLabelDetailsModal({
     }
   };
 
-  // 👇 2. UPDATE HANDLER TO CALL BACKEND MUTATION
+  // Existing: Handler to call backend mutation for Approval
   const handleApproveClick = async () => {
     if (!selectedTestCase) return;
 
@@ -90,11 +93,52 @@ export default function AltTextAriaLabelDetailsModal({
       });
 
       // Show native alert after successful backend update
+      // IMPORTANT: In a real app, replace this with a toast/custom modal
       alert('the test case is updated to "Approved"');
 
     } catch (error) {
       console.error("Failed to approve test case:", error);
       alert("Error: Could not update test case status.");
+    }
+  };
+
+  // Existing: Handler to call backend mutation for Decline
+  const handleDeclineClick = async () => {
+    if (!selectedTestCase) return;
+
+    try {
+      // Call the decline mutation
+      await declineTestCase({
+        testCaseId: selectedTestCase._id,
+      });
+
+      // Display native alert as requested
+      // IMPORTANT: In a real app, replace this with a toast/custom modal
+      alert("the test case is updated");
+
+    } catch (error) {
+      console.error("Failed to decline test case:", error);
+      alert("Error: Could not update test case status to Declined.");
+    }
+  };
+  
+  // 👇 NEW: Handler to call backend mutation for Request Revision
+  const handleRequestRevisionClick = async () => {
+    if (!selectedTestCase) return;
+
+    try {
+      // Call the request revision mutation
+      await requestRevision({
+        testCaseId: selectedTestCase._id,
+      });
+
+      // Display native alert as requested
+      // IMPORTANT: In a real app, replace this with a toast/custom modal
+      alert('the test case is updated to "Need Revision"');
+
+    } catch (error) {
+      console.error("Failed to request revision for test case:", error);
+      alert("Error: Could not update test case status to Need Revision.");
     }
   };
 
@@ -336,16 +380,38 @@ export default function AltTextAriaLabelDetailsModal({
                       {/* Right section */}
                       <div className="lg:col-span-1 space-y-6">
                         
-                        {/* The Approved Button */}
+                        {/* The Action Buttons (Approve, Need Revision, and Decline) */}
                         {isQALeadOrOwner && (
-                          <Button 
-                            className="w-full bg-green-600 hover:bg-green-700 text-white" 
-                            onClick={handleApproveClick}
-                            // Optionally disable the button if the status is already Approved
-                            disabled={selectedTestCase.workflowStatus === "Approved"}
-                          >
-                            Approved
-                          </Button>
+                          <div className="space-y-2">
+                            {/* Existing Approved Button */}
+                            <Button 
+                              className="w-full bg-green-600 hover:bg-green-700 text-white" 
+                              onClick={handleApproveClick}
+                              disabled={selectedTestCase.workflowStatus === "Approved"}
+                            >
+                              Approved
+                            </Button>
+                            
+                            {/* 👇 NEW: Need Revision Button */}
+                            <Button 
+                              variant="secondary" // Indicates "needs attention/in progress"
+                              className="w-full" 
+                              onClick={handleRequestRevisionClick}
+                              disabled={selectedTestCase.workflowStatus === "Need Revision"}
+                            >
+                              Need Revision
+                            </Button>
+
+                            {/* Existing Decline Button */}
+                            <Button 
+                              variant="destructive" // Clear rejection action
+                              className="w-full" 
+                              onClick={handleDeclineClick}
+                              disabled={selectedTestCase.workflowStatus === "Declined"}
+                            >
+                              Decline
+                            </Button>
+                          </div>
                         )}
 
                         <Button className="w-full justify-between">
@@ -370,8 +436,8 @@ export default function AltTextAriaLabelDetailsModal({
                             <p>
                               {selectedTestCase._creationTime
                                 ? new Date(
-                                    selectedTestCase._creationTime
-                                  ).toLocaleString()
+                                      selectedTestCase._creationTime
+                                    ).toLocaleString()
                                 : "N/A"}
                             </p>
                           </MetadataField>
