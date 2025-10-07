@@ -86,7 +86,9 @@ export function Header({ sheetName, onBack, sheetId, sheetType }: HeaderProps & 
             with a single block of conditional logic based on 'sheetType'.
           */}
           {sheetType === "altTextAriaLabel" && (
+            <>
             <AltTextAriaLabelDetailsModal sheetId={sheetId} />
+            </>
           )}
           {sheetType === "functionality" && (
             <FunctionalityTestCasesDetailsModal sheetId={sheetId} />

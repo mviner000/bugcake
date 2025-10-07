@@ -53,6 +53,9 @@ export function FunctionalityTestCasesTable({
   const createTestCase = useMutation(
     api.myFunctions.createFunctionalityTestCase,
   );
+  const batchUpdateWorkflowStatus = useMutation(
+    api.myFunctions.batchUpdateFunctionalityWorkflowStatus,
+  );
   const fetchedColumnWidths = useQuery(api.myFunctions.getColumnWidths, {
     sheetId,
     testCaseType: "functionality",
@@ -123,16 +126,29 @@ export function FunctionalityTestCasesTable({
   const isAllSelected = testCases.length > 0 && selectedRows.size === testCases.length;
   const isIndeterminate = selectedRows.size > 0 && selectedRows.size < testCases.length;
 
-  const handleSendToApproval = () => {
-    const selectedCount = selectedRows.size;
-    const selectedIds = Array.from(selectedRows);
-    
-    if (selectedCount === 0) {
+  const handleSendToApproval = async () => {
+    if (selectedRows.size === 0) {
       alert('Please select at least one test case to send for approval.');
       return;
     }
-    
-    alert(`Selected ${selectedCount} test case(s) for approval:\n\nRow IDs:\n${selectedIds.join('\n')}`);
+
+    const selectedIds = Array.from(selectedRows);
+    try {
+      const result = await batchUpdateWorkflowStatus({
+        testCaseIds: selectedIds,
+        workflowStatus: "Waiting for QA Lead Approval",
+      });
+      
+      if (result.summary.failed > 0) {
+        alert(`Successfully sent ${result.summary.successful} test case(s) for QA Lead approval!\n\nFailed: ${result.summary.failed}`);
+      } else {
+        alert(`Successfully sent ${result.summary.successful} test case(s) for QA Lead approval!`);
+      }
+      setSelectedRows(new Set());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error occurred';
+      alert('Failed to send for approval: ' + message);
+    }
   };
 
   const handleAddNew = () => {

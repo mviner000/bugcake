@@ -1,5 +1,4 @@
 // src/components/sheet/alttextarialabel/AltTextAriaLabelTable.tsx
-
 import React, { useState, useRef } from "react";
 import { Doc } from "convex/_generated/dataModel";
 import { api } from "../../../../convex/_generated/api";
@@ -19,13 +18,8 @@ import { WorkflowStatusBadge, WorkflowStatus } from "../common/WorkflowStatusBad
 import { Button } from "@/components/ui/button";
 
 // --- AltTextAriaLabelTable Component ---
-
 interface AltTextAriaLabelTableProps {
-  testCases: (Doc<"altTextAriaLabelTestCases"> & { 
-    createdByName: string; 
-    sequenceNumber: number;
-    workflowStatus: WorkflowStatus;
-  })[];
+  testCases: (Doc<"altTextAriaLabelTestCases"> & { createdByName: string; sequenceNumber: number; workflowStatus: WorkflowStatus; })[];
   sheetId: string;
 }
 
@@ -46,10 +40,19 @@ interface NewTestCase {
 }
 
 const initialNewTestCaseState: NewTestCase = {
-  persona: "User", 
-  module: "", subModule: "", pageSection: "", wireframeLink: "",
-  imagesIcons: "", remarks: "", altTextAriaLabel: "", seImplementation: "Not yet",
-  actualResults: "", testingStatus: "Not Run", notes: "", jiraUserStory: "",
+  persona: "User",
+  module: "",
+  subModule: "",
+  pageSection: "",
+  wireframeLink: "",
+  imagesIcons: "",
+  remarks: "",
+  altTextAriaLabel: "",
+  seImplementation: "Not yet",
+  actualResults: "",
+  testingStatus: "Not Run",
+  notes: "",
+  jiraUserStory: "",
 };
 
 const ALT_TEXT_ARIA_LABEL_COLUMNS = [
@@ -77,6 +80,7 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
   const updateRowHeight = useMutation(api.myFunctions.updateAltTextAriaLabelTestCaseRowHeight);
   const createTestCase = useMutation(api.myFunctions.createAltTextAriaLabelTestCase);
   const updateColumnWidth = useMutation(api.myFunctions.updateColumnWidth);
+  const batchUpdateWorkflowStatus = useMutation(api.myFunctions.batchUpdateAltTextAriaLabelWorkflowStatus);
 
   // Queries
   const fetchedColumnWidths = useQuery(api.myFunctions.getColumnWidths, {
@@ -86,21 +90,14 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
 
   // Custom Hooks
   const { getColumnWidth } = useColumnWidths(fetchedColumnWidths);
-  
   const { resizingRow, handleRowMouseDown } = useRowResize({
     onResizeComplete: async (testCaseId, rowHeight) => {
       await updateRowHeight({ testCaseId, rowHeight });
     }
   });
-
   const { resizingColumn, handleColumnMouseDown } = useColumnResize({
     onResizeComplete: async (columnName, width) => {
-      await updateColumnWidth({
-        sheetId,
-        columnName,
-        width,
-        testCaseType: "altTextAriaLabel"
-      });
+      await updateColumnWidth({ sheetId, columnName, width, testCaseType: "altTextAriaLabel" });
     }
   });
 
@@ -112,7 +109,6 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
   const tableRef = useRef<HTMLTableElement>(null);
 
   // --- Event Handlers ---
-
   const handleCheckboxChange = (testCaseId: string, checked: boolean) => {
     setSelectedRows(prev => {
       const newSet = new Set(prev);
@@ -156,6 +152,7 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
       alert("Persona, Module, and Alt Text/Aria Label fields are required.");
       return;
     }
+
     setIsSaving(true);
     try {
       const payload = {
@@ -166,7 +163,12 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
         actualResults: formatWithNumbering(newTestCase.actualResults),
         notes: formatWithNumbering(newTestCase.notes),
       };
-      await createTestCase({ sheetId, ...payload });
+
+      await createTestCase({
+        sheetId,
+        ...payload
+      });
+
       setNewTestCase(initialNewTestCaseState);
       setIsAdding(false);
     } catch (error) {
@@ -187,16 +189,31 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
     setNewTestCase(initialNewTestCaseState);
   };
 
-  const handleSendToApproval = () => {
-    const selectedCount = selectedRows.size;
-    const selectedIds = Array.from(selectedRows);
-    
-    if (selectedCount === 0) {
+  const handleSendToApproval = async () => {
+    if (selectedRows.size === 0) {
       alert('Please select at least one test case to send for approval.');
       return;
     }
+
+    const selectedIds = Array.from(selectedRows);
     
-    alert(`Selected ${selectedCount} test case(s) for approval:\n\nRow IDs:\n${selectedIds.join('\n')}`);
+    try {
+      const result = await batchUpdateWorkflowStatus({
+        testCaseIds: selectedIds,
+        workflowStatus: "Waiting for QA Lead Approval",
+      });
+
+      if (result.summary.failed > 0) {
+        alert(`Successfully sent ${result.summary.successful} test case(s) for QA Lead approval!\n\nFailed: ${result.summary.failed}`);
+      } else {
+        alert(`Successfully sent ${result.summary.successful} test case(s) for QA Lead approval!`);
+      }
+      
+      setSelectedRows(new Set());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error occurred';
+      alert('Failed to send for approval: ' + message);
+    }
   };
 
   return (
@@ -204,7 +221,10 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
       {/* Top Bar Button */}
       <div className="flex justify-end mb-4 px-4">
         <Button onClick={handleSendToApproval}>
-          Send To Approval for QA Lead {selectedRows.size > 0 && `(${selectedRows.size})`}
+          Send To Approval for QA Lead
+          {selectedRows.size > 0 && (
+            ` (${selectedRows.size})`
+          )}
         </Button>
       </div>
 
@@ -234,7 +254,7 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
                     </th>
                   );
                 }
-                
+
                 return (
                   <TableHeaderCell
                     key={key}
@@ -284,7 +304,7 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
                           </td>
                         );
                       }
-                      
+
                       // Special rendering for workflow status (second column)
                       if (key === 'workflowStatus') {
                         return (
@@ -298,7 +318,7 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
                           </td>
                         );
                       }
-                      
+
                       // Regular rendering for other columns
                       return (
                         <td
@@ -336,6 +356,7 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
                     >
                       {/* Empty checkbox cell for new row */}
                     </td>
+
                     {/* Workflow Status - New (defaults to Open, read-only) */}
                     <td
                       data-column="workflowStatus"
@@ -344,6 +365,7 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
                     >
                       <WorkflowStatusBadge status="Open" />
                     </td>
+
                     <td
                       data-column="sequenceNumber"
                       style={{ width: `${getColumnWidth("sequenceNumber", 80)}px` }}
@@ -351,6 +373,7 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
                     >
                       TC_{String(testCases.length + 1).padStart(3, '0')}
                     </td>
+
                     <td
                       data-column="persona"
                       style={{ width: `${getColumnWidth("persona", 150)}px` }}
@@ -370,6 +393,7 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
                         <option value="Manager">Manager</option>
                       </select>
                     </td>
+
                     <td
                       data-column="module"
                       style={{ width: `${getColumnWidth("module", 150)}px` }}
@@ -383,6 +407,7 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
                         className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </td>
+
                     <td
                       data-column="subModule"
                       style={{ width: `${getColumnWidth("subModule", 150)}px` }}
@@ -396,6 +421,7 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
                         className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </td>
+
                     <td
                       data-column="pageSection"
                       style={{ width: `${getColumnWidth("pageSection", 150)}px` }}
@@ -409,6 +435,7 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
                         className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </td>
+
                     <td
                       data-column="wireframeLink"
                       style={{ width: `${getColumnWidth("wireframeLink", 150)}px` }}
@@ -422,6 +449,7 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
                         className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </td>
+
                     <td
                       data-column="imagesIcons"
                       style={{ width: `${getColumnWidth("imagesIcons", 200)}px` }}
@@ -435,6 +463,7 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
                         className="text-sm"
                       />
                     </td>
+
                     <td
                       data-column="remarks"
                       style={{ width: `${getColumnWidth("remarks", 250)}px` }}
@@ -448,6 +477,7 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
                         className="text-sm"
                       />
                     </td>
+
                     <td
                       data-column="altTextAriaLabel"
                       style={{ width: `${getColumnWidth("altTextAriaLabel", 300)}px` }}
@@ -461,6 +491,7 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
                         className="text-sm"
                       />
                     </td>
+
                     <td
                       data-column="seImplementation"
                       style={{ width: `${getColumnWidth("seImplementation", 150)}px` }}
@@ -481,6 +512,7 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
                         <option value="Not Available">Not Available</option>
                       </select>
                     </td>
+
                     <td
                       data-column="actualResults"
                       style={{ width: `${getColumnWidth("actualResults", 250)}px` }}
@@ -494,6 +526,7 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
                         className="text-sm"
                       />
                     </td>
+
                     <td
                       data-column="testingStatus"
                       style={{ width: `${getColumnWidth("testingStatus", 120)}px` }}
@@ -512,6 +545,7 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
                         <option value="Not Available">Not Available</option>
                       </select>
                     </td>
+
                     <td
                       data-column="notes"
                       style={{ width: `${getColumnWidth("notes", 250)}px` }}
@@ -525,6 +559,7 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
                         className="text-sm"
                       />
                     </td>
+
                     <td
                       data-column="jiraUserStory"
                       style={{ width: `${getColumnWidth("jiraUserStory", 150)}px` }}
@@ -538,6 +573,7 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
                         className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </td>
+
                     <td
                       data-column="createdByName"
                       style={{ width: `${getColumnWidth("createdByName", 150)}px` }}

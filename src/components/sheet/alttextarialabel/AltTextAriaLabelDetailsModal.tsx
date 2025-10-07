@@ -1,6 +1,7 @@
 // src/components/sheet/alttextarialabel/AltTextAriaLabelDetailsModal.tsx
 
 import { useState } from "react";
+import { api } from "../../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +18,8 @@ import {
   Link,
   ChevronDown
 } from "lucide-react";
+import { useQuery } from "convex/react";
+import { Id } from "convex/_generated/dataModel";
 
 interface AltTextAriaLabelDetailsModalProps {
   sheetId: string;
@@ -36,10 +39,10 @@ const DUMMY_TEST_CASES = [
     altTextAriaLabel: "User avatar placeholder",
     remarks:
       "1. Ensure proper contrast ratio\n2. Test with screen readers\n3. Verify keyboard navigation",
-    seImplementation: "Done",
+    seImplementation: "Not Yet",
     actualResults:
       "1. Alt text properly announced\n2. ARIA labels correctly set\n3. Focus indicators visible",
-    testingStatus: "Passed",
+    testingStatus: "Not Run",
     notes:
       "1. All accessibility checks passed\n2. Works well with NVDA and JAWS\n3. Mobile testing completed",
     jiraUserStory: "US-1234",
@@ -59,10 +62,10 @@ const DUMMY_TEST_CASES = [
     altTextAriaLabel: "Analytics bar chart placeholder",
     remarks:
       "1. Complex data visualization\n2. Multiple interactive elements\n3. Requires detailed descriptions",
-    seImplementation: "Ongoing",
+    seImplementation: "Not Yet",
     actualResults:
       "1. Chart description needs improvement\n2. Download button accessible\n3. Filter controls working",
-    testingStatus: "Failed",
+    testingStatus: "Not Run",
     notes:
       "1. Chart needs more descriptive alt text\n2. Consider adding data table alternative\n3. Retest after fixes",
     jiraUserStory: "US-2345",
@@ -82,7 +85,7 @@ const DUMMY_TEST_CASES = [
     altTextAriaLabel: "Security lock icon placeholder",
     remarks:
       "1. Critical security features\n2. Must be fully accessible\n3. Clear warning messages needed",
-    seImplementation: "Not yet",
+    seImplementation: "Not Yet",
     actualResults: "",
     testingStatus: "Not Run",
     notes:
@@ -104,10 +107,10 @@ const DUMMY_TEST_CASES = [
     altTextAriaLabel: "Clock icon for time tracking",
     remarks:
       "1. Form validation required\n2. Error messages must be accessible\n3. Success confirmation needed",
-    seImplementation: "Done",
+    seImplementation: "Not Yet",
     actualResults:
       "1. All form fields properly labeled\n2. Error messages announced correctly\n3. Success message accessible",
-    testingStatus: "Passed",
+    testingStatus: "Not Run",
     notes:
       "1. Excellent accessibility implementation\n2. No issues found during testing\n3. Ready for production",
     jiraUserStory: "US-4567",
@@ -128,10 +131,10 @@ const DUMMY_TEST_CASES = [
     altTextAriaLabel: "Team performance graph placeholder",
     remarks:
       "1. Data-heavy interface\n2. Multiple chart types\n3. Export functionality critical",
-    seImplementation: "Has Concerns",
+    seImplementation: "Not Yet",
     actualResults:
       "1. Graph description too generic\n2. Export button works well\n3. Print preview accessible",
-    testingStatus: "Blocked",
+    testingStatus: "Not Run",
     notes:
       "1. Waiting for design clarification\n2. Graph alt text needs stakeholder input\n3. On hold until next review",
     jiraUserStory: "US-5678",
@@ -164,17 +167,35 @@ function getStatusVariant(
 }
 
 // --- Main Component ---
-export default function AltTextAriaLabelDetailsModal({ sheetId: _sheetId }: AltTextAriaLabelDetailsModalProps) {
+export default function AltTextAriaLabelDetailsModal({ sheetId }: AltTextAriaLabelDetailsModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedTestCase, setSelectedTestCase] = useState<
     (typeof DUMMY_TEST_CASES)[0] | null
-  >(DUMMY_TEST_CASES.length > 0 ? DUMMY_TEST_CASES[0] : null); // FIXED: Robust state initialization
+  >(DUMMY_TEST_CASES.length > 0 ? DUMMY_TEST_CASES[0] : null);
+
+  // Ensure we use the correct type from the Convex model
+  const normalizedSheetId = sheetId as Id<"sheets">;
+  const usersWithAccess = useQuery(api.myFunctions.getUsersWithAccess, {
+    sheetId: normalizedSheetId,
+  });
 
   return (
     <>
-      <Button variant="outline" size="sm" onClick={() => setIsOpen(true)}>
+      <Button variant="outline" size="sm" onClick={() => setIsOpen(true)} className="relative">
         <ListChecks className="w-4 h-4 mr-2" />
-        View AltTextAriaLabelDetailsModal Test Cases Details
+        {(() => {
+          const currentUser = usersWithAccess?.find((u) => u.isCurrentUser);
+          const isQALeadOrOwner = currentUser?.role === "qa_lead" || currentUser?.role === "owner";
+          
+          return isQALeadOrOwner 
+            ? "Please approve this now" 
+            : "Need Approval for QA Lead/Owner Approval";
+        })()}
+        {DUMMY_TEST_CASES.length > 0 && (
+          <span className="absolute -top-2 -right-2 flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold text-white bg-red-500 rounded-full">
+            {DUMMY_TEST_CASES.length}
+          </span>
+        )}
       </Button>
 
       <DetailsModal isOpen={isOpen} onClose={() => setIsOpen(false)}>
@@ -265,7 +286,7 @@ export default function AltTextAriaLabelDetailsModal({ sheetId: _sheetId }: AltT
                         {/* Persona */}
                         <ContentSection title="Persona">
                           <div className="flex items-center gap-2 text-muted-foreground">
-                            <User className="w-4 h-4 mt-0.5 self-start flex-shrink-0" /> {/* FIXED: Icon changed to User */}
+                            <User className="w-4 h-4 mt-0.5 self-start flex-shrink-0" />
                             <div>
                               {selectedTestCase.persona}
                             </div>

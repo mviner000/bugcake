@@ -1,4 +1,5 @@
-import React from "react"
+// components/sheet/UserRoleDisplay.tsx
+
 import { Badge } from "@/components/ui/badge"
 
 interface UserRoleDisplayProps {
