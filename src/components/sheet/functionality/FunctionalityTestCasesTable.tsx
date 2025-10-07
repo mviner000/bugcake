@@ -1,21 +1,21 @@
-// src/components/sheet/FunctionalityTestCasesTable.tsx
+// src/components/sheet/functionality/FunctionalityTestCasesTable.tsx
 
 import { useState, useRef } from "react";
 import { Doc } from "convex/_generated/dataModel";
-import { api } from "../../../convex/_generated/api";
+import { api } from "../../../../convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
-import { NumberedTextarea } from "./NumberedTextarea";
-import { useColumnResize } from "../../hooks/useColumnResize";
-import { useRowResize } from "../../hooks/useRowResize";
-import { useColumnWidths } from "../../hooks/useColumnWidths";
-import { TableHeaderCell } from "./common/TableHeaderCell";
-import { ResizeHandle } from "./common/ResizeHandle";
-import { TableActionButtons } from "./common/TableActionButtons";
-import { EmptyTableState } from "./common/EmptyTableState";
-import { ResizeFeedback } from "./common/ResizeFeedback";
-import { formatWithNumbering } from "../../utils/formatUtils";
-import { TestingStatusBadge } from "./common/StatusBadgeHelper";
-import { WorkflowStatusBadge, WorkflowStatus } from "./common/WorkflowStatusBadge";
+import { NumberedTextarea } from "../NumberedTextarea";
+import { useColumnResize } from "../../../hooks/useColumnResize";
+import { useRowResize } from "../../../hooks/useRowResize";
+import { useColumnWidths } from "../../../hooks/useColumnWidths";
+import { TableHeaderCell } from "../common/TableHeaderCell";
+import { ResizeHandle } from "../common/ResizeHandle";
+import { TableActionButtons } from "../common/TableActionButtons";
+import { EmptyTableState } from "../common/EmptyTableState";
+import { ResizeFeedback } from "../common/ResizeFeedback";
+import { formatWithNumbering } from "../../../utils/formatUtils";
+import { TestingStatusBadge } from "../common/StatusBadgeHelper";
+import { WorkflowStatusBadge, WorkflowStatus } from "../common/WorkflowStatusBadge";
 import { Button } from "@/components/ui/button";
 
 interface FunctionalityTestCasesTableProps {
@@ -91,7 +91,49 @@ export function FunctionalityTestCasesTable({
     status: "Not Run",
     jiraUserStory: "",
   });
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const tableRef = useRef<HTMLTableElement>(null);
+
+  const handleCheckboxChange = (testCaseId: string, checked: boolean) => {
+    setSelectedRows(prev => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(testCaseId);
+        console.log('Row selected:', testCaseId);
+      } else {
+        newSet.delete(testCaseId);
+        console.log('Row deselected:', testCaseId);
+      }
+      console.log('Currently selected rows:', Array.from(newSet));
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allIds = new Set(testCases.map(tc => tc._id));
+      setSelectedRows(allIds);
+      console.log('All rows selected:', Array.from(allIds));
+    } else {
+      setSelectedRows(new Set());
+      console.log('All rows deselected');
+    }
+  };
+
+  const isAllSelected = testCases.length > 0 && selectedRows.size === testCases.length;
+  const isIndeterminate = selectedRows.size > 0 && selectedRows.size < testCases.length;
+
+  const handleSendToApproval = () => {
+    const selectedCount = selectedRows.size;
+    const selectedIds = Array.from(selectedRows);
+    
+    if (selectedCount === 0) {
+      alert('Please select at least one test case to send for approval.');
+      return;
+    }
+    
+    alert(`Selected ${selectedCount} test case(s) for approval:\n\nRow IDs:\n${selectedIds.join('\n')}`);
+  };
 
   const handleAddNew = () => {
     setIsAdding(true);
@@ -168,6 +210,7 @@ export function FunctionalityTestCasesTable({
   };
 
   const columns = [
+    { key: "checkbox", label: "", width: 30 },
     { key: "workflowStatus", label: "Workflow Status", width: 200 },
     { key: "tcId", label: "TC ID", width: 80 },
     { key: "level", label: "TC Level", width: 100 },
@@ -189,7 +232,9 @@ export function FunctionalityTestCasesTable({
     <div className="flex flex-col">
       {/* Top Bar Button */}
       <div className="flex justify-end mb-4 px-4">
-        <Button>Send To Approval for QA Lead</Button>
+        <Button onClick={handleSendToApproval}>
+          Send To Approval for QA Lead {selectedRows.size > 0 && `(${selectedRows.size})`}
+        </Button>
       </div>
 
       {/* Scrollable table container */}
@@ -197,16 +242,39 @@ export function FunctionalityTestCasesTable({
         <table ref={tableRef} className="w-full border-collapse" style={{ minWidth: 'max-content' }}>
           <thead>
             <tr className="bg-gray-100">
-              {columns.map(({ key, label, width }) => (
-                <TableHeaderCell
-                  key={key}
-                  columnKey={key}
-                  label={label}
-                  width={getColumnWidth(key, width)}
-                  isResizing={resizingColumn === key}
-                  onResizeStart={handleColumnMouseDown}
-                />
-              ))}
+              {columns.map(({ key, label, width }) => {
+                // Special handling for checkbox column header
+                if (key === 'checkbox') {
+                  return (
+                    <th
+                      key={key}
+                      style={{ width: `${getColumnWidth(key, width)}px` }}
+                      className="border border-gray-300 px-2 py-2 text-center bg-gray-100"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isAllSelected}
+                        ref={(el) => {
+                          if (el) el.indeterminate = isIndeterminate;
+                        }}
+                        onChange={(e) => handleSelectAll(e.target.checked)}
+                        className="cursor-pointer"
+                      />
+                    </th>
+                  );
+                }
+                
+                return (
+                  <TableHeaderCell
+                    key={key}
+                    columnKey={key}
+                    label={label}
+                    width={getColumnWidth(key, width)}
+                    isResizing={resizingColumn === key}
+                    onResizeStart={handleColumnMouseDown}
+                  />
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -216,7 +284,7 @@ export function FunctionalityTestCasesTable({
                   message="No functionality test cases found."
                   onAdd={handleAddNew}
                   buttonText="Add First Test Case"
-                  colSpan={15}
+                  colSpan={16}
                 />
               ) : (
                 <>
@@ -227,7 +295,20 @@ export function FunctionalityTestCasesTable({
                       className="hover:bg-gray-50 relative"
                       style={{ height: `${testCase.rowHeight || 20}px` }}
                     >
-                      {/* Workflow Status - FIRST COLUMN (Read-only) */}
+                      {/* Checkbox column */}
+                      <td
+                        data-column="checkbox"
+                        style={{ width: `${getColumnWidth("checkbox", 30)}px` }}
+                        className="border border-gray-300 px-2 py-2 text-center"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedRows.has(testCase._id)}
+                          onChange={(e) => handleCheckboxChange(testCase._id, e.target.checked)}
+                          className="cursor-pointer"
+                        />
+                      </td>
+                      {/* Workflow Status */}
                       <td
                         data-column="workflowStatus"
                         style={{ width: `${getColumnWidth("workflowStatus", 200)}px` }}
@@ -362,6 +443,14 @@ export function FunctionalityTestCasesTable({
                   {/* New Row Input */}
                   {isAdding && (
                     <tr className="bg-blue-50">
+                      {/* Checkbox - Empty for new row */}
+                      <td
+                        data-column="checkbox"
+                        style={{ width: `${getColumnWidth("checkbox", 30)}px` }}
+                        className="border border-gray-300 px-2 py-2 text-center"
+                      >
+                        {/* Empty checkbox cell for new row */}
+                      </td>
                       {/* Workflow Status - New (defaults to Open, read-only) */}
                       <td
                         data-column="workflowStatus"

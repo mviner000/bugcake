@@ -27,6 +27,8 @@ import { ShareModal } from "./share-modal";
 import { Id } from "convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import ActivityApprovalsSheet from "./right-side/ActivityApprovalsSheet";
+import AltTextAriaLabelDetailsModal from "./alttextarialabel/AltTextAriaLabelDetailsModal";
+import FunctionalityTestCasesDetailsModal from "./functionality/FunctionalityTestCaseDetailsModal";
 
 interface HeaderProps {
   sheetName?: string;
@@ -68,6 +70,8 @@ export function Header({ sheetName, onBack, sheetId }: HeaderProps & { sheetId: 
           </div>
         </div>
         <div className="flex items-center space-x-4">
+          <AltTextAriaLabelDetailsModal />
+          <FunctionalityTestCasesDetailsModal />
           <ActivityApprovalsSheet sheetId={sheetId as any} />
           <Button onClick={() => setIsShareModalOpen(true)} size="sm" className="bg-blue-700 text-white hover:bg-blue-70">
             <Share className="w-4 h-4" />

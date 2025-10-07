@@ -1,21 +1,21 @@
-// src/components/sheet/AltTextAriaLabelTable.tsx
+// src/components/sheet/alttextarialabel/AltTextAriaLabelTable.tsx
 
 import React, { useState, useRef } from "react";
 import { Doc } from "convex/_generated/dataModel";
-import { api } from "../../../convex/_generated/api";
+import { api } from "../../../../convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
-import { useColumnResize } from "../../hooks/useColumnResize";
-import { useRowResize } from "../../hooks/useRowResize";
-import { useColumnWidths } from "../../hooks/useColumnWidths";
-import { TableHeaderCell } from "./common/TableHeaderCell";
-import { ResizeHandle } from "./common/ResizeHandle";
-import { TableActionButtons } from "./common/TableActionButtons";
-import { EmptyTableState } from "./common/EmptyTableState";
-import { ResizeFeedback } from "./common/ResizeFeedback";
-import { formatWithNumbering } from "../../utils/formatUtils";
-import { SEImplementationBadge, TestingStatusBadge } from "./common/StatusBadgeHelper";
-import { NumberedTextarea } from "./NumberedTextarea";
-import { WorkflowStatusBadge, WorkflowStatus } from "./common/WorkflowStatusBadge";
+import { useColumnResize } from "../../../hooks/useColumnResize";
+import { useRowResize } from "../../../hooks/useRowResize";
+import { useColumnWidths } from "../../../hooks/useColumnWidths";
+import { TableHeaderCell } from "../common/TableHeaderCell";
+import { ResizeHandle } from "../common/ResizeHandle";
+import { TableActionButtons } from "../common/TableActionButtons";
+import { EmptyTableState } from "../common/EmptyTableState";
+import { ResizeFeedback } from "../common/ResizeFeedback";
+import { formatWithNumbering } from "../../../utils/formatUtils";
+import { SEImplementationBadge, TestingStatusBadge } from "../common/StatusBadgeHelper";
+import { NumberedTextarea } from "../NumberedTextarea";
+import { WorkflowStatusBadge, WorkflowStatus } from "../common/WorkflowStatusBadge";
 import { Button } from "@/components/ui/button";
 
 // --- AltTextAriaLabelTable Component ---
@@ -128,6 +128,20 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
     });
   };
 
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allIds = new Set(testCases.map(tc => tc._id));
+      setSelectedRows(allIds);
+      console.log('All rows selected:', Array.from(allIds));
+    } else {
+      setSelectedRows(new Set());
+      console.log('All rows deselected');
+    }
+  };
+
+  const isAllSelected = testCases.length > 0 && selectedRows.size === testCases.length;
+  const isIndeterminate = selectedRows.size > 0 && selectedRows.size < testCases.length;
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setNewTestCase((prev) => ({ ...prev, [name]: value }));
@@ -199,16 +213,39 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
         <table ref={tableRef} className="w-full border-collapse" style={{ minWidth: 'max-content' }}>
           <thead>
             <tr className="bg-gray-100">
-              {ALT_TEXT_ARIA_LABEL_COLUMNS.map(({ key, label, width }) => (
-                <TableHeaderCell
-                  key={key}
-                  columnKey={key}
-                  label={label}
-                  width={getColumnWidth(key, width)}
-                  isResizing={resizingColumn === key}
-                  onResizeStart={handleColumnMouseDown}
-                />
-              ))}
+              {ALT_TEXT_ARIA_LABEL_COLUMNS.map(({ key, label, width }) => {
+                // Special handling for checkbox column header
+                if (key === 'checkbox') {
+                  return (
+                    <th
+                      key={key}
+                      style={{ width: `${getColumnWidth(key, width)}px` }}
+                      className="border border-gray-300 px-2 py-2 text-center bg-gray-100"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isAllSelected}
+                        ref={(el) => {
+                          if (el) el.indeterminate = isIndeterminate;
+                        }}
+                        onChange={(e) => handleSelectAll(e.target.checked)}
+                        className="cursor-pointer"
+                      />
+                    </th>
+                  );
+                }
+                
+                return (
+                  <TableHeaderCell
+                    key={key}
+                    columnKey={key}
+                    label={label}
+                    width={getColumnWidth(key, width)}
+                    isResizing={resizingColumn === key}
+                    onResizeStart={handleColumnMouseDown}
+                  />
+                );
+              })}
             </tr>
           </thead>
           <tbody>

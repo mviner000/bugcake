@@ -4,8 +4,8 @@ import { api } from "../../../convex/_generated/api";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { isAltTextTestCase, isFunctionalityTestCase } from "@/utils/typeGuards";
-import { AltTextAriaLabelTable } from "./AltTextAriaLabelTable";
-import { FunctionalityTestCasesTable } from "./FunctionalityTestCasesTable";
+import { AltTextAriaLabelTable } from "./alttextarialabel/AltTextAriaLabelTable";
+import { FunctionalityTestCasesTable } from "./functionality/FunctionalityTestCasesTable";
 import { Header } from "./Header";
 import { AccessRequest } from "./access-request";
 
