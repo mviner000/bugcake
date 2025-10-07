@@ -1,10 +1,12 @@
 // src/components/sheet/alttextarialabel/AltTextAriaLabelDetailsModal.tsx
 
-import { useState, useEffect, type ReactNode } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { DetailsModal } from "@/components/ui/mod/DetailsModal";
+import { ContentSection, MetadataField } from "@/components/ui/mod/ModalHelpers";
 import {
   ListChecks,
   X,
@@ -15,71 +17,6 @@ import {
   Link,
   ChevronDown
 } from "lucide-react";
-
-// --- Custom Modal Component ---
-interface CustomModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  children: ReactNode;
-}
-function CustomModal({ isOpen, onClose, children }: CustomModalProps) {
-  if (!isOpen) return null;
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
-  useEffect(() => {
-    if (isOpen) document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = "unset";
-    };
-  }, [isOpen]);
-  return (
-    <>
-      <style>{`
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.5); z-index: 40; }
-        .modal-content { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); z-index: 50; overflow: hidden; }
-        .dark .modal-content { background-color: hsl(222.2 84% 4.9%); border: 1px solid hsl(217.2 32.6% 17.5%); }
-      `}</style>
-      <div className="modal-overlay" onClick={onClose} />
-      <div className="modal-content" role="dialog" aria-modal="true">
-        {children}
-      </div>
-    </>
-  );
-}
-
-// --- Helper Components ---
-const ContentSection = ({
-  title,
-  children
-}: {
-  title: string;
-  children: ReactNode;
-}) => (
-  <div className="space-y-2">
-    <h4 className="text-sm font-semibold text-muted-foreground">{title}</h4>
-    <div className="text-sm">{children}</div>
-  </div>
-);
-
-const MetadataField = ({
-  label,
-  children
-}: {
-  label: string;
-  children: ReactNode;
-}) => (
-  <div>
-    <h5 className="text-xs font-bold text-muted-foreground mb-1.5">
-      {label.toUpperCase()}
-    </h5>
-    <div className="text-sm">{children}</div>
-  </div>
-);
 
 // --- Dummy Data ---
 const DUMMY_TEST_CASES = [
@@ -236,7 +173,7 @@ export default function AltTextAriaLabelDetailsModal() {
         View AltTextAriaLabelDetailsModal Test Cases Details
       </Button>
 
-      <CustomModal isOpen={isOpen} onClose={() => setIsOpen(false)}>
+      <DetailsModal isOpen={isOpen} onClose={() => setIsOpen(false)}>
         <div className="w-[92vw] h-[90vh] flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-3 border-b">
@@ -450,7 +387,7 @@ export default function AltTextAriaLabelDetailsModal() {
             </div>
           </div>
         </div>
-      </CustomModal>
+      </DetailsModal>
     </>
   );
 }
