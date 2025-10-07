@@ -225,7 +225,7 @@ export const updateSheetAccessLevel = mutation({
       throw new Error("Authentication required");
     }
 
-    // ✅ Verify user has permission to change access (owners/editors only)
+    // ✅ Verify user has permission to change access (owners/qa_lead only)
     const userPermission = await ctx.db
       .query("sheetPermissions")
       .withIndex("by_sheet_and_user", (q) =>
@@ -237,8 +237,8 @@ export const updateSheetAccessLevel = mutation({
       throw new Error("You don't have access to this sheet");
     }
 
-    if (!["owner", "editor"].includes(userPermission.role)) {
-      throw new Error("Only owners and editors can change access levels");
+    if (!["owner", "qa_lead"].includes(userPermission.role)) {
+      throw new Error("Only owners and qa_lead can change access levels");
     }
 
     // ✅ Update the sheet's access level
@@ -1075,7 +1075,7 @@ const getUserId = async (ctx: QueryCtx | MutationCtx): Promise<Id<"users"> | nul
 };
 
 // 💡 FIX APPLIED HERE: Use the union type (QueryCtx | MutationCtx)
-type Role = "owner" | "editor" | "viewer" | null;
+type Role = "owner" | "qa_lead" | "qa_tester" | "viewer" | null;
 
 const checkAccessRoleInternal = async (
   ctx: QueryCtx | MutationCtx, 
@@ -1109,19 +1109,34 @@ export const updatePermission = mutation({
   args: {
     sheetId: v.id("sheets"),
     targetUserId: v.id("users"),
-    role: v.union(v.literal("owner"), v.literal("editor"), v.literal("viewer")),
+    role: v.union(
+      v.literal("owner"), 
+      v.literal("qa_lead"), 
+      v.literal("qa_tester"), 
+      v.literal("viewer")
+    ),
   },
   handler: async (ctx, args) => {
-    const sharerId = await getUserId(ctx);
+    const sharerId = await getAuthUserId(ctx);
     if (!sharerId) {
-        throw new Error("Authentication required.");
+      throw new Error("Authentication required.");
     }
-    // ctx is MutationCtx, which is assignable to QueryCtx | MutationCtx
-    const sharerPermission = await checkAccessRoleInternal(ctx, args.sheetId);
-    
-    // ... rest of the updatePermission logic
-    if (sharerPermission !== "owner" && sharerPermission !== "editor") {
-      throw new Error("Permission denied. Only owners/editors can share.");
+
+    // Get the sharer's permission
+    const sharerPermission = await ctx.db
+      .query("sheetPermissions")
+      .withIndex("by_sheet_and_user", (q) =>
+        q.eq("sheetId", args.sheetId).eq("userId", sharerId)
+      )
+      .unique();
+
+    // ✅ FIX: Allow owner, qa_lead, AND qa_tester to update permissions
+    if (!sharerPermission) {
+      throw new Error("You don't have access to this sheet.");
+    }
+
+    if (sharerPermission.role === "viewer") {
+      throw new Error("Permission denied. Viewers cannot manage permissions.");
     }
 
     const existingPermission = await ctx.db
@@ -1140,8 +1155,11 @@ export const updatePermission = mutation({
         role: args.role,
       });
     }
+
+    return { success: true, message: "Permission updated successfully." };
   },
 });
+
 
 export const getUsersWithAccess = query({
   args: { sheetId: v.id("sheets") },
@@ -1181,7 +1199,12 @@ export const addUserAccessToSheet = mutation({
   args: {
     sheetId: v.id("sheets"),
     userEmail: v.string(),
-    role: v.union(v.literal("owner"), v.literal("editor"), v.literal("viewer")),
+    role: v.union(
+      v.literal("owner"), 
+      v.literal("qa_lead"), 
+      v.literal("qa_tester"), 
+      v.literal("viewer")
+    ),
   },
   handler: async (ctx, args) => {
     // 1. Check if current user has permission to share
@@ -1197,10 +1220,13 @@ export const addUserAccessToSheet = mutation({
       )
       .unique();
 
-    // Only owners and editors can add people
-    if (!currentUserPermission || 
-        (currentUserPermission.role !== "owner" && currentUserPermission.role !== "editor")) {
-      throw new Error("Permission denied. Only owners/editors can share.");
+    // ✅ FIX: Allow owner, qa_lead, AND qa_tester to add people
+    if (!currentUserPermission) {
+      throw new Error("You don't have access to this sheet.");
+    }
+
+    if (currentUserPermission.role === "viewer") {
+      throw new Error("Permission denied. Viewers cannot add people.");
     }
 
     // 2. Find the user by email
@@ -1422,9 +1448,9 @@ export const requestSheetAccess = mutation({
   args: {
     sheetId: v.string(),
     accessLevel: v.union(
+      v.literal("qa_lead"),
+      v.literal("qa_tester"),
       v.literal("viewer"),
-      v.literal("commenter"),
-      v.literal("editor"),
     ),
     message: v.optional(v.string()),
   },
@@ -1498,12 +1524,13 @@ export const getPendingAccessRequests = query({
     sheetId: v.id("sheets"),
   },
   handler: async (ctx, args) => {
-    // 1. Check if current user has permission to view requests (owner/editor only)
+    // 1. Check if current user has permission to view requests
     const currentUserId = await getAuthUserId(ctx);
     if (!currentUserId) {
       throw new Error("Authentication required.");
     }
 
+    // 2. First check sheetPermissions table for the current user
     const currentUserPermission = await ctx.db
       .query("sheetPermissions")
       .withIndex("by_sheet_and_user", (q) =>
@@ -1511,31 +1538,35 @@ export const getPendingAccessRequests = query({
       )
       .unique();
 
-    // Only owners and editors can view access requests
-    if (!currentUserPermission || 
-        (currentUserPermission.role !== "owner" && currentUserPermission.role !== "editor")) {
-      throw new Error("Permission denied. Only owners/editors can view access requests.");
+    // ✅ FIX: Allow owner, qa_lead, AND qa_tester to view requests
+    // Only viewers should be blocked
+    if (!currentUserPermission) {
+      throw new Error("You don't have access to this sheet.");
     }
 
-    // 2. Fetch all pending permissions for this sheet
+    if (currentUserPermission.role === "viewer") {
+      throw new Error("Permission denied. Viewers cannot manage access requests.");
+    }
+
+    // 3. Fetch all pending permissions for this sheet
     const pendingPermissions = await ctx.db
       .query("permissions")
       .withIndex("bySheetId", (q) => q.eq("sheetId", args.sheetId))
       .filter((q) => q.eq(q.field("status"), "pending"))
       .collect();
 
-    // 3. Enhance with user details
+    // 4. Enhance with user details
     const requestsWithDetails = await Promise.all(
       pendingPermissions.map(async (permission) => {
         const user = await ctx.db.get(permission.userId);
-        
+
         return {
           id: permission._id,
           userId: permission.userId,
           name: user?.name || user?.email?.split('@')[0] || "Unknown User",
           email: user?.email || "N/A",
           avatarUrl: user?.image || null,
-          requestedAt: permission._creationTime, // Use creation time for "requested at"
+          requestedAt: permission._creationTime,
           requestMessage: permission.message || "No message provided",
           requestedRole: permission.level,
         };
@@ -1553,7 +1584,12 @@ export const getPendingAccessRequests = query({
 export const approveAccessRequest = mutation({
   args: {
     permissionId: v.id("permissions"),
-    finalRole: v.union(v.literal("viewer"), v.literal("commenter"), v.literal("editor")),
+    finalRole: v.union(
+      v.literal("owner"), 
+      v.literal("qa_lead"), 
+      v.literal("qa_tester"), 
+      v.literal("viewer")
+    ),
   },
   handler: async (ctx, args) => {
     const currentUserId = await getAuthUserId(ctx);
@@ -1567,7 +1603,7 @@ export const approveAccessRequest = mutation({
       throw new Error("Permission request not found.");
     }
 
-    // Check if current user can approve (owner/editor only)
+    // Check if current user can approve
     const currentUserPermission = await ctx.db
       .query("sheetPermissions")
       .withIndex("by_sheet_and_user", (q) =>
@@ -1575,23 +1611,41 @@ export const approveAccessRequest = mutation({
       )
       .unique();
 
-    if (!currentUserPermission || 
-        (currentUserPermission.role !== "owner" && currentUserPermission.role !== "editor")) {
-      throw new Error("Permission denied. Only owners/editors can approve requests.");
+    // ✅ FIX: Allow owner, qa_lead, AND qa_tester to approve requests
+    if (!currentUserPermission) {
+      throw new Error("You don't have access to this sheet.");
     }
 
-    // Update the permission status to approved and update the level
+    if (currentUserPermission.role === "viewer") {
+      throw new Error("Permission denied. Viewers cannot approve requests.");
+    }
+
+    // 1. Update the 'permissions' table status to approved
     await ctx.db.patch(args.permissionId, {
       status: "approved",
-      level: args.finalRole,
     });
 
-    // Add to sheetPermissions for actual access
-    await ctx.db.insert("sheetPermissions", {
-      sheetId: permission.sheetId,
-      userId: permission.userId,
-      role: args.finalRole as "viewer" | "editor" | "owner", // Map commenter to viewer for simplicity
-    });
+    // 2. Check if user already has sheetPermissions (to avoid duplicate entries)
+    const existingSheetPermission = await ctx.db
+      .query("sheetPermissions")
+      .withIndex("by_sheet_and_user", (q) =>
+        q.eq("sheetId", permission.sheetId).eq("userId", permission.userId)
+      )
+      .unique();
+
+    if (existingSheetPermission) {
+      // Update existing permission
+      await ctx.db.patch(existingSheetPermission._id, {
+        role: args.finalRole,
+      });
+    } else {
+      // Insert new permission
+      await ctx.db.insert("sheetPermissions", {
+        sheetId: permission.sheetId,
+        userId: permission.userId,
+        role: args.finalRole,
+      });
+    }
 
     return { success: true, message: "Access request approved successfully." };
   },
@@ -1614,7 +1668,7 @@ export const declineAccessRequest = mutation({
       throw new Error("Permission request not found.");
     }
 
-    // Check if current user can decline (owner/editor only)
+    // Check if current user can decline
     const currentUserPermission = await ctx.db
       .query("sheetPermissions")
       .withIndex("by_sheet_and_user", (q) =>
@@ -1622,9 +1676,13 @@ export const declineAccessRequest = mutation({
       )
       .unique();
 
-    if (!currentUserPermission || 
-        (currentUserPermission.role !== "owner" && currentUserPermission.role !== "editor")) {
-      throw new Error("Permission denied. Only owners/editors can decline requests.");
+    // ✅ FIX: Allow owner, qa_lead, AND qa_tester to decline requests
+    if (!currentUserPermission) {
+      throw new Error("You don't have access to this sheet.");
+    }
+
+    if (currentUserPermission.role === "viewer") {
+      throw new Error("Permission denied. Viewers cannot decline requests.");
     }
 
     // Update the permission status to declined

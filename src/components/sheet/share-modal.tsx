@@ -1,5 +1,5 @@
 // components/sheet/share-modal.tsx
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Copy, Lock, Mail, LinkIcon, Check, X, Globe, ChevronDown, ChevronUp } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -44,6 +44,28 @@ export function ShareModal({
   const [requestRoles, setRequestRoles] = useState<Record<string, string>>({})
   const [processingRequests, setProcessingRequests] = useState<Set<string>>(new Set())
 
+  // Auto-initialize requestRoles with the requested role for each pending request
+  useEffect(() => {
+    if (pendingRequests && pendingRequests.length > 0) {
+      const initialRoles: Record<string, string> = {}
+      pendingRequests.forEach((request) => {
+        // Map the requestedRole to the select dropdown value
+        const mappedRole = mapRequestedRoleToSelectValue(request.requestedRole)
+        initialRoles[request.id] = mappedRole
+      })
+      setRequestRoles(initialRoles)
+    }
+  }, [pendingRequests])
+
+  // Helper function to map the requested role to the select dropdown options
+  const mapRequestedRoleToSelectValue = (requestedRole: string): string => {
+    const role = requestedRole.toLowerCase()
+    if (role === "qa_lead") return "editor"
+    if (role === "qa_tester") return "commenter"
+    if (role === "viewer") return "viewer"
+    return "viewer" // default fallback
+  }
+
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href).then(() => {
       setIsCopied(true)
@@ -73,17 +95,19 @@ export function ShareModal({
     }
   }
 
-  const handleRoleChange = async (userId: Id<"users">, newRole: "owner" | "editor" | "viewer") => {
+  const handleRoleChange = async (userId: Id<"users">, newRole: "viewer" | "qa_lead" | "qa_tester") => {
     try {
       await updateUserRole({
         sheetId,
         targetUserId: userId,
         role: newRole,
       })
+      alert(`People with access role change to "${newRole}" was successful!`)
     } catch (error: any) {
-      alert(error.message || "Failed to update role")
+      alert(error.message || "People with access role change failed.")
     }
   }
+
 
   const handleRemoveUser = async (userId: Id<"users">) => {
     if (!confirm("Are you sure you want to remove this user's access?")) {
@@ -115,10 +139,16 @@ export function ShareModal({
     setProcessingRequests((prev) => new Set(prev).add(permissionId))
     
     try {
-      const finalRole = requestRoles[permissionId] || requestedRole.toLowerCase()
+      const finalRole = requestRoles[permissionId] || mapRequestedRoleToSelectValue(requestedRole)
+      
+      // Map select value back to role format
+      let actualRole: "viewer" | "qa_lead" | "qa_tester" = "viewer"
+      if (finalRole === "editor") actualRole = "qa_lead"
+      if (finalRole === "commenter") actualRole = "qa_tester"
+      
       await approveRequest({
         permissionId,
-        finalRole: finalRole as "viewer" | "commenter" | "editor",
+        finalRole: actualRole,
       })
       
       // Remove from expanded state if approved
@@ -290,15 +320,16 @@ export function ShareModal({
                       <div className="flex items-center gap-2">
                         <Select 
                           defaultValue={person.role}
-                          onValueChange={(value) => handleRoleChange(person.id, value as "owner" | "editor" | "viewer")}
+                          onValueChange={(value) => handleRoleChange(person.id, value as "viewer" | "qa_lead" | "qa_tester")}
                         >
                           <SelectTrigger className="w-[110px] h-9">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="viewer">Viewer</SelectItem>
-                            <SelectItem value="editor">Editor</SelectItem>
                             <SelectItem value="owner">Owner</SelectItem>
+                            <SelectItem value="viewer">Viewer</SelectItem>
+                            <SelectItem value="qa_tester">QA Tester</SelectItem>
+                            <SelectItem value="qa_lead">QA Lead</SelectItem>
                           </SelectContent>
                         </Select>
                         {!person.isCurrentUser && (
@@ -343,7 +374,8 @@ export function ShareModal({
                     <div className="space-y-3">
                       {pendingRequests.map((request) => {
                         const isProcessing = processingRequests.has(request.id)
-                        const selectedRole = requestRoles[request.id] || request.requestedRole.toLowerCase()
+                        // Use the auto-detected role from requestRoles, or fall back to mapped value
+                        const selectedRole = requestRoles[request.id] || mapRequestedRoleToSelectValue(request.requestedRole)
                         
                         return (
                           <div key={request.id} className="rounded-lg border bg-muted/30 overflow-hidden">
@@ -393,7 +425,9 @@ export function ShareModal({
                                 <div className="pt-3 space-y-3">
                                   <div>
                                     <p className="text-xs font-medium text-muted-foreground mb-1">Requested Role</p>
-                                    <p className="text-sm capitalize">{request.requestedRole}</p>
+                                    <p className="text-sm uppercase">
+                                      {request.requestedRole}
+                                    </p>
                                   </div>
                                   
                                   {request.requestMessage && request.requestMessage !== "No message provided" && (
@@ -422,8 +456,8 @@ export function ShareModal({
                                     </SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="viewer">Viewer</SelectItem>
-                                      <SelectItem value="commenter">Commenter</SelectItem>
-                                      <SelectItem value="editor">Editor</SelectItem>
+                                      <SelectItem value="commenter">QA Tester</SelectItem>
+                                      <SelectItem value="editor">QA Lead</SelectItem>
                                     </SelectContent>
                                   </Select>
 

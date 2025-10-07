@@ -169,8 +169,8 @@ export default defineSchema({
     userId: v.id("users"),
     level: v.union(
       v.literal("viewer"),
-      v.literal("commenter"),
-      v.literal("editor"),
+      v.literal("qa_lead"),
+      v.literal("qa_tester"),
     ),
     status: v.union(
       v.literal("pending"),
@@ -368,7 +368,12 @@ export default defineSchema({
     sheetId: v.id("sheets"),
     userId: v.id("users"),
     // Define the roles for access control
-    role: v.union(v.literal("owner"), v.literal("editor"), v.literal("viewer")),
+   role: v.union(
+      v.literal("owner"),
+      v.literal("qa_lead"), // Added QA Lead
+      v.literal("qa_tester"), // Added QA Tester
+      v.literal("viewer")
+    ),
   })
     // Index for quickly checking a user's permission on a sheet (Critical for Step 5)
     .index("by_sheet_and_user", ["sheetId", "userId"])
