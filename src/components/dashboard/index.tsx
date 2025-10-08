@@ -8,7 +8,7 @@ import {
   Folder,
   UsersIcon,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 // Use both useQuery and useMutation
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -19,7 +19,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { CreateNewSheetModal } from "./CreateNewSheetModal";
-
 // Import the new modal component
 
 
@@ -239,13 +238,30 @@ export function Dashboard() {
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleCreateSheet}
       />
+
+      {/* single create button */}
+      <Link to="/create-template" className="block md:hidden">
+        <div className="flex flex-col items-center p-4 bg-white rounded-lg border border-gray-200 cursor-pointer hover:shadow-md transition-shadow">
+          <div className="w-16 h-16 mb-3 flex items-center justify-center">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="6" y="8" width="36" height="32" rx="4" fill="#f3f4f6" stroke="#d1d5db" strokeWidth="2" />
+              <rect x="10" y="12" width="28" height="2" rx="1" fill="#9ca3af" />
+              <rect x="10" y="16" width="20" height="2" rx="1" fill="#d1d5db" />
+              <rect x="10" y="20" width="24" height="2" rx="1" fill="#d1d5db" />
+              <circle cx="32" cy="32" r="10" fill="#10b981" />
+              <path d="M28 32h8M32 28v8" stroke="white" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </div>
+          <span className="text-sm text-gray-700 text-center">Create New Checklist</span>
+        </div>
+      </Link>
       
       <div className="bg-gray-50 min-h-screen font-sans">
 
         {/* Main Content */}
         <main className="p-6">
-          {/* Template Gallery */}
-          <section className="mb-8">
+          {/* Template Gallery Large Device*/}
+          <section className="mb-8 hidden md:block">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-normal text-gray-800">
                 Start a new checklist

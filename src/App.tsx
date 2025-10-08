@@ -17,6 +17,7 @@ import { ForgotPasswordPage } from "./components/auth/ForgotPasswordPage";
 import { NotFound } from "./components/NotFound";
 import { RBACPage } from "./components/rbac/rbac-page";
 import { VerificationStatusPage } from "./components/auth/VerificationStatusPage";
+import { MultiStepFormPage } from "./components/multi-step-form-page";
 
 /**
  * Handles routing for users who are not logged in.
@@ -59,6 +60,7 @@ function AuthenticatedApp() {
           <Route path="/sheet/:sheetId" element={<DetailPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/rbac" element={<RBACPage />} />
+          <Route path="/create-template" element={<MultiStepFormPage />} /> {/* Add this route */}
           {/* Redirect authenticated users away from auth pages */}
           <Route path="/signin" element={<Navigate to="/" replace />} />
           <Route path="/signup" element={<Navigate to="/" replace />} />

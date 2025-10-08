@@ -94,34 +94,6 @@ export function CreateNewSheetModal({
               className="col-span-3"
             />
           </div>
-
-          {/* Type Select */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="type" className="text-right">
-              File Type
-            </Label>
-            <Controller
-              name="type"
-              control={control}
-              render={({ field }) => (
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
-                  <SelectTrigger id="type" className="col-span-3">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="sheet">Spreadsheet</SelectItem>
-                    <SelectItem value="doc">Document</SelectItem>
-                    <SelectItem value="pdf">PDF</SelectItem>
-                    <SelectItem value="folder">Folder</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-            />
-          </div>
           
           {/* Test Case Type Select */}
           <div className="grid grid-cols-4 items-center gap-4">
