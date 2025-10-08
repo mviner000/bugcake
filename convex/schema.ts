@@ -183,13 +183,23 @@ export default defineSchema({
     .index("byUserId", ["userId"])
     .index("bySheetAndUser", ["sheetId", "userId"]),
 
+    // =======================================================
+  // NEW 'modules' table
+  // =======================================================
+  modules: defineTable({
+    sheetId: v.id("sheets"), // Link to the specific sheet
+    name: v.string(),        // The name of the module, e.g., "User Profile"
+    createdBy: v.id("users"),// Who created the module
+  }).index("by_sheetId", ["sheetId"]), // Index to quickly fetch modules for a sheet
+
   functionalityTestCases: defineTable({
     // Link to the sheets table
     sheetId: v.id("sheets"),
 
     // Core info
     title: v.string(), // Test Case Title
-    module: v.optional(v.string()), // Module (<=50 chars - enforce in app)
+    // UPDATED: 'module' now references the new 'modules' table
+    module: v.optional(v.id("modules")),
     subModule: v.optional(v.string()),
 
     // Classification
@@ -229,7 +239,8 @@ export default defineSchema({
     .index("createdBy", ["createdBy"])
     .index("executedBy", ["executedBy"])
     .index("status", ["status"])
-    .index("module", ["module"]),
+    // UPDATED: Index on the new module ID field
+    .index("by_module", ["module"]),
 
   altTextAriaLabelTestCases: defineTable({
     // Link to the sheets table
@@ -244,7 +255,8 @@ export default defineSchema({
       v.literal("Reporting Manager"),
       v.literal("Manager"),
     ),
-    module: v.string(),
+    // UPDATED: 'module' now references the new 'modules' table
+    module: v.id("modules"),
     subModule: v.optional(v.string()),
     pageSection: v.string(),
     wireframeLink: v.optional(v.string()),
@@ -291,7 +303,8 @@ export default defineSchema({
     .index("persona", ["persona"])
     .index("seImplementation", ["seImplementation"])
     .index("testingStatus", ["testingStatus"])
-    .index("module", ["module"])
+    // UPDATED: Index on the new module ID field
+    .index("by_module", ["module"])
     .index("createdBy", ["createdBy"])
     .index("executedBy", ["executedBy"]),
 

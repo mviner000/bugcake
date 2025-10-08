@@ -795,7 +795,7 @@ export const createFunctionalityTestCase = mutation({
     title: v.string(),
     level: v.union(v.literal("High"), v.literal("Low")),
     scenario: v.union(v.literal("Happy Path"), v.literal("Unhappy Path")),
-    module: v.optional(v.string()),
+    module: v.optional(v.id("modules")),
     subModule: v.optional(v.string()),
     preConditions: v.optional(v.string()),
     steps: v.string(),
@@ -826,16 +826,27 @@ export const createFunctionalityTestCase = mutation({
         throw new Error("Invalid Sheet ID provided.");
     }
 
+    // UPDATED: Restructured module ID normalization to handle the 'null' case
+    let normalizedModuleId: Id<"modules"> | undefined = undefined;
+    if (args.module) {
+      const potentialId = ctx.db.normalizeId("modules", args.module);
+      if (potentialId === null) {
+        throw new Error("Invalid Module ID provided.");
+      }
+      normalizedModuleId = potentialId;
+    }
+
     const now = Date.now();
     const defaultRowHeight = 20;
 
-    // 2. Insert the new functionalityTestCases document with default "Open" workflow status
+    // 2. Insert the new functionalityTestCases document
+    // This now works because `normalizedModuleId` is guaranteed to be `Id<"modules"> | undefined`
     const newTestCaseId = await ctx.db.insert("functionalityTestCases", {
       sheetId: normalizedSheetId,
       title: args.title,
       level: args.level,
       scenario: args.scenario,
-      module: args.module,
+      module: normalizedModuleId,
       subModule: args.subModule,
       preConditions: args.preConditions,
       steps: args.steps,
@@ -846,7 +857,7 @@ export const createFunctionalityTestCase = mutation({
       createdAt: now,
       updatedAt: now,
       rowHeight: defaultRowHeight,
-      workflowStatus: "Open", // ✅ DEFAULT: Set to "Open" on creation
+      workflowStatus: "Open",
     });
 
     // 3. Log the activity to the 'activityLogs' database
@@ -958,7 +969,8 @@ export const createAltTextAriaLabelTestCase = mutation({
       v.literal("Reporting Manager"),
       v.literal("Manager"),
     ),
-    module: v.string(),
+    // UPDATED: Expect an ID for the module, not a string name
+    module: v.id("modules"),
     subModule: v.optional(v.string()),
     pageSection: v.string(),
     wireframeLink: v.optional(v.string()),
@@ -1001,13 +1013,22 @@ export const createAltTextAriaLabelTestCase = mutation({
       throw new Error("Invalid sheet ID");
     }
 
-    const { sheetId, ...restArgs } = args;
+    // NEW: Normalize the module ID
+    const normalizedModuleId = ctx.db.normalizeId("modules", args.module);
+    if (!normalizedModuleId) {
+      throw new Error("Invalid module ID");
+    }
+
+    // UPDATED: Destructure `module` so it's not included in `restArgs`
+    const { sheetId, module, ...restArgs } = args;
     const now = Date.now();
     const defaultRowHeight = 20;
 
     // 2. Insert the new test case document with default "Open" workflow status
     const newTestCaseId = await ctx.db.insert("altTextAriaLabelTestCases", {
       sheetId: normalizedSheetId,
+      // UPDATED: Add the normalized ID explicitly
+      module: normalizedModuleId,
       createdBy: userId,
       executedBy: userId,
       rowHeight: defaultRowHeight,
