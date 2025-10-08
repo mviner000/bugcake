@@ -39,7 +39,7 @@ function getStatusVariant(
     case "Ongoing":
     case "In Review":
     case "Has Concerns":
-    case "Need Revision": // <-- ADDED: Need Revision status
+    case "Needs revision":
       return "secondary";
     case "Declined":
       return "outline";
@@ -58,7 +58,6 @@ export default function AltTextAriaLabelDetailsModal({
   // 1. INITIALIZE MUTATION HOOKS
   const approveTestCase = useMutation(api.myFunctions.updateAltTextAriaLabelWorkflowStatusToApproved);
   const declineTestCase = useMutation(api.myFunctions.updateAltTextAriaLabelWorkflowStatusToDeclined);
-  // NEW: Initialize the request revision mutation hook
   const requestRevision = useMutation(api.myFunctions.updateAltTextAriaLabelWorkflowStatusToNeedsRevision);
 
   const normalizedSheetId = sheetId as Id<"sheets">;
@@ -68,10 +67,13 @@ export default function AltTextAriaLabelDetailsModal({
     sheetId: normalizedSheetId,
   });
 
-  // 🎯 Fetch real Alt Text test cases waiting for approval
+  // 🎯 Fetch Alt Text test cases using the new function with status filter
   const testCasesData = useQuery(
-    api.myFunctions.getAltTextAriaLabelTestCasesAwaitingApproval,
-    { sheetId }
+    api.myFunctions.getAltTextAriaLabelTestCasesByWorkflowStatus,
+    { 
+      sheetId,
+      status: "Waiting for QA Lead Approval" // Pass the status filter
+    }
   );
   const testCases = testCasesData?.testCases || [];
 
@@ -92,8 +94,6 @@ export default function AltTextAriaLabelDetailsModal({
         testCaseId: selectedTestCase._id,
       });
 
-      // Show native alert after successful backend update
-      // IMPORTANT: In a real app, replace this with a toast/custom modal
       alert('the test case is updated to "Approved"');
 
     } catch (error) {
@@ -107,13 +107,10 @@ export default function AltTextAriaLabelDetailsModal({
     if (!selectedTestCase) return;
 
     try {
-      // Call the decline mutation
       await declineTestCase({
         testCaseId: selectedTestCase._id,
       });
 
-      // Display native alert as requested
-      // IMPORTANT: In a real app, replace this with a toast/custom modal
       alert("the test case is updated");
 
     } catch (error) {
@@ -122,26 +119,22 @@ export default function AltTextAriaLabelDetailsModal({
     }
   };
   
-  // 👇 NEW: Handler to call backend mutation for Request Revision
+  // Handler to call backend mutation for Request Revision
   const handleRequestRevisionClick = async () => {
     if (!selectedTestCase) return;
 
     try {
-      // Call the request revision mutation
       await requestRevision({
         testCaseId: selectedTestCase._id,
       });
 
-      // Display native alert as requested
-      // IMPORTANT: In a real app, replace this with a toast/custom modal
-      alert('the test case is updated to "Need Revision"');
+      alert('the test case is updated to "Needs revision"');
 
     } catch (error) {
       console.error("Failed to request revision for test case:", error);
-      alert("Error: Could not update test case status to Need Revision.");
+      alert("Error: Could not update test case status to Needs revision.");
     }
   };
-
 
   // Auto-set selection on data change
   useEffect(() => {
@@ -383,7 +376,6 @@ export default function AltTextAriaLabelDetailsModal({
                         {/* The Action Buttons (Approve, Need Revision, and Decline) */}
                         {isQALeadOrOwner && (
                           <div className="space-y-2">
-                            {/* Existing Approved Button */}
                             <Button 
                               className="w-full bg-green-600 hover:bg-green-700 text-white" 
                               onClick={handleApproveClick}
@@ -392,19 +384,17 @@ export default function AltTextAriaLabelDetailsModal({
                               Approved
                             </Button>
                             
-                            {/* 👇 NEW: Need Revision Button */}
                             <Button 
-                              variant="secondary" // Indicates "needs attention/in progress"
+                              variant="secondary"
                               className="w-full" 
                               onClick={handleRequestRevisionClick}
-                              disabled={selectedTestCase.workflowStatus === "Need Revision"}
+                              disabled={selectedTestCase.workflowStatus === "Needs revision"}
                             >
                               Need Revision
                             </Button>
 
-                            {/* Existing Decline Button */}
                             <Button 
-                              variant="destructive" // Clear rejection action
+                              variant="destructive"
                               className="w-full" 
                               onClick={handleDeclineClick}
                               disabled={selectedTestCase.workflowStatus === "Declined"}

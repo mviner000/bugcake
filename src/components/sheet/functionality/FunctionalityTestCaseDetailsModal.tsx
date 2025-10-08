@@ -1,3 +1,5 @@
+// src/components/sheet/functionality/FunctionalityTestCaseDetailsModal.tsx
+
 import { useState, useEffect } from "react";
 import { api } from "../../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
@@ -79,10 +81,13 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
     sheetId: normalizedSheetId,
   });
 
-  // 🎯 DYNAMIC DATA: Fetch test cases awaiting approval
+  // 🎯 DYNAMIC DATA: Fetch test cases awaiting approval using the flexible status query
   const testCasesData = useQuery(
-    api.myFunctions.getFunctionalityTestCasesAwaitingApproval,
-    { sheetId }
+    api.myFunctions.getFunctionalityTestCasesByWorkflowStatus,
+    { 
+      sheetId,
+      status: "Waiting for QA Lead Approval"
+    }
   );
 
   const testCases = testCasesData?.testCases || [];

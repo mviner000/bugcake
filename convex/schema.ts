@@ -3,7 +3,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
-const workflowStatusEnum = v.union(
+export const workflowStatusEnum = v.union(
   v.literal("Open"),
   v.literal("Waiting for QA Lead Approval"),
   v.literal("Needs revision"),

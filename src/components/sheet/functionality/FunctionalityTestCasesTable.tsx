@@ -29,6 +29,8 @@ interface FunctionalityTestCasesTableProps {
     workflowStatus: WorkflowStatus;
   })[];
   sheetId: string;
+  activeWorkflowStatus: WorkflowStatus;
+  onWorkflowStatusChange: (status: WorkflowStatus) => void;
 }
 
 interface NewTestCase {
@@ -47,6 +49,8 @@ interface NewTestCase {
 export function FunctionalityTestCasesTable({
   testCases,
   sheetId,
+  activeWorkflowStatus,
+  onWorkflowStatusChange,
 }: FunctionalityTestCasesTableProps) {
   const updateRowHeight = useMutation(
     api.myFunctions.updateFunctionalityTestCaseRowHeight,
@@ -62,6 +66,21 @@ export function FunctionalityTestCasesTable({
     testCaseType: "functionality",
   });
   const updateColumnWidth = useMutation(api.myFunctions.updateColumnWidth);
+
+  // Fetch all test cases to get counts per status
+  const allTestCasesData = useQuery(
+    api.myFunctions.getTestCasesForSheet,
+    sheetId ? { sheetId } : "skip"
+  );
+
+  // Calculate status counts
+  const statusCounts = allTestCasesData && 'testCases' in allTestCasesData 
+    ? (allTestCasesData.testCases as any[]).reduce((acc, tc) => {
+        const status = tc.workflowStatus as WorkflowStatus;
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+      }, {} as Record<WorkflowStatus, number>)
+    : undefined;
 
   // Custom Hooks
   const { getColumnWidth } = useColumnWidths(fetchedColumnWidths);
@@ -253,7 +272,13 @@ export function FunctionalityTestCasesTable({
           Send To Approval for QA Lead {selectedRows.size > 0 && `(${selectedRows.size})`}
         </Button>
       </div>
-        <SheetNavigationBar />
+
+      {/* Navigation Bar with Status Filter */}
+      <SheetNavigationBar 
+        activeStatus={activeWorkflowStatus}
+        onStatusChange={onWorkflowStatusChange}
+        statusCounts={statusCounts}
+      />
 
       {/* Scrollable table container */}
       <div className="overflow-x-auto overflow-y-visible" style={{ maxWidth: '100%' }}>
@@ -299,7 +324,7 @@ export function FunctionalityTestCasesTable({
             {testCases.length === 0 && !isAdding ?
               (
                 <EmptyTableState
-                  message="No functionality test cases found."
+                  message={`No ${activeWorkflowStatus.toLowerCase()} test cases found.`}
                   onAdd={handleAddNew}
                   buttonText="Add First Test Case"
                   colSpan={16}

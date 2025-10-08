@@ -6,6 +6,7 @@ import { api } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { Doc } from "./_generated/dataModel";
 import { Id } from "./_generated/dataModel";
+import { workflowStatusEnum } from "./schema";
 
 // Write your Convex functions in any file inside this directory (`convex`).
 // See https://docs.convex.dev/functions for more.
@@ -2116,9 +2117,6 @@ export const updateAltTextAriaLabelWorkflowStatusToApproval = mutation({
 
 
 
-
-
-
 export const getAltTextAriaLabelTestCasesAwaitingApproval = query({
   args: {
     sheetId: v.string(),
@@ -2172,10 +2170,12 @@ export const getAltTextAriaLabelTestCasesAwaitingApproval = query({
   },
 });
 
-// NEW: Query for Functionality Test Cases awaiting approval
-export const getFunctionalityTestCasesAwaitingApproval = query({
+// Query for Functionality Test Cases by a specific status
+export const getFunctionalityTestCasesByWorkflowStatus = query({
   args: {
     sheetId: v.string(),
+    // Use the enum here for type safety!
+    status: workflowStatusEnum, 
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -2183,19 +2183,75 @@ export const getFunctionalityTestCasesAwaitingApproval = query({
       return { testCases: [], viewer: null };
     }
 
-    // Normalize the sheetId
     const normalizedSheetId = ctx.db.normalizeId("sheets", args.sheetId);
     if (!normalizedSheetId) {
       return { testCases: [], viewer: null };
     }
 
-    // Query test cases with "Waiting for QA Lead Approval" status
+    // Query test cases using the status from the arguments
     const testCasesQuery = ctx.db
       .query("functionalityTestCases")
       .filter((q) => 
         q.and(
           q.eq(q.field("sheetId"), normalizedSheetId),
-          q.eq(q.field("workflowStatus"), "Waiting for QA Lead Approval")
+          // Use the status passed in the arguments instead of a hardcoded string
+          q.eq(q.field("workflowStatus"), args.status) 
+        )
+      );
+
+    const rawTestCases = await testCasesQuery.order("desc").collect();
+
+    // The rest of your logic to enhance test cases remains the same...
+    const testCasesWithUsers = await Promise.all(
+      rawTestCases.map(async (testCase) => {
+        const createdByUser = await ctx.db.get(testCase.createdBy);
+        const executedByUser = testCase.executedBy
+          ? await ctx.db.get(testCase.executedBy)
+          : null;
+
+        return {
+          ...testCase,
+          createdByName: createdByUser?.email || "Unknown User",
+          executedByName: executedByUser?.email || "N/A",
+        };
+      })
+    );
+
+    const user = await ctx.db.get(userId);
+
+    return {
+      viewer: user?.email ?? null,
+      testCases: testCasesWithUsers,
+    };
+  },
+});
+
+// Query for Alt Text/Aria Label Test Cases by a specific workflow status
+export const getAltTextAriaLabelTestCasesByWorkflowStatus = query({
+  args: {
+    sheetId: v.string(),
+    // Use the enum here for type safety!
+    status: workflowStatusEnum, 
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      return { testCases: [], viewer: null };
+    }
+
+    const normalizedSheetId = ctx.db.normalizeId("sheets", args.sheetId);
+    if (!normalizedSheetId) {
+      return { testCases: [], viewer: null };
+    }
+
+    // Query test cases using the workflow status from the arguments
+    const testCasesQuery = ctx.db
+      .query("altTextAriaLabelTestCases")
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("sheetId"), normalizedSheetId),
+          // Use the status passed in the arguments
+          q.eq(q.field("workflowStatus"), args.status) 
         )
       );
 
@@ -2225,6 +2281,61 @@ export const getFunctionalityTestCasesAwaitingApproval = query({
     };
   },
 });
+
+// Query for Functionality Test Cases awaiting approval
+// export const getFunctionalityTestCasesAwaitingApproval = query({
+//   args: {
+//     sheetId: v.string(),
+//   },
+//   handler: async (ctx, args) => {
+//     const userId = await getAuthUserId(ctx);
+//     if (!userId) {
+//       return { testCases: [], viewer: null };
+//     }
+
+//     // Normalize the sheetId
+//     const normalizedSheetId = ctx.db.normalizeId("sheets", args.sheetId);
+//     if (!normalizedSheetId) {
+//       return { testCases: [], viewer: null };
+//     }
+
+//     // Query test cases with "Waiting for QA Lead Approval" status
+//     const testCasesQuery = ctx.db
+//       .query("functionalityTestCases")
+//       .filter((q) => 
+//         q.and(
+//           q.eq(q.field("sheetId"), normalizedSheetId),
+//           q.eq(q.field("workflowStatus"), "Waiting for QA Lead Approval")
+//         )
+//       );
+
+//     const rawTestCases = await testCasesQuery.order("desc").collect();
+
+//     // Enhance test cases with user information
+//     const testCasesWithUsers = await Promise.all(
+//       rawTestCases.map(async (testCase) => {
+//         const createdByUser = await ctx.db.get(testCase.createdBy);
+//         const executedByUser = testCase.executedBy
+//           ? await ctx.db.get(testCase.executedBy)
+//           : null;
+
+//         return {
+//           ...testCase,
+//           createdByName: createdByUser?.email || "Unknown User",
+//           executedByName: executedByUser?.email || "N/A",
+//         };
+//       })
+//     );
+
+//     const user = await ctx.db.get(userId);
+
+//     return {
+//       viewer: user?.email ?? null,
+//       testCases: testCasesWithUsers,
+//     };
+//   },
+// });
+
 
 // ============================================
 // INTERNAL HELPER for Workflow Status Updates
