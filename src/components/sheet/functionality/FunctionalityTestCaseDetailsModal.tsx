@@ -17,7 +17,6 @@ import {
   Share2,
   ChevronDown
 } from "lucide-react";
-// 👇 Import useMutation
 import { useQuery, useMutation } from "convex/react"; 
 import { Id } from "convex/_generated/dataModel";
 
@@ -41,7 +40,7 @@ function getStatusVariant(
     case "Ongoing":
     case "In Review":
     case "Has Concerns":
-    case "Needs revision": // <-- ADDED: Needs revision uses secondary style
+    case "Needs revision":
       return "secondary";
     case "Declined":
         return "outline";
@@ -67,13 +66,13 @@ function getLevelVariant(level: string): "default" | "secondary" | "destructive"
 export default function FunctionalityTestCasesDetailsModal({ sheetId }: FunctionalityTestCasesDetailsModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedTestCase, setSelectedTestCase] = useState<any | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
 
-  // 👇 Initialize mutation hooks
+  // Initialize mutation hooks
   const approveTestCase = useMutation(api.myFunctions.updateFunctionalityWorkflowStatusToApproved);
-  const declineTestCase = useMutation(api.myFunctions.updateFunctionalityWorkflowStatusToDeclined); // Added Decline hook
-  const needsRevisionTestCase = useMutation(api.myFunctions.updateFunctionalityWorkflowStatusToNeedsRevision); // <-- NEW: Needs Revision hook
+  const declineTestCase = useMutation(api.myFunctions.updateFunctionalityWorkflowStatusToDeclined);
+  const needsRevisionTestCase = useMutation(api.myFunctions.updateFunctionalityWorkflowStatusToNeedsRevision);
 
-  // Ensure we use the correct type from the Convex model
   const normalizedSheetId = sheetId as Id<"sheets">;
   
   // Fetch users with access to determine role
@@ -81,7 +80,7 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
     sheetId: normalizedSheetId,
   });
 
-  // 🎯 DYNAMIC DATA: Fetch test cases awaiting approval using the flexible status query
+  // Fetch test cases awaiting approval
   const testCasesData = useQuery(
     api.myFunctions.getFunctionalityTestCasesByWorkflowStatus,
     { 
@@ -95,12 +94,13 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
   // Set the first test case as selected when modal opens and data loads
   const handleOpen = () => {
     setIsOpen(true);
+    setShowDetails(false);
     if (testCases.length > 0 && !selectedTestCase) {
       setSelectedTestCase(testCases[0]);
     }
   };
 
-  // 👇 Handler to call the Convex mutation for Approval
+  // Handler to call the Convex mutation for Approval
   const handleApproveClick = async () => {
     if (!selectedTestCase) return;
 
@@ -109,8 +109,8 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
         testCaseId: selectedTestCase._id,
       });
 
-      // Show native alert after successful backend update
       alert('the test case is updated to "Approved"');
+      setShowDetails(false); // NEW: Auto back to list
 
     } catch (error) {
       console.error("Failed to approve functionality test case:", error);
@@ -118,7 +118,7 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
     }
   };
 
-  // 👇 Handler to call the Convex mutation for Decline (Re-added based on previous steps)
+  // Handler to call the Convex mutation for Decline
   const handleDeclineClick = async () => {
     if (!selectedTestCase) return;
 
@@ -128,6 +128,7 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
       });
 
       alert('the test case is updated to "Declined"');
+      setShowDetails(false); // NEW: Auto back to list
 
     } catch (error) {
       console.error("Failed to decline functionality test case:", error);
@@ -135,7 +136,7 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
     }
   };
 
-  // 👇 NEW: Handler to call the Convex mutation for Needs Revision
+  // Handler to call the Convex mutation for Needs Revision
   const handleNeedsRevisionClick = async () => {
     if (!selectedTestCase) return;
 
@@ -145,13 +146,13 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
       });
 
       alert('the test case is updated to "Needs revision"');
+      setShowDetails(false); // NEW: Auto back to list
 
     } catch (error) {
       console.error("Failed to set functionality test case to Needs revision:", error);
       alert("Error: Could not update functionality test case status to Needs revision.");
     }
   };
-
 
   // Update selected test case when test cases change
   useEffect(() => {
@@ -202,7 +203,7 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
           {/* Content */}
           <div className="flex flex-1 overflow-hidden">
             {/* Sidebar */}
-            <div className="w-72 border-r bg-muted/20">
+            <div className={`w-full lg:w-72 border-r bg-muted/20 ${showDetails ? 'hidden' : 'block'} lg:block`}>
               <ScrollArea className="h-full p-4">
                 {testCases.length === 0 ? (
                   <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
@@ -218,7 +219,10 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
                             ? "bg-accent border-primary"
                             : ""
                         }`}
-                        onClick={() => setSelectedTestCase(testCase)}
+                        onClick={() => {
+                          setSelectedTestCase(testCase);
+                          setShowDetails(true);
+                        }}
                       >
                         <CardHeader className="p-3">
                           <div className="flex items-center gap-2 mb-1">
@@ -244,10 +248,21 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 min-w-0">
+            <div className={`flex-1 min-w-0 ${showDetails ? 'block' : 'hidden'} lg:block`}>
               <ScrollArea className="h-full">
                 {selectedTestCase ? (
                   <div className="p-8">
+                    {/* Back button for mobile */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowDetails(false)}
+                      className="mb-4 lg:hidden"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Back to list
+                    </Button>
+
                     {/* Header */}
                     <div className="flex items-center justify-between mb-6">
                       <p className="text-sm text-muted-foreground">
@@ -345,7 +360,7 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
                       <div className="lg:col-span-1 space-y-6">
                         {/* The Action Buttons (Approve, Needs Revision, Decline) */}
                         {isQALeadOrOwner && (
-                          <>
+                          <div className="space-y-2">
                             <Button
                               className="w-full bg-green-600 hover:bg-green-700 text-white"
                               onClick={handleApproveClick}
@@ -354,26 +369,24 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
                               Approved
                             </Button>
                             
-                            {/* NEW: Needs Revision Button */}
                             <Button
                                 variant="secondary"
-                                className="w-full mt-2"
+                                className="w-full"
                                 onClick={handleNeedsRevisionClick}
                                 disabled={selectedTestCase.workflowStatus === "Needs revision"}
                             >
                                 Needs Revision
                             </Button>
 
-                            {/* Decline Button */}
                             <Button
                                 variant="destructive"
-                                className="w-full mt-2"
+                                className="w-full"
                                 onClick={handleDeclineClick}
                                 disabled={selectedTestCase.workflowStatus === "Declined"}
                             >
                                 Decline
                             </Button>
-                          </>
+                          </div>
                         )}
 
                         <Button className="w-full justify-between">

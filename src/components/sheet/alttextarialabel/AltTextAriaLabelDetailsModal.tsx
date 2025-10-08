@@ -1,3 +1,5 @@
+// src/components/sheet/alttextarialabel/AltTextAriaLabelDetailsModal.tsx
+
 import { useState, useEffect } from "react";
 import { api } from "../../../../convex/_generated/api";
 import { useQuery, useMutation } from "convex/react";
@@ -54,103 +56,95 @@ export default function AltTextAriaLabelDetailsModal({
 }: AltTextAriaLabelDetailsModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedTestCase, setSelectedTestCase] = useState<any | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
 
-  // 1. INITIALIZE MUTATION HOOKS
-  const approveTestCase = useMutation(api.myFunctions.updateAltTextAriaLabelWorkflowStatusToApproved);
-  const declineTestCase = useMutation(api.myFunctions.updateAltTextAriaLabelWorkflowStatusToDeclined);
-  const requestRevision = useMutation(api.myFunctions.updateAltTextAriaLabelWorkflowStatusToNeedsRevision);
+  const approveTestCase = useMutation(
+    api.myFunctions.updateAltTextAriaLabelWorkflowStatusToApproved
+  );
+  const declineTestCase = useMutation(
+    api.myFunctions.updateAltTextAriaLabelWorkflowStatusToDeclined
+  );
+  const requestRevision = useMutation(
+    api.myFunctions.updateAltTextAriaLabelWorkflowStatusToNeedsRevision
+  );
 
   const normalizedSheetId = sheetId as Id<"sheets">;
 
-  // Fetch users (for role check)
   const usersWithAccess = useQuery(api.myFunctions.getUsersWithAccess, {
     sheetId: normalizedSheetId,
   });
 
-  // 🎯 Fetch Alt Text test cases using the new function with status filter
   const testCasesData = useQuery(
     api.myFunctions.getAltTextAriaLabelTestCasesByWorkflowStatus,
-    { 
+    {
       sheetId,
-      status: "Waiting for QA Lead Approval" // Pass the status filter
+      status: "Waiting for QA Lead Approval",
     }
   );
   const testCases = testCasesData?.testCases || [];
 
-  // Select first test case when modal opens
   const handleOpen = () => {
     setIsOpen(true);
+    setShowDetails(false);
     if (testCases.length > 0 && !selectedTestCase) {
       setSelectedTestCase(testCases[0]);
     }
   };
 
-  // Existing: Handler to call backend mutation for Approval
   const handleApproveClick = async () => {
     if (!selectedTestCase) return;
-
     try {
       await approveTestCase({
         testCaseId: selectedTestCase._id,
       });
-
       alert('the test case is updated to "Approved"');
-
+      setShowDetails(false);
     } catch (error) {
       console.error("Failed to approve test case:", error);
       alert("Error: Could not update test case status.");
     }
   };
 
-  // Existing: Handler to call backend mutation for Decline
   const handleDeclineClick = async () => {
     if (!selectedTestCase) return;
-
     try {
       await declineTestCase({
         testCaseId: selectedTestCase._id,
       });
-
       alert("the test case is updated");
-
+      setShowDetails(false);
     } catch (error) {
       console.error("Failed to decline test case:", error);
       alert("Error: Could not update test case status to Declined.");
     }
   };
-  
-  // Handler to call backend mutation for Request Revision
+
   const handleRequestRevisionClick = async () => {
     if (!selectedTestCase) return;
-
     try {
       await requestRevision({
         testCaseId: selectedTestCase._id,
       });
-
       alert('the test case is updated to "Needs revision"');
-
+      setShowDetails(false);
     } catch (error) {
       console.error("Failed to request revision for test case:", error);
       alert("Error: Could not update test case status to Needs revision.");
     }
   };
 
-  // Auto-set selection on data change
   useEffect(() => {
     if (testCases.length > 0 && !selectedTestCase) {
       setSelectedTestCase(testCases[0]);
     }
   }, [testCases, selectedTestCase]);
 
-  // Current user role logic
   const currentUser = usersWithAccess?.find((u) => u.isCurrentUser);
   const isQALeadOrOwner =
     currentUser?.role === "qa_lead" || currentUser?.role === "owner";
 
   return (
     <>
-      {/* --- Trigger Button --- */}
       <Button
         variant="outline"
         size="sm"
@@ -169,12 +163,12 @@ export default function AltTextAriaLabelDetailsModal({
         )}
       </Button>
 
-      {/* --- Modal --- */}
       <DetailsModal isOpen={isOpen} onClose={() => setIsOpen(false)}>
         <div className="w-[92vw] h-[90vh] flex flex-col">
-          {/* Header */}
           <div className="flex items-center justify-between px-6 py-3 border-b">
-            <h2 className="text-lg font-semibold">Alt Text & Aria Label Details</h2>
+            <h2 className="text-lg font-semibold">
+              Alt Text & Aria Label Details
+            </h2>
             <Button
               variant="ghost"
               size="icon"
@@ -185,10 +179,12 @@ export default function AltTextAriaLabelDetailsModal({
             </Button>
           </div>
 
-          {/* Body */}
           <div className="flex flex-1 overflow-hidden">
-            {/* Sidebar */}
-            <div className="w-72 border-r bg-muted/20">
+            <div
+              className={`w-full lg:w-72 border-r bg-muted/20 ${
+                showDetails ? "hidden" : "block"
+              } lg:block`}
+            >
               <ScrollArea className="h-full p-4">
                 {!testCases || testCases.length === 0 ? (
                   <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
@@ -204,14 +200,21 @@ export default function AltTextAriaLabelDetailsModal({
                             ? "bg-accent border-primary"
                             : ""
                         }`}
-                        onClick={() => setSelectedTestCase(testCase)}
+                        onClick={() => {
+                          setSelectedTestCase(testCase);
+                          setShowDetails(true);
+                        }}
                       >
                         <CardHeader className="p-3">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-xs font-semibold text-primary">
                               TC_{String(index + 1).padStart(3, "0")}
                             </span>
-                            <Badge variant={getStatusVariant(testCase.workflowStatus)}>
+                            <Badge
+                              variant={getStatusVariant(
+                                testCase.workflowStatus
+                              )}
+                            >
                               {testCase.workflowStatus}
                             </Badge>
                           </div>
@@ -232,12 +235,24 @@ export default function AltTextAriaLabelDetailsModal({
               </ScrollArea>
             </div>
 
-            {/* Main content */}
-            <div className="flex-1 min-w-0">
+            <div
+              className={`flex-1 min-w-0 ${
+                showDetails ? "block" : "hidden"
+              } lg:block`}
+            >
               <ScrollArea className="h-full">
                 {selectedTestCase ? (
                   <div className="p-8">
-                    {/* Header info */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowDetails(false)}
+                      className="mb-4 lg:hidden"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Back to list
+                    </Button>
+
                     <div className="flex items-center justify-between mb-6">
                       <p className="text-sm text-muted-foreground">
                         Created{" "}
@@ -262,7 +277,6 @@ export default function AltTextAriaLabelDetailsModal({
                     </h3>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                      {/* Left section */}
                       <div className="lg:col-span-2 space-y-8">
                         <ContentSection title="Module Hierarchy">
                           <div className="flex items-center gap-2 text-muted-foreground">
@@ -291,7 +305,11 @@ export default function AltTextAriaLabelDetailsModal({
                               <span className="text-xs font-bold text-muted-foreground">
                                 TESTING STATUS:
                               </span>
-                              <Badge variant={getStatusVariant(selectedTestCase.testingStatus)}>
+                              <Badge
+                                variant={getStatusVariant(
+                                  selectedTestCase.testingStatus
+                                )}
+                              >
                                 {selectedTestCase.testingStatus}
                               </Badge>
                             </div>
@@ -299,7 +317,11 @@ export default function AltTextAriaLabelDetailsModal({
                               <span className="text-xs font-bold text-muted-foreground">
                                 SE IMPLEMENTATION:
                               </span>
-                              <Badge variant={getStatusVariant(selectedTestCase.seImplementation)}>
+                              <Badge
+                                variant={getStatusVariant(
+                                  selectedTestCase.seImplementation
+                                )}
+                              >
                                 {selectedTestCase.seImplementation}
                               </Badge>
                             </div>
@@ -315,7 +337,9 @@ export default function AltTextAriaLabelDetailsModal({
                         <ContentSection title="Images, Icons & Alt Text">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg">
                             <div>
-                              <h5 className="font-semibold mb-2">Images/Icons</h5>
+                              <h5 className="font-semibold mb-2">
+                                Images/Icons
+                              </h5>
                               {selectedTestCase.imagesIcons ? (
                                 <img
                                   src={selectedTestCase.imagesIcons}
@@ -329,7 +353,9 @@ export default function AltTextAriaLabelDetailsModal({
                               )}
                             </div>
                             <div>
-                              <h5 className="font-semibold mb-2">Alt Text / Aria Label</h5>
+                              <h5 className="font-semibold mb-2">
+                                Alt Text / Aria Label
+                              </h5>
                               <p className="whitespace-pre-wrap text-muted-foreground">
                                 {selectedTestCase.altTextAriaLabel}
                               </p>
@@ -370,34 +396,38 @@ export default function AltTextAriaLabelDetailsModal({
                         )}
                       </div>
 
-                      {/* Right section */}
                       <div className="lg:col-span-1 space-y-6">
-                        
-                        {/* The Action Buttons (Approve, Need Revision, and Decline) */}
                         {isQALeadOrOwner && (
                           <div className="space-y-2">
-                            <Button 
-                              className="w-full bg-green-600 hover:bg-green-700 text-white" 
+                            <Button
+                              className="w-full bg-green-600 hover:bg-green-700 text-white"
                               onClick={handleApproveClick}
-                              disabled={selectedTestCase.workflowStatus === "Approved"}
+                              disabled={
+                                selectedTestCase.workflowStatus === "Approved"
+                              }
                             >
                               Approved
                             </Button>
-                            
-                            <Button 
+
+                            <Button
                               variant="secondary"
-                              className="w-full" 
+                              className="w-full"
                               onClick={handleRequestRevisionClick}
-                              disabled={selectedTestCase.workflowStatus === "Needs revision"}
+                              disabled={
+                                selectedTestCase.workflowStatus ===
+                                "Needs revision"
+                              }
                             >
                               Need Revision
                             </Button>
 
-                            <Button 
+                            <Button
                               variant="destructive"
-                              className="w-full" 
+                              className="w-full"
                               onClick={handleDeclineClick}
-                              disabled={selectedTestCase.workflowStatus === "Declined"}
+                              disabled={
+                                selectedTestCase.workflowStatus === "Declined"
+                              }
                             >
                               Decline
                             </Button>
@@ -408,6 +438,7 @@ export default function AltTextAriaLabelDetailsModal({
                           {selectedTestCase.workflowStatus}
                           <ChevronDown className="w-4 h-4" />
                         </Button>
+
                         <div className="p-4 border rounded-lg space-y-4">
                           <h4 className="text-base font-semibold">Details</h4>
                           <MetadataField label="Created By">
@@ -426,8 +457,8 @@ export default function AltTextAriaLabelDetailsModal({
                             <p>
                               {selectedTestCase._creationTime
                                 ? new Date(
-                                      selectedTestCase._creationTime
-                                    ).toLocaleString()
+                                    selectedTestCase._creationTime
+                                  ).toLocaleString()
                                 : "N/A"}
                             </p>
                           </MetadataField>

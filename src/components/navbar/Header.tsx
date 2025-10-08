@@ -5,10 +5,11 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "convex/react";
 
-
-import { Skeleton } from "@/components/ui/skeleton"; // Assuming you have a Skeleton component
+import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "../../../convex/_generated/api";
 import { UserProfileDropdown } from "./user-profile-dropdown";
+import { Button } from "../ui/button";
+import { ListChecks } from "lucide-react";
 
 export function Header() {
   const { isAuthenticated, isLoading } = useConvexAuth();
@@ -56,24 +57,43 @@ export function Header() {
       <div className="flex h-16 items-center justify-between px-4">
         <Link
           to="/"
-          className="text-xl font-semibold text-foreground hover:text-primary"
+          className="flex items-center gap-1 text-xl font-semibold text-foreground hover:text-primary"
         >
+          <img
+            src="/bugcake-favicon.ico"
+            alt="bugcake logo"
+            className="w-6 h-6"
+          />
           BugCake
         </Link>
-        {isAuthenticated && userProfile && (
-          <UserProfileDropdown
-            user={{
-              name: userProfile.name || "User",
-              email: userProfile.email || "N/A",
-              phone: userProfile.phone || "N/A",
-              role: userProfile.role || "N/A", // Using verificationStatus as a stand-in for role
-              avatar: userProfile.image || undefined,
-            }}
-            onEditProfile={handleEditProfile}
-            onManageRBAC={handleManageRBAC}
-            onSignOut={handleSignOut}
-          />
-        )}
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            className="relative"
+          >
+            <ListChecks className="w-4 h-4 mr-2" />
+            Notifications
+            <span className="absolute -top-2 -right-2 flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold text-white bg-red-500 rounded-full">
+              1
+            </span>
+          </Button>
+          
+          {isAuthenticated && userProfile && (
+            <UserProfileDropdown
+              user={{
+                name: userProfile.name || "User",
+                email: userProfile.email || "N/A",
+                phone: userProfile.phone || "N/A",
+                role: userProfile.role || "N/A",
+                avatar: userProfile.image || undefined,
+              }}
+              onEditProfile={handleEditProfile}
+              onManageRBAC={handleManageRBAC}
+              onSignOut={handleSignOut}
+            />
+          )}
+        </div>
       </div>
     </header>
   );

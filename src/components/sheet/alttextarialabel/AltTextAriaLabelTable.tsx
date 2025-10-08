@@ -288,7 +288,7 @@ export function AltTextAriaLabelTable({
   return (
     <div className="flex flex-col">
       {/* Top Bar Button */}
-      <div className="flex justify-end px-4">
+      <div className="flex justify-start px-4">
         <Button onClick={handleSendToApproval}>
           Send To Approval for QA Lead {selectedRows.size > 0 && `(${selectedRows.size})`}
         </Button>
