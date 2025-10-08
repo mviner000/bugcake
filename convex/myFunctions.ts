@@ -2114,122 +2114,10 @@ export const updateAltTextAriaLabelWorkflowStatusToApproval = mutation({
   },
 });
 
-// ============================================
-// FUNCTIONALITY TEST CASES - Single Update to Approved
-// ============================================
-export const updateFunctionalityWorkflowStatusToApproved = mutation({
-  args: {
-    testCaseId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("User must be authenticated");
-    }
-
-    const user = await ctx.db.get(userId);
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    const normalizedTestCaseId = ctx.db.normalizeId(
-      "functionalityTestCases",
-      args.testCaseId
-    );
-    if (!normalizedTestCaseId) {
-      throw new Error("Invalid test case ID");
-    }
-
-    const testCase = await ctx.db.get(normalizedTestCaseId);
-    if (!testCase) {
-      throw new Error("Test case not found");
-    }
-
-    const now = Date.now();
-    const oldStatus = testCase.workflowStatus;
-    const newStatus = "Approved";
-
-    // Update workflow status
-    await ctx.db.patch(normalizedTestCaseId, {
-      workflowStatus: newStatus,
-      updatedAt: now,
-    });
-
-    // Log the activity
-    await ctx.db.insert("activityLogs", {
-      testCaseId: args.testCaseId,
-      testCaseType: "functionality",
-      action: "Status Change",
-      userId: userId,
-      username: user.name ?? user.email?.split("@")[0] ?? "Anonymous",
-      userEmail: user.email ?? "N/A",
-      sheetId: testCase.sheetId,
-      timestamp: now,
-      details: `Workflow status changed from "${oldStatus}" to "${newStatus}".`,
-    });
-
-    return { success: true, newStatus };
-  },
-});
 
 
-// ============================================
-// ALT TEXT ARIA LABEL TEST CASES - Single Update to Approved
-// ============================================
-export const updateAltTextAriaLabelWorkflowStatusToApproved = mutation({
-  args: {
-    testCaseId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("User must be authenticated");
-    }
 
-    const user = await ctx.db.get(userId);
-    if (!user) {
-      throw new Error("User not found");
-    }
 
-    const normalizedTestCaseId = ctx.db.normalizeId(
-      "altTextAriaLabelTestCases",
-      args.testCaseId
-    );
-    if (!normalizedTestCaseId) {
-      throw new Error("Invalid test case ID");
-    }
-
-    const testCase = await ctx.db.get(normalizedTestCaseId);
-    if (!testCase) {
-      throw new Error("Test case not found");
-    }
-
-    const now = Date.now();
-    const oldStatus = testCase.workflowStatus;
-    const newStatus = "Approved";
-
-    // Update workflow status
-    await ctx.db.patch(normalizedTestCaseId, {
-      workflowStatus: newStatus,
-      updatedAt: now,
-    });
-
-    // Log the activity
-    await ctx.db.insert("activityLogs", {
-      testCaseId: args.testCaseId,
-      testCaseType: "altTextAriaLabel",
-      action: "Status Change",
-      userId: userId,
-      username: user.name ?? user.email?.split("@")[0] ?? "Anonymous",
-      userEmail: user.email ?? "N/A",
-      sheetId: testCase.sheetId,
-      timestamp: now,
-      details: `Workflow status changed from "${oldStatus}" to "${newStatus}".`,
-    });
-
-    return { success: true, newStatus };
-  },
-});
 
 export const getAltTextAriaLabelTestCasesAwaitingApproval = query({
   args: {
@@ -2339,220 +2227,125 @@ export const getFunctionalityTestCasesAwaitingApproval = query({
 });
 
 // ============================================
-// FUNCTIONALITY TEST CASES - Single Update to Declined
+// INTERNAL HELPER for Workflow Status Updates
 // ============================================
+const _updateWorkflowStatus = async (
+  ctx: MutationCtx,
+  testCaseId: string,
+  testCaseType: "functionality" | "altTextAriaLabel",
+  newStatus: "Approved" | "Declined" | "Needs revision"
+) => {
+  const userId = await getAuthUserId(ctx);
+  if (!userId) throw new Error("User must be authenticated");
+
+  const user = await ctx.db.get(userId);
+  if (!user) throw new Error("User not found");
+
+  const tableName =
+    testCaseType === "functionality"
+      ? "functionalityTestCases"
+      : "altTextAriaLabelTestCases";
+
+  const normalizedTestCaseId = ctx.db.normalizeId(tableName, testCaseId);
+  if (!normalizedTestCaseId) throw new Error("Invalid test case ID");
+
+  const testCase = await ctx.db.get(normalizedTestCaseId);
+  if (!testCase) throw new Error("Test case not found");
+
+  const now = Date.now();
+  const oldStatus = testCase.workflowStatus;
+
+  await ctx.db.patch(normalizedTestCaseId, {
+    workflowStatus: newStatus,
+    updatedAt: now,
+  });
+
+  await ctx.db.insert("activityLogs", {
+    testCaseId: testCaseId,
+    testCaseType: testCaseType,
+    action: "Status Change",
+    userId,
+    username: user.name ?? user.email?.split("@")[0] ?? "Anonymous",
+    userEmail: user.email ?? "N/A",
+    sheetId: testCase.sheetId,
+    timestamp: now,
+    details: `Workflow status changed from "${oldStatus}" to "${newStatus}".`,
+  });
+
+  return { success: true, newStatus };
+};
+
+// ============================================
+// NEW CONSOLIDATED MUTATION for QA Lead Actions
+// ============================================
+export const updateTestCaseWorkflowStatus = mutation({
+  args: {
+    testCaseId: v.string(),
+    testCaseType: v.union(
+      v.literal("functionality"),
+      v.literal("altTextAriaLabel")
+    ),
+    workflowStatus: v.union(
+      v.literal("Approved"),
+      v.literal("Declined"),
+      v.literal("Needs revision")
+    ),
+  },
+  handler: async (ctx, args) => {
+    return await _updateWorkflowStatus(
+      ctx,
+      args.testCaseId,
+      args.testCaseType,
+      args.workflowStatus
+    );
+  },
+});
+
+// ============================================
+// REFACTORED MUTATIONS (Backward Compatible)
+// ============================================
+
+// --- Approved ---
+export const updateFunctionalityWorkflowStatusToApproved = mutation({
+  args: { testCaseId: v.string() },
+  handler: async (ctx, args) => {
+    return await _updateWorkflowStatus(ctx, args.testCaseId, "functionality", "Approved");
+  },
+});
+
+export const updateAltTextAriaLabelWorkflowStatusToApproved = mutation({
+  args: { testCaseId: v.string() },
+  handler: async (ctx, args) => {
+    return await _updateWorkflowStatus(ctx, args.testCaseId, "altTextAriaLabel", "Approved");
+  },
+});
+
+// --- Declined ---
 export const updateFunctionalityWorkflowStatusToDeclined = mutation({
-  args: {
-    testCaseId: v.string(),
-  },
+  args: { testCaseId: v.string() },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("User must be authenticated");
-    }
-
-    const user = await ctx.db.get(userId);
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    const normalizedTestCaseId = ctx.db.normalizeId(
-      "functionalityTestCases",
-      args.testCaseId
-    );
-    if (!normalizedTestCaseId) {
-      throw new Error("Invalid test case ID");
-    }
-
-    const testCase = await ctx.db.get(normalizedTestCaseId);
-    if (!testCase) {
-      throw new Error("Test case not found");
-    }
-
-    const now = Date.now();
-    const oldStatus = testCase.workflowStatus;
-    const newStatus = "Declined";
-
-    // Update workflow status
-    await ctx.db.patch(normalizedTestCaseId, {
-      workflowStatus: newStatus,
-      updatedAt: now,
-    });
-
-    // Log the activity
-    await ctx.db.insert("activityLogs", {
-      testCaseId: args.testCaseId,
-      testCaseType: "functionality",
-      action: "Status Change",
-      userId: userId,
-      username: user.name ?? user.email?.split("@")[0] ?? "Anonymous",
-      userEmail: user.email ?? "N/A",
-      sheetId: testCase.sheetId,
-      timestamp: now,
-      details: `Workflow status changed from "${oldStatus}" to "${newStatus}".`,
-    });
-
-    return { success: true, newStatus };
+    return await _updateWorkflowStatus(ctx, args.testCaseId, "functionality", "Declined");
   },
 });
 
-
-// ============================================
-// ALT TEXT ARIA LABEL TEST CASES - Single Update to Declined
-// ============================================
 export const updateAltTextAriaLabelWorkflowStatusToDeclined = mutation({
-  args: {
-    testCaseId: v.string(),
-  },
+  args: { testCaseId: v.string() },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("User must be authenticated");
-    }
-
-    const user = await ctx.db.get(userId);
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    const normalizedTestCaseId = ctx.db.normalizeId(
-      "altTextAriaLabelTestCases",
-      args.testCaseId
-    );
-    if (!normalizedTestCaseId) {
-      throw new Error("Invalid test case ID");
-    }
-
-    const testCase = await ctx.db.get(normalizedTestCaseId);
-    if (!testCase) {
-      throw new Error("Test case not found");
-    }
-
-    const now = Date.now();
-    const oldStatus = testCase.workflowStatus;
-    const newStatus = "Declined";
-
-    // Update workflow status
-    await ctx.db.patch(normalizedTestCaseId, {
-      workflowStatus: newStatus,
-      updatedAt: now,
-    });
-
-    // Log the activity
-    await ctx.db.insert("activityLogs", {
-      testCaseId: args.testCaseId,
-      testCaseType: "altTextAriaLabel",
-      action: "Status Change",
-      userId: userId,
-      username: user.name ?? user.email?.split("@")[0] ?? "Anonymous",
-      userEmail: user.email ?? "N/A",
-      sheetId: testCase.sheetId,
-      timestamp: now,
-      details: `Workflow status changed from "${oldStatus}" to "${newStatus}".`,
-    });
-
-    return { success: true, newStatus };
+    return await _updateWorkflowStatus(ctx, args.testCaseId, "altTextAriaLabel", "Declined");
   },
 });
 
-
-// ============================================
-// FUNCTIONALITY TEST CASES - Single Update to Needs Revision
-// ============================================
+// --- Needs Revision ---
 export const updateFunctionalityWorkflowStatusToNeedsRevision = mutation({
-  args: {
-    testCaseId: v.string(),
-  },
+  args: { testCaseId: v.string() },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("User must be authenticated");
-
-    const user = await ctx.db.get(userId);
-    if (!user) throw new Error("User not found");
-
-    const normalizedTestCaseId = ctx.db.normalizeId(
-      "functionalityTestCases",
-      args.testCaseId
-    );
-    if (!normalizedTestCaseId) throw new Error("Invalid test case ID");
-
-    const testCase = await ctx.db.get(normalizedTestCaseId);
-    if (!testCase) throw new Error("Test case not found");
-
-    const now = Date.now();
-    const oldStatus = testCase.workflowStatus;
-    const newStatus = "Needs revision";
-
-    // Update workflow status
-    await ctx.db.patch(normalizedTestCaseId, {
-      workflowStatus: newStatus,
-      updatedAt: now,
-    });
-
-    // Log the activity
-    await ctx.db.insert("activityLogs", {
-      testCaseId: args.testCaseId,
-      testCaseType: "functionality",
-      action: "Status Change",
-      userId,
-      username: user.name ?? user.email?.split("@")[0] ?? "Anonymous",
-      userEmail: user.email ?? "N/A",
-      sheetId: testCase.sheetId,
-      timestamp: now,
-      details: `Workflow status changed from "${oldStatus}" to "${newStatus}".`,
-    });
-
-    return { success: true, newStatus };
+    return await _updateWorkflowStatus(ctx, args.testCaseId, "functionality", "Needs revision");
   },
 });
 
-
-// ============================================
-// ALT TEXT ARIA LABEL TEST CASES - Single Update to Needs Revision
-// ============================================
 export const updateAltTextAriaLabelWorkflowStatusToNeedsRevision = mutation({
-  args: {
-    testCaseId: v.string(),
-  },
+  args: { testCaseId: v.string() },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("User must be authenticated");
-
-    const user = await ctx.db.get(userId);
-    if (!user) throw new Error("User not found");
-
-    const normalizedTestCaseId = ctx.db.normalizeId(
-      "altTextAriaLabelTestCases",
-      args.testCaseId
-    );
-    if (!normalizedTestCaseId) throw new Error("Invalid test case ID");
-
-    const testCase = await ctx.db.get(normalizedTestCaseId);
-    if (!testCase) throw new Error("Test case not found");
-
-    const now = Date.now();
-    const oldStatus = testCase.workflowStatus;
-    const newStatus = "Needs revision";
-
-    // Update workflow status
-    await ctx.db.patch(normalizedTestCaseId, {
-      workflowStatus: newStatus,
-      updatedAt: now,
-    });
-
-    // Log the activity
-    await ctx.db.insert("activityLogs", {
-      testCaseId: args.testCaseId,
-      testCaseType: "altTextAriaLabel",
-      action: "Status Change",
-      userId,
-      username: user.name ?? user.email?.split("@")[0] ?? "Anonymous",
-      userEmail: user.email ?? "N/A",
-      sheetId: testCase.sheetId,
-      timestamp: now,
-      details: `Workflow status changed from "${oldStatus}" to "${newStatus}".`,
-    });
-
-    return { success: true, newStatus };
+    return await _updateWorkflowStatus(ctx, args.testCaseId, "altTextAriaLabel", "Needs revision");
   },
 });
