@@ -16,6 +16,7 @@ import { SEImplementationBadge, TestingStatusBadge } from "../common/StatusBadge
 import { NumberedTextarea } from "../NumberedTextarea";
 import { WorkflowStatusBadge, WorkflowStatus } from "../common/WorkflowStatusBadge";
 import { Button } from "@/components/ui/button";
+import { SheetNavigationBar } from "../sheet-navigation-bar";
 
 // --- AltTextAriaLabelTable Component ---
 interface AltTextAriaLabelTableProps {
@@ -219,7 +220,7 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
   return (
     <div className="flex flex-col">
       {/* Top Bar Button */}
-      <div className="flex justify-end mb-4 px-4">
+      <div className="flex justify-end px-4">
         <Button onClick={handleSendToApproval}>
           Send To Approval for QA Lead
           {selectedRows.size > 0 && (
@@ -227,6 +228,7 @@ export function AltTextAriaLabelTable({ testCases, sheetId }: AltTextAriaLabelTa
           )}
         </Button>
       </div>
+        <SheetNavigationBar />
 
       {/* Scrollable table container */}
       <div className="overflow-x-auto overflow-y-visible" style={{ maxWidth: '100%' }}>
