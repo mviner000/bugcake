@@ -15,10 +15,15 @@ import { EmptyTableState } from "../common/EmptyTableState";
 import { ResizeFeedback } from "../common/ResizeFeedback";
 import { formatWithNumbering } from "../../../utils/formatUtils";
 import { TestingStatusBadge } from "../common/StatusBadgeHelper";
-import { WorkflowStatusBadge, WorkflowStatus } from "../common/WorkflowStatusBadge";
+import { WorkflowStatusBadge } from "../common/WorkflowStatusBadge";
 import { Button } from "@/components/ui/button";
 import { SheetNavigationBar } from "../common/SheetNavigationBar";
 import { ModuleNamebar } from "../common/ModuleNamebar";
+import { 
+  WorkflowStatus, 
+  NewFunctionalityTestCase,
+  StatusCounts 
+} from "@/types/testCaseTypes";
 
 interface FunctionalityTestCasesTableProps {
   testCases: (Doc<"functionalityTestCases"> & {
@@ -34,19 +39,6 @@ interface FunctionalityTestCasesTableProps {
   activeWorkflowStatus: WorkflowStatus;
   onWorkflowStatusChange: (status: WorkflowStatus) => void;
   modules: Doc<"modules">[];
-}
-
-interface NewTestCase {
-  title: string;
-  level: "High" | "Low";
-  scenario: "Happy Path" | "Unhappy Path";
-  module: string;
-  subModule: string;
-  preConditions: string;
-  steps: string;
-  expectedResults: string;
-  status: "Passed" | "Failed" | "Not Run" | "Blocked" | "Not Available";
-  jiraUserStory: string;
 }
 
 export function FunctionalityTestCasesTable({
@@ -115,11 +107,11 @@ export function FunctionalityTestCasesTable({
       : []) as (Doc<"functionalityTestCases"> & { workflowStatus: WorkflowStatus })[];
 
   // Calculate status counts for the navigation bar
-  const statusCounts = allFunctionalityTestCases.reduce((acc, tc) => {
+  const statusCounts: StatusCounts = allFunctionalityTestCases.reduce((acc, tc) => {
         const status = tc.workflowStatus;
         acc[status] = (acc[status] || 0) + 1;
         return acc;
-      }, {} as Record<WorkflowStatus, number>);
+      }, {} as StatusCounts);
   
   // Determine the next sequential ID for the new test case placeholder
   const totalTestCasesCount = allFunctionalityTestCases.length;
@@ -172,7 +164,7 @@ export function FunctionalityTestCasesTable({
 
   const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [newTestCase, setNewTestCase] = useState<NewTestCase>({
+  const [newTestCase, setNewTestCase] = useState<NewFunctionalityTestCase>({
     title: "",
     level: "High",
     scenario: "Happy Path",
@@ -725,7 +717,7 @@ export function FunctionalityTestCasesTable({
                     >
                       <select
                         value={newTestCase.status}
-                        onChange={(e) => setNewTestCase({ ...newTestCase, status: e.target.value as NewTestCase['status'] })}
+                        onChange={(e) => setNewTestCase({ ...newTestCase, status: e.target.value as NewFunctionalityTestCase['status'] })}
                         className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="Not Run">Not Run</option>

@@ -20,7 +20,7 @@ export type WorkflowStatus =
 interface SheetNavigationBarProps {
   activeStatus: WorkflowStatus;
   onStatusChange: (status: WorkflowStatus) => void;
-  statusCounts?: Record<WorkflowStatus, number>;
+  statusCounts?: Partial<Record<WorkflowStatus, number>>;
 }
 
 const navigationItems: { id: WorkflowStatus; label: string }[] = [
@@ -62,7 +62,7 @@ export function SheetNavigationBar({
                   )}
                 >
                   <span>{item.label}</span>
-                  {statusCounts && statusCounts[item.id] > 0 && (
+                  {statusCounts && statusCounts[item.id] !== undefined && statusCounts[item.id]! > 0 && (
                     <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
                       {statusCounts[item.id]}
                     </span>
@@ -86,7 +86,7 @@ export function SheetNavigationBar({
                 onClick={() => onStatusChange(item.id)}
               >
                 {item.label}
-                {statusCounts && statusCounts[item.id] > 0 && (
+                {statusCounts && statusCounts[item.id] !== undefined && statusCounts[item.id]! > 0 && (
                   <span className="ml-2 text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
                     {statusCounts[item.id]}
                   </span>
