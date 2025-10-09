@@ -1,4 +1,4 @@
-// src/Dashboard.tsx
+// src/index.tsx
 
 import React from "react"; // Needed for useState
 import {
@@ -48,6 +48,7 @@ interface NewSheetFormData {
   name: string;
   type: "sheet" | "doc" | "pdf" | "folder" | "other";
   testCaseType: "functionality" | "altTextAriaLabel";
+  modules: string[]; // ✅ UPDATED: Array of module names
 }
 
 
@@ -58,8 +59,8 @@ export function Dashboard() {
   // State to control the modal
   const [isModalOpen, setIsModalOpen] = React.useState(false); 
 
-  // Get the Convex mutation to create a new sheet
-  const createSheet = useMutation(api.myFunctions.createSheet); 
+  // Get the Convex mutation to create a new sheet with multiple modules
+  const createSheet = useMutation(api.myFunctions.createSheetWithModules);
 
   if (sheets === undefined) {
     return (
@@ -104,19 +105,16 @@ export function Dashboard() {
   // Function to handle the form submission from the modal
   const handleCreateSheet = async (data: NewSheetFormData) => {
     try {
-      // Call the Convex mutation. The backend will handle the 'owner' (logged-in user)
-      // and timestamps (created_at, updated_at, last_opened_at).
       const newSheetId = await createSheet({
         name: data.name,
         type: data.type,
         testCaseType: data.testCaseType,
-        shared: false, // Defaulting shared to false on creation
+        shared: false,
+        modules: data.modules, // ✅ Now passing array of module names
       });
-      // Navigate to the newly created sheet
-      void navigate(`/sheet/${newSheetId}`); 
+      void navigate(`/sheet/${newSheetId}`);
     } catch (error) {
       console.error("Failed to create new sheet:", error);
-      // In a real app, you'd show a toast notification here
     }
   };
 

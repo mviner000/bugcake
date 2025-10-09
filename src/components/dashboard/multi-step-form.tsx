@@ -6,7 +6,7 @@ import { StepTwo } from "./form-steps/step-two"
 import { StepThree } from "./form-steps/step-three"
 import { useMutation } from "convex/react"
 import { api } from "../../../convex/_generated/api"
-import { useNavigate } from "react-router-dom" // Keep navigate
+import { useNavigate } from "react-router-dom"
 
 export type TemplateType = "functionality" | "altTextAriaLabel"
 
@@ -24,7 +24,7 @@ export function MultiStepForm() {
     modules: [],
   })
   
-  const createSheet = useMutation(api.myFunctions.createSheet)
+  const createSheetWithModules = useMutation(api.myFunctions.createSheetWithModules)
   const navigate = useNavigate()
 
   const updateFormData = (data: Partial<FormData>) => {
@@ -37,13 +37,15 @@ export function MultiStepForm() {
 
   const handleFinalSubmit = async () => {
     try {
-      const sheetId = await createSheet({
+      // ✅ SIMPLIFIED: Pass all modules directly to the unified mutation
+      const sheetId = await createSheetWithModules({
         name: formData.sheetName,
         type: "sheet",
         testCaseType: formData.templateType,
         shared: false,
         isPublic: false,
         requestable: false,
+        modules: formData.modules, // ✅ Pass all modules at once
       })
       
       alert("✅ Template created successfully!")

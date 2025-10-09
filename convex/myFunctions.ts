@@ -420,6 +420,78 @@ export const updateUserVerificationStatus = mutation({
   },
 });
 
+export const createSheetWithModules = mutation({
+  args: {
+    name: v.string(),
+    type: v.union(
+      v.literal("sheet"),
+      v.literal("doc"),
+      v.literal("pdf"),
+      v.literal("folder"),
+      v.literal("other"),
+    ),
+    testCaseType: v.union(
+      v.literal("functionality"),
+      v.literal("altTextAriaLabel"),
+    ),
+    shared: v.boolean(),
+    isPublic: v.optional(v.boolean()),
+    requestable: v.optional(v.boolean()),
+    modules: v.array(v.string()), // ✅ NEW: Accept array of module names
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Unauthorized: You must be logged in to create a sheet.");
+    }
+
+    const normalizedUserId = ctx.db.normalizeId("users", userId);
+    if (!normalizedUserId) {
+      throw new Error("Invalid user session.");
+    }
+
+    // ✅ Validate: At least one module is required
+    if (!args.modules || args.modules.length === 0) {
+      throw new Error("At least one module is required.");
+    }
+
+    const now = Date.now();
+
+    // 1. Create the sheet
+    const sheetId = await ctx.db.insert("sheets", {
+      name: args.name,
+      type: args.type,
+      owner: normalizedUserId,
+      last_opened_at: now,
+      created_at: now,
+      updated_at: now,
+      shared: args.shared,
+      testCaseType: args.testCaseType,
+      isPublic: args.isPublic ?? false,
+      requestable: args.requestable ?? false,
+      accessLevel: "restricted",
+    });
+
+    // 2. Add the creator as "owner" in sheetPermissions
+    await ctx.db.insert("sheetPermissions", {
+      sheetId: sheetId,
+      userId: normalizedUserId,
+      role: "owner",
+    });
+
+    // 3. ✅ Create ALL modules linked to this sheet
+    for (const moduleName of args.modules) {
+      await ctx.db.insert("modules", {
+        sheetId: sheetId,
+        name: moduleName.trim(), // Trim whitespace
+        createdBy: normalizedUserId,
+      });
+    }
+
+    return sheetId;
+  },
+});
+
 export const createSheet = mutation({
   args: {
     name: v.string(),
@@ -437,6 +509,7 @@ export const createSheet = mutation({
     shared: v.boolean(),
     isPublic: v.optional(v.boolean()),
     requestable: v.optional(v.boolean()),
+    moduleName: v.string(), // NEW: Module name to create with the sheet
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -463,7 +536,7 @@ export const createSheet = mutation({
       testCaseType: args.testCaseType,
       isPublic: args.isPublic ?? false,
       requestable: args.requestable ?? false,
-      accessLevel: "restricted", // ✅ ADD THIS LINE - new sheets default to restricted
+      accessLevel: "restricted",
     });
 
     // ✅ Auto-add the creator as "owner" in sheetPermissions
@@ -471,6 +544,13 @@ export const createSheet = mutation({
       sheetId: sheetId,
       userId: normalizedUserId,
       role: "owner",
+    });
+
+    // ✅ NEW: Create the initial module linked to this sheet
+    await ctx.db.insert("modules", {
+      sheetId: sheetId,
+      name: args.moduleName,
+      createdBy: normalizedUserId,
     });
 
     return sheetId;
