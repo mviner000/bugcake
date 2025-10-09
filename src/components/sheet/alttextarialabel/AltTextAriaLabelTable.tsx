@@ -14,7 +14,7 @@ import { ResizeFeedback } from "../common/ResizeFeedback";
 import { TestingStatusBadge } from "../common/StatusBadgeHelper";
 import { WorkflowStatusBadge, WorkflowStatus } from "../common/WorkflowStatusBadge";
 import { Button } from "@/components/ui/button";
-import { SheetNavigationBar } from "../sheet-navigation-bar";
+import { SheetNavigationBar } from "../common/SheetNavigationBar";
 import { SEImplementationBadge } from "../common/SEImplementationBadge";
 import { ModuleNamebar } from "../common/ModuleNamebar";
 
@@ -132,19 +132,18 @@ export function AltTextAriaLabelTable({
     return groups;
   }, [testCases]);
 
-  // Get module colors (cycling through a palette)
-  const getModuleColor = (index: number) => {
-    const colors = [
-      { bg: "bg-blue-600", text: "text-white" },
-      { bg: "bg-green-600", text: "text-white" },
-      { bg: "bg-purple-600", text: "text-white" },
-      { bg: "bg-orange-600", text: "text-white" },
-      { bg: "bg-teal-600", text: "text-white" },
-      { bg: "bg-pink-600", text: "text-white" },
-      { bg: "bg-indigo-600", text: "text-white" },
-    ];
-    return colors[index % colors.length];
-  };
+  // Generate light colors dynamically based on index
+    const getModuleColor = (index: number) => {
+      // Use HSL color space for better color distribution
+      // Hue: distributed evenly across the color wheel
+      // Saturation: 70% for vibrant but not overwhelming colors
+      // Lightness: 85% for light background
+      const hue = (index * 137.5) % 360; // Golden angle for better distribution
+      const bgColor = `hsl(${hue}, 70%, 85%)`;
+      const textColor = "#333333"; // Dark text for contrast
+      
+      return { bgColor, textColor };
+    };
 
   // Custom Hooks
   const { getColumnWidth } = useColumnWidths(fetchedColumnWidths);
@@ -592,11 +591,11 @@ export function AltTextAriaLabelTable({
                   <React.Fragment key={moduleId}>
                     {/* Module Name Bar with Checkbox */}
                     <tr>
-                      <td colSpan={19} className="p-0">
+                      <td colSpan={16} className="p-0">
                         <ModuleNamebar 
-                          title={`${moduleName} (${moduleTestCases.length} test cases)`}
-                          bgColor={color.bg}
-                          textColor={color.text}
+                          title={`${moduleName} (${moduleTestCases.length})`}
+                          bgColor={color.bgColor}
+                          textColor={color.textColor}
                           isChecked={isChecked}
                           isIndeterminate={isIndeterminate}
                           onCheckboxChange={(checked) => handleModuleCheckboxChange(moduleId, checked)}

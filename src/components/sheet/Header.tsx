@@ -48,9 +48,6 @@ export function Header({ sheetName, sheetId, sheetType }: HeaderProps & { sheetI
             <div className="flex items-center space-x-2 sm:space-x-4 flex-1 min-w-0">
               <Menu className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600 cursor-pointer flex-shrink-0" />
               <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
-                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-green-600 rounded flex items-center justify-center flex-shrink-0">
-                  <div className="w-4 h-4 sm:w-5 sm:h-5 bg-white rounded-sm"></div>
-                </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-base sm:text-xl text-gray-700 font-normal truncate">
                     {sheetName}
