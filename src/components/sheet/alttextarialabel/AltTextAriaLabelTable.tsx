@@ -19,19 +19,19 @@ import { SheetNavigationBar } from "../sheet-navigation-bar";
 import { SEImplementationBadge } from "../common/SEImplementationBadge";
 
 interface AltTextAriaLabelTableProps {
-  testCases: (Doc<"altTextAriaLabelTestCases"> & {
-    createdByName: string;
-    executedByName: string;
-    sequenceNumber: number;
-    rowHeight?: number;
-    createdAt: number;
-    workflowStatus: WorkflowStatus;
-  })[];
-  sheetId: string;
-  activeWorkflowStatus: WorkflowStatus;
-  onWorkflowStatusChange: (status: WorkflowStatus) => void;
-  // FIX 1: Add the modules prop
-  modules: Doc<"modules">[];
+  testCases: (Doc<"altTextAriaLabelTestCases"> & {
+    createdByName: string;
+    executedByName: string;
+    sequenceNumber: number;
+    rowHeight?: number;
+    createdAt: number;
+    workflowStatus: WorkflowStatus;
+    moduleName: string; // ✅ NEW: Add module name
+  })[];
+  sheetId: string;
+  activeWorkflowStatus: WorkflowStatus;
+  onWorkflowStatusChange: (status: WorkflowStatus) => void;
+  modules: Doc<"modules">[];
 }
 
 interface NewTestCase {
@@ -403,12 +403,12 @@ export function AltTextAriaLabelTable({
                     </td>
                     {/* Module */}
                     <td
-                      data-column="module"
-                      style={{ width: `${getColumnWidth("module", 150)}px` }}
-                      className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
-                    >
-                      {testCase.module}
-                    </td>
+                      data-column="module"
+                      style={{ width: `${getColumnWidth("module", 150)}px` }}
+                      className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+                    >
+                      {testCase.moduleName} {/* ✅ Changed from testCase.module to testCase.moduleName */}
+                    </td>
                     {/* Sub Module */}
                     <td
                       data-column="subModule"

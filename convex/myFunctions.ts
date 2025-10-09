@@ -1485,11 +1485,19 @@ export const getTestCasesForSheet = query({
             ? await ctx.db.get(testCase.executedBy)
             : null;
 
+          // ✅ NEW: Fetch module name if module exists
+          let moduleName = "N/A";
+          if (testCase.module) {
+            const module = await ctx.db.get(testCase.module);
+            moduleName = module?.name || "N/A";
+          }
+
           return {
             ...testCase,
             createdByName: createdByUser?.email || "Unknown User",
             executedByName: executedByUser?.email || "N/A",
             sequenceNumber: index + 1,
+            moduleName: moduleName, // ✅ Add module name
           };
         })
       );
@@ -1506,11 +1514,19 @@ export const getTestCasesForSheet = query({
             ? await ctx.db.get(testCase.executedBy)
             : null;
 
+          // ✅ NEW: Fetch module name
+          let moduleName = "N/A";
+          if (testCase.module) {
+            const module = await ctx.db.get(testCase.module);
+            moduleName = module?.name || "N/A";
+          }
+
           return {
             ...testCase,
             createdByName: createdByUser?.email || "Unknown User",
             executedByName: executedByUser?.email || "N/A",
             sequenceNumber: index + 1,
+            moduleName: moduleName, // ✅ Add module name
           };
         })
       );
@@ -1520,7 +1536,7 @@ export const getTestCasesForSheet = query({
       sheet,
       testCaseType: sheet.testCaseType,
       testCases,
-      access, // Include access info (useful for frontend to know if user has edit rights, etc.)
+      access,
     };
   },
 });

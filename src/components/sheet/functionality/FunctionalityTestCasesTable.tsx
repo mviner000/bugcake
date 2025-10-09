@@ -20,18 +20,19 @@ import { Button } from "@/components/ui/button";
 import { SheetNavigationBar } from "../sheet-navigation-bar";
 
 interface FunctionalityTestCasesTableProps {
-  testCases: (Doc<"functionalityTestCases"> & {
-    createdByName: string;
-    executedByName: string;
-    sequenceNumber: number;
-    rowHeight?: number;
-    createdAt: number;
-    workflowStatus: WorkflowStatus;
-  })[];
-  sheetId: string;
-  activeWorkflowStatus: WorkflowStatus;
-  onWorkflowStatusChange: (status: WorkflowStatus) => void;
-  modules: Doc<"modules">[]; 
+  testCases: (Doc<"functionalityTestCases"> & {
+    createdByName: string;
+    executedByName: string;
+    sequenceNumber: number;
+    rowHeight?: number;
+    createdAt: number;
+    workflowStatus: WorkflowStatus;
+    moduleName: string; // ✅ NEW: Add module name
+  })[];
+  sheetId: string;
+  activeWorkflowStatus: WorkflowStatus;
+  onWorkflowStatusChange: (status: WorkflowStatus) => void;
+  modules: Doc<"modules">[];
 }
 
 interface NewTestCase {
@@ -398,11 +399,11 @@ export function FunctionalityTestCasesTable({
                       </td>
                       {/* Module */}
                       <td
-                        data-column="module"
-                        style={{ width: `${getColumnWidth("module", 150)}px` }}
-                        className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
-                      >
-                        {testCase.module ?? "N/A"}
+                        data-column="module"
+                        style={{ width: `${getColumnWidth("module", 150)}px` }}
+                        className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+                        >
+                        {testCase.moduleName} 
                       </td>
                       {/* Sub Module */}
                       <td
