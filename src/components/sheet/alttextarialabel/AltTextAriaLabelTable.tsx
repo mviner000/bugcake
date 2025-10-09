@@ -79,6 +79,35 @@ export function AltTextAriaLabelTable({
     sheetId ? { sheetId } : "skip"
   );
 
+  // Add this new handler function after the existing checkbox handlers:
+  const handleModuleCheckboxChange = (moduleId: string, checked: boolean) => {
+    setSelectedRows(prev => {
+      const newSet = new Set(prev);
+      const moduleTestCases = groupedTestCases[moduleId] || [];
+      
+      if (checked) {
+        // Add all test cases in this module
+        moduleTestCases.forEach(tc => newSet.add(tc._id));
+      } else {
+        // Remove all test cases in this module
+        moduleTestCases.forEach(tc => newSet.delete(tc._id));
+      }
+      
+      return newSet;
+    });
+  };
+
+  // Add this helper function to determine module checkbox state:
+  const getModuleCheckboxState = (moduleId: string) => {
+    const moduleTestCases = groupedTestCases[moduleId] || [];
+    const selectedCount = moduleTestCases.filter(tc => selectedRows.has(tc._id)).length;
+    
+    return {
+      isChecked: selectedCount === moduleTestCases.length && moduleTestCases.length > 0,
+      isIndeterminate: selectedCount > 0 && selectedCount < moduleTestCases.length
+    };
+  };
+
   // Calculate status counts
   const statusCounts = allTestCasesData && 'testCases' in allTestCasesData 
     ? (allTestCasesData.testCases as any[]).reduce((acc, tc) => {
@@ -554,25 +583,29 @@ export function AltTextAriaLabelTable({
               />
             ) : (
               <>
-                {Object.entries(groupedTestCases).map(([moduleId, moduleTestCases], groupIndex) => {
-                  const moduleName = moduleTestCases[0]?.moduleName || 'Unknown Module';
-                  const color = getModuleColor(groupIndex);
-                  
+              {Object.entries(groupedTestCases).map(([moduleId, moduleTestCases], groupIndex) => {
+                const moduleName = moduleTestCases[0]?.moduleName || 'Unknown Module';
+                const color = getModuleColor(groupIndex);
+                const { isChecked, isIndeterminate } = getModuleCheckboxState(moduleId);
+                
                   return (
-                    <React.Fragment key={moduleId}>
-                      {/* Module Name Bar */}
-                      <tr>
-                        <td colSpan={19} className="p-0">
-                          <ModuleNamebar 
-                            title={`${moduleName} (${moduleTestCases.length} test cases)`}
-                            bgColor={color.bg}
-                            textColor={color.text}
-                          />
-                        </td>
-                      </tr>
-                      {/* Test Cases for this module */}
-                      {moduleTestCases.map(testCase => renderTestCaseRow(testCase))}
-                    </React.Fragment>
+                  <React.Fragment key={moduleId}>
+                    {/* Module Name Bar with Checkbox */}
+                    <tr>
+                      <td colSpan={19} className="p-0">
+                        <ModuleNamebar 
+                          title={`${moduleName} (${moduleTestCases.length} test cases)`}
+                          bgColor={color.bg}
+                          textColor={color.text}
+                          isChecked={isChecked}
+                          isIndeterminate={isIndeterminate}
+                          onCheckboxChange={(checked) => handleModuleCheckboxChange(moduleId, checked)}
+                        />
+                      </td>
+                    </tr>
+                    {/* Test Cases for this module */}
+                    {moduleTestCases.map(testCase => renderTestCaseRow(testCase))}
+                  </React.Fragment>
                   );
                 })}
 
