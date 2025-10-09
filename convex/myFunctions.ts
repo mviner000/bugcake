@@ -2561,3 +2561,24 @@ export const updateAltTextAriaLabelWorkflowStatusToNeedsRevision = mutation({
     return await _updateWorkflowStatus(ctx, args.testCaseId, "altTextAriaLabel", "Needs revision");
   },
 });
+
+/**
+ * Fetches all modules associated with a given sheet ID.
+ * This is used to populate the Module dropdown when creating a new test case.
+ */
+export const getModulesForSheet = query({
+  args: {
+    sheetId: v.id("sheets"),
+  },
+  handler: async (ctx, args) => {
+    // 1. Fetch all modules that belong to the sheetId using the index
+    const modules = await ctx.db
+      .query("modules")
+      .withIndex("by_sheetId", (q) => q.eq("sheetId", args.sheetId))
+      .collect();
+
+    // 2. Return the list of modules (including their name and _id)
+    // You can add sorting here if needed (e.g., sorting by module name)
+    return modules;
+  },
+});

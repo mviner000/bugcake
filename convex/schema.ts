@@ -188,9 +188,20 @@ export default defineSchema({
   // =======================================================
   modules: defineTable({
     sheetId: v.id("sheets"), // Link to the specific sheet
-    name: v.string(),        // The name of the module, e.g., "User Profile"
+    name: v.string(),        // The name of the module, e.g., "User Profile"
     createdBy: v.id("users"),// Who created the module
-  }).index("by_sheetId", ["sheetId"]), // Index to quickly fetch modules for a sheet
+    
+    // NEW FIELD: Optional array of user IDs for single or multiple assignees
+    // This allows:
+    // 1. No assignees (field is missing or set to undefined) - if optional()
+    // 2. No assignees (field is present but empty: [])
+    // 3. Single assignee: [id1]
+    // 4. Multiple assignees: [id1, id2, id3]
+    assigneeIds: v.optional(v.array(v.id("users"))),
+  })
+    .index("by_sheetId", ["sheetId"]) // Index to quickly fetch modules for a sheet
+    // NEW INDEX: To quickly find all modules assigned to a specific user ID
+    .index("by_assigneeId", ["assigneeIds"]), // Convex indexes array elements individually
 
   functionalityTestCases: defineTable({
     // Link to the sheets table
