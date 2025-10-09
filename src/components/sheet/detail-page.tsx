@@ -11,23 +11,44 @@ import { FunctionalityTestCasesTable } from "./functionality/FunctionalityTestCa
 import { Header } from "./Header";
 import { AccessRequest } from "./access-request";
 import { WorkflowStatus } from "./common/WorkflowStatusBadge"; 
-import { Doc } from "convex/_generated/dataModel"; // Import Doc type
+import { Doc } from "convex/_generated/dataModel";
 
 type SheetType = "altTextAriaLabel" | "functionality";
+
+// ✅ NEW: Define proper types for test cases with extended properties
+type FunctionalityTestCaseWithDetails = Doc<"functionalityTestCases"> & {
+  createdByName: string;
+  executedByName: string;
+  sequenceNumber: number;
+  rowHeight?: number;
+  createdAt: number;
+  workflowStatus: WorkflowStatus;
+  moduleName: string;
+};
+
+type AltTextTestCaseWithDetails = Doc<"altTextAriaLabelTestCases"> & {
+  createdByName: string;
+  executedByName: string;
+  sequenceNumber: number;
+  rowHeight?: number;
+  createdAt: number;
+  workflowStatus: WorkflowStatus;
+  moduleName: string;
+};
+
 export function DetailPage() {
   const navigate = useNavigate();
   const { sheetId } = useParams(); 
-// State for managing the active workflow status filter
+
   const [activeWorkflowStatus, setActiveWorkflowStatus] = useState<WorkflowStatus>("Open"); 
+  
   const queryResult = useQuery(
     api.myFunctions.getTestCasesForSheet,
     sheetId ? { sheetId } : "skip", 
   );
-// =======================================================
-// NEW: Fetch all modules for the current sheet using the new API
-// =======================================================
+
   const modules = useQuery(
-    api.myFunctions.getModulesForSheet, // This is the new query
+    api.myFunctions.getModulesForSheet,
     sheetId ? { sheetId: sheetId as Doc<"sheets">["_id"] } : "skip",
   ) as Doc<"modules">[] | undefined; 
 
@@ -35,13 +56,10 @@ export function DetailPage() {
     void navigate("/");
   };
   
-  // Wait for both queries to load
-  // IMPORTANT: The `sheetId` must be cast to `Doc<"sheets">["_id"]` for the new query
   if (queryResult === undefined || modules === undefined) { 
     return <div className="p-4 text-center">Loading sheet...</div>; 
   }
 
-  // Check if the result indicates access denied 
   if (queryResult && typeof queryResult === 'object' && 'accessDenied' in queryResult) {
     if (queryResult.requiresAuth) {
       return (
@@ -65,7 +83,6 @@ export function DetailPage() {
     return <AccessRequest />; 
   }
 
-  // Handle null case (sheet not found) 
   if (queryResult === null) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -86,9 +103,11 @@ export function DetailPage() {
   }
 
   const { sheet, testCaseType, testCases } = queryResult; 
-// Filter test cases based on the active workflow status
+
+  // ✅ FIX: Properly type the filtered test cases
   const filteredTestCases = testCases.filter(
-    (tc: any) => tc.workflowStatus === activeWorkflowStatus 
+    (tc: FunctionalityTestCaseWithDetails | AltTextTestCaseWithDetails) => 
+      tc.workflowStatus === activeWorkflowStatus 
   );
   
   const renderTable = () => { 
@@ -97,28 +116,37 @@ export function DetailPage() {
     }
 
     if (testCaseType === "functionality") {
-      const functionalityTestCases = filteredTestCases.filter(isFunctionalityTestCase); 
+      // ✅ Type assertion with proper type
+      const functionalityTestCases = filteredTestCases.filter(
+        isFunctionalityTestCase
+      ) as FunctionalityTestCaseWithDetails[];
+      
       return (
         <FunctionalityTestCasesTable 
           testCases={functionalityTestCases}
           sheetId={sheetId}
           activeWorkflowStatus={activeWorkflowStatus}
           onWorkflowStatusChange={setActiveWorkflowStatus}
-          modules={modules || []} // Pass modules
+          modules={modules || []}
         />
       );
     } else if (testCaseType === "altTextAriaLabel") {
-      const altTextTestCases = filteredTestCases.filter(isAltTextTestCase); 
+      // ✅ Type assertion with proper type
+      const altTextTestCases = filteredTestCases.filter(
+        isAltTextTestCase
+      ) as AltTextTestCaseWithDetails[];
+      
       return (
         <AltTextAriaLabelTable
           testCases={altTextTestCases}
           sheetId={sheetId}
           activeWorkflowStatus={activeWorkflowStatus}
           onWorkflowStatusChange={setActiveWorkflowStatus}
-          modules={modules || []} // Pass modules
+          modules={modules || []}
         />
       );
     }
+    
     return ( 
       <div className="p-4 text-center">
         No test case type specified for this sheet.

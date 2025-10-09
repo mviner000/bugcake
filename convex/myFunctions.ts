@@ -2291,7 +2291,6 @@ export const getAltTextAriaLabelTestCasesAwaitingApproval = query({
 export const getFunctionalityTestCasesByWorkflowStatus = query({
   args: {
     sheetId: v.string(),
-    // Use the enum here for type safety!
     status: workflowStatusEnum, 
   },
   handler: async (ctx, args) => {
@@ -2305,20 +2304,17 @@ export const getFunctionalityTestCasesByWorkflowStatus = query({
       return { testCases: [], viewer: null };
     }
 
-    // Query test cases using the status from the arguments
     const testCasesQuery = ctx.db
       .query("functionalityTestCases")
       .filter((q) => 
         q.and(
           q.eq(q.field("sheetId"), normalizedSheetId),
-          // Use the status passed in the arguments instead of a hardcoded string
           q.eq(q.field("workflowStatus"), args.status) 
         )
       );
 
     const rawTestCases = await testCasesQuery.order("desc").collect();
 
-    // The rest of your logic to enhance test cases remains the same...
     const testCasesWithUsers = await Promise.all(
       rawTestCases.map(async (testCase) => {
         const createdByUser = await ctx.db.get(testCase.createdBy);
@@ -2326,10 +2322,18 @@ export const getFunctionalityTestCasesByWorkflowStatus = query({
           ? await ctx.db.get(testCase.executedBy)
           : null;
 
+        // ✅ NEW: Fetch module name
+        let moduleName = "N/A";
+        if (testCase.module) {
+          const module = await ctx.db.get(testCase.module);
+          moduleName = module?.name || "N/A";
+        }
+
         return {
           ...testCase,
           createdByName: createdByUser?.email || "Unknown User",
           executedByName: executedByUser?.email || "N/A",
+          moduleName: moduleName, // ✅ Add module name
         };
       })
     );
@@ -2347,7 +2351,6 @@ export const getFunctionalityTestCasesByWorkflowStatus = query({
 export const getAltTextAriaLabelTestCasesByWorkflowStatus = query({
   args: {
     sheetId: v.string(),
-    // Use the enum here for type safety!
     status: workflowStatusEnum, 
   },
   handler: async (ctx, args) => {
@@ -2361,20 +2364,17 @@ export const getAltTextAriaLabelTestCasesByWorkflowStatus = query({
       return { testCases: [], viewer: null };
     }
 
-    // Query test cases using the workflow status from the arguments
     const testCasesQuery = ctx.db
       .query("altTextAriaLabelTestCases")
       .filter((q) => 
         q.and(
           q.eq(q.field("sheetId"), normalizedSheetId),
-          // Use the status passed in the arguments
           q.eq(q.field("workflowStatus"), args.status) 
         )
       );
 
     const rawTestCases = await testCasesQuery.order("desc").collect();
 
-    // Enhance test cases with user information
     const testCasesWithUsers = await Promise.all(
       rawTestCases.map(async (testCase) => {
         const createdByUser = await ctx.db.get(testCase.createdBy);
@@ -2382,10 +2382,18 @@ export const getAltTextAriaLabelTestCasesByWorkflowStatus = query({
           ? await ctx.db.get(testCase.executedBy)
           : null;
 
+        // ✅ NEW: Fetch module name
+        let moduleName = "N/A";
+        if (testCase.module) {
+          const module = await ctx.db.get(testCase.module);
+          moduleName = module?.name || "N/A";
+        }
+
         return {
           ...testCase,
           createdByName: createdByUser?.email || "Unknown User",
           executedByName: executedByUser?.email || "N/A",
+          moduleName: moduleName, // ✅ Add module name
         };
       })
     );

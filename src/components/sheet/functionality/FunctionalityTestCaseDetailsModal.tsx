@@ -234,7 +234,7 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
                             {testCase.title}
                           </CardTitle>
                           <p className="text-xs text-muted-foreground line-clamp-1">
-                            {testCase.module}
+                            {testCase.moduleName}
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">
                             Created by: {testCase.createdByName}
@@ -291,7 +291,7 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <Layers3 className="w-4 h-4 mt-0.5 self-start flex-shrink-0" />
                             <div>
-                              {selectedTestCase.module}
+                              {selectedTestCase.moduleName}
                               {selectedTestCase.subModule && ` / ${selectedTestCase.subModule}`}
                             </div>
                           </div>

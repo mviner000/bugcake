@@ -1,4 +1,4 @@
-// src/components/sheet/alttextarialabel/AltTextAriaLabelDetailsModal.tsx
+// old src/components/sheet/alttextarialabel/AltTextAriaLabelDetailsModal.tsx
 
 import { useState, useEffect } from "react";
 import { api } from "../../../../convex/_generated/api";
@@ -222,7 +222,7 @@ export default function AltTextAriaLabelDetailsModal({
                             {testCase.pageSection || "Unnamed Section"}
                           </CardTitle>
                           <p className="text-xs text-muted-foreground line-clamp-1">
-                            {testCase.module}
+                            {testCase.moduleName} {/* ✅ Changed from testCase.module */}
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">
                             Created by: {testCase.createdByName || "N/A"}
@@ -282,7 +282,7 @@ export default function AltTextAriaLabelDetailsModal({
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <Layers3 className="w-4 h-4 mt-0.5 flex-shrink-0" />
                             <div>
-                              {selectedTestCase.module} /{" "}
+                              {selectedTestCase.moduleName} /{" "}
                               {selectedTestCase.subModule} /{" "}
                               {selectedTestCase.pageSection}
                             </div>
