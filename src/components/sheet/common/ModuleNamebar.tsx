@@ -3,6 +3,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useState, useEffect, useRef } from "react"
 import { AssigneeModal } from "./AssigneeModal"
+import { RequestButton } from "./RequestButton"
 
 interface TeamMember {
   name: string
@@ -160,6 +161,14 @@ export function ModuleNamebar({
         <span className="font-bold">+ Add New</span>
       </button>
 
+
+      {/* Request Button */}
+      <RequestButton
+        className="ml-4 sticky top-3/4 -translate-y-[65%] z-10"
+        style={{ 
+          left: `calc(${avatarLeftPosition}px - 70px)` 
+        }}
+      />
       {/* Avatars - POSITIONING MODIFIED */}
       <button 
         className="flex ml-4 cursor-pointer sticky top-3/4 -translate-y-[150%] z-10 px-2 py-1 transition-colors"
