@@ -253,7 +253,7 @@ export function BaseTable<T extends BaseTestCase>({
     <div className="flex flex-col">
       {/* Top Bar Button */}
       <div className="flex justify-start px-4">
-        <Button onClick={handleSendToApproval}>
+        <Button size="sm" variant="outline" onClick={handleSendToApproval}>
           Send To Approval for QA Lead{" "}
           {selectedRows.size > 0 && `(${selectedRows.size})`}
         </Button>
@@ -348,19 +348,19 @@ export function BaseTable<T extends BaseTestCase>({
                     return (
                       <React.Fragment key={moduleId}>
                         {/* Module Name Bar with Checkbox */}
-                        <tr>
-                          <td colSpan={columns.length} className="p-0">
+                        <tr style={{ height: '40px' }}>
+                        <td colSpan={columns.length} className="p-0 relative">
                             <ModuleNamebar
-                              title={`${moduleName} (${moduleTestCases.length})`}
-                              bgColor={color.bgColor}
-                              textColor={color.textColor}
-                              isChecked={isChecked}
-                              isIndeterminate={isIndeterminate}
-                              onCheckboxChange={(checked) =>
+                            title={`${moduleName} (${moduleTestCases.length})`}
+                            bgColor={color.bgColor}
+                            textColor={color.textColor}
+                            isChecked={isChecked}
+                            isIndeterminate={isIndeterminate}
+                            onCheckboxChange={(checked) =>
                                 handleModuleCheckboxChange(moduleId, checked)
-                              }
+                            }
                             />
-                          </td>
+                        </td>
                         </tr>
                         {/* Test Cases for this module */}
                         {moduleTestCases.map((testCase) => (
