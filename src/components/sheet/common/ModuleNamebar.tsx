@@ -2,6 +2,7 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useState, useEffect, useRef } from "react"
+import { AssigneeModal } from "./AssigneeModal"
 
 interface TeamMember {
   name: string
@@ -35,14 +36,17 @@ export function ModuleNamebar({
   const [addButtonLeftPosition, setAddButtonLeftPosition] = useState(112)
   const titleButtonRef = useRef<HTMLButtonElement>(null)
 
+  
+  const [isAssigneeModalOpen, setIsAssigneeModalOpen] = useState(false)
+
   useEffect(() => {
     const updatePosition = () => {
       const screenWidth = window.innerWidth
       const titleButtonWidth = titleButtonRef.current?.offsetWidth || 0
       
       // Calculate dynamic position based on screen width
-      // MODIFIED: Reduced offset from 300px to 180px to move avatars closer to the right edge
-      const calculatedAvatarPosition = screenWidth - 180 
+      // MODIFIED: Reduced offset from 300px to 185px to move avatars closer to the right edge
+      const calculatedAvatarPosition = screenWidth - 185 
       
       // Calculate the start position for the Add Button:
       // Title Button's 'ml-11' (44px) + its 'left-4' (16px) + its width = 60px + width
@@ -100,6 +104,13 @@ export function ModuleNamebar({
   const teamMembers = members || defaultMembers
 
   return (
+    <>
+    <AssigneeModal
+          open={isAssigneeModalOpen}
+          onOpenChange={setIsAssigneeModalOpen}
+          moduleName="modulename"
+          sheetId="demo-sheet-id"
+        />
     <div
       className={`mt-[4px] absolute inset-0 w-full ${className} border-b-4 z-1`}
       style={{
@@ -153,6 +164,7 @@ export function ModuleNamebar({
       <button 
         className="flex ml-4 cursor-pointer sticky top-3/4 -translate-y-[150%] z-10 px-2 py-1 transition-colors"
         style={{ left: `${avatarLeftPosition}px` }}
+        onClick={() => setIsAssigneeModalOpen(true)}
       >
         {/* <span className="mt-1 text-[12px] px-1">assigned to:</span> */}
         {teamMembers.map((member, index) => (
@@ -166,5 +178,6 @@ export function ModuleNamebar({
         ))}
       </button>
     </div>
+    </>
   )
 }
