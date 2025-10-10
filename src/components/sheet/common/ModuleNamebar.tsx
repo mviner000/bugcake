@@ -8,22 +8,23 @@ interface ModuleNamebarProps {
   isChecked: boolean;
   isIndeterminate: boolean;
   onCheckboxChange: (checked: boolean) => void;
+  itemCount?: number; // ✅ optional
 }
 
 export function ModuleNamebar({
   title,
   bgColor,
-  textColor,
   isChecked,
   isIndeterminate,
   onCheckboxChange,
   className = "",
+  itemCount,
 }: ModuleNamebarProps) {
   return (
     <div
-      className={`absolute inset-0 w-full ${className} border-b-4`}
-      style={{ 
-        height: "40px",
+      className={`mt-[4px] absolute inset-0 w-full ${className} border-b-4 z-1`}
+      style={{
+        height: "44px",
         borderBottomColor: bgColor,
       }}
     >
@@ -42,18 +43,28 @@ export function ModuleNamebar({
 
       {/* Title Button */}
       <button
-        className="ml-11 sticky left-4 top-3/4 -translate-y-3/4 z-10 bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition-colors"
+        className=" ml-11 sticky left-4 top-3/4 -translate-y-3/4 z-10 bg-blue-500 text-white px-3 py-[2.6px] border border-blue-500 transition-colors rounded-none"
         style={{ lineHeight: "normal", fontSize: "14px" }}
       >
-        {title}
+        <span>{title}</span>
+
+        {/* ✅ Facebook-like red badge */}
+        {itemCount !== undefined && itemCount > 0 && (
+          <span
+            className="absolute -top-2 -right-2 border border-[#333333] bg-white text-[#333333] text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center"
+          >
+            {itemCount}
+          </span>
+        )}
       </button>
+
 
       {/* Add Button */}
       <button
-        className="ml-2 cursor-pointer sticky left-24 top-3/4 -translate-y-3/4 z-10 bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition-colors"
+        className="ml-4 cursor-pointer sticky left-24 top-3/4 -translate-y-3/4 z-10 border border-[#333333] text-[#333333] bg-transparent px-2 py-1 rounded hover:bg-blue-500 hover:text-white transition-colors"
         style={{ lineHeight: "normal", fontSize: "14px" }}
       >
-        Add
+        <span className="font-bold">+ Add New</span>
       </button>
     </div>
   );

@@ -348,10 +348,11 @@ export function BaseTable<T extends BaseTestCase>({
                     return (
                       <React.Fragment key={moduleId}>
                         {/* Module Name Bar with Checkbox */}
-                        <tr style={{ height: '40px' }}>
+                        <tr style={{ height: '46px' }}>
                         <td colSpan={columns.length} className="p-0 relative">
                             <ModuleNamebar
-                            title={`${moduleName} (${moduleTestCases.length})`}
+                            title={`${moduleName}`}
+                            itemCount={moduleTestCases.length}
                             bgColor={color.bgColor}
                             textColor={color.textColor}
                             isChecked={isChecked}

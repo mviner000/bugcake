@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react"; 
 import { Id } from "convex/_generated/dataModel";
+import { ApprovalButtons } from "../common/ApprovalButtons";
 
 interface FunctionalityTestCasesDetailsModalProps {
   sheetId: string;
@@ -110,7 +111,7 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
       });
 
       alert('the test case is updated to "Approved"');
-      setShowDetails(false); // NEW: Auto back to list
+      setShowDetails(false);
 
     } catch (error) {
       console.error("Failed to approve functionality test case:", error);
@@ -128,7 +129,7 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
       });
 
       alert('the test case is updated to "Declined"');
-      setShowDetails(false); // NEW: Auto back to list
+      setShowDetails(false);
 
     } catch (error) {
       console.error("Failed to decline functionality test case:", error);
@@ -146,7 +147,7 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
       });
 
       alert('the test case is updated to "Needs revision"');
-      setShowDetails(false); // NEW: Auto back to list
+      setShowDetails(false);
 
     } catch (error) {
       console.error("Failed to set functionality test case to Needs revision:", error);
@@ -165,6 +166,11 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
   const currentUser = usersWithAccess?.find((u) => u.isCurrentUser);
   const isQALeadOrOwner = currentUser?.role === "qa_lead" || currentUser?.role === "owner";
 
+  // ✅ Hide button entirely if there are no test cases
+  if (!testCases || testCases.length === 0) {
+    return null;
+  }
+
   return (
     <>
       <Button 
@@ -172,21 +178,18 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
         size="sm" 
         onClick={handleOpen} 
         className="relative"
-        disabled={testCases.length === 0}
       >
         <ListChecks className="w-4 h-4 mr-2" />
         {isQALeadOrOwner 
           ? "Please approve this now" 
           : "Need Approval for QA Lead/Owner"}
-        {testCases.length > 0 && (
-          <span className="absolute -top-2 -right-2 flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold text-white bg-red-500 rounded-full">
-            {testCases.length}
-          </span>
-        )}
+        <span className="absolute -top-2 -right-2 flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold text-white bg-red-500 rounded-full">
+          {testCases.length}
+        </span>
       </Button>
 
       <DetailsModal isOpen={isOpen} onClose={() => setIsOpen(false)}>
-        <div className="w-[92vw] h-[90vh] flex flex-col">
+        <div className="w-[92vw] h-[90vh] flex flex-col z-1">
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-3 border-b">
             <h2 className="text-lg font-semibold">Test Cases Awaiting Approval</h2>
@@ -358,35 +361,14 @@ export default function FunctionalityTestCasesDetailsModal({ sheetId }: Function
 
                       {/* Right */}
                       <div className="lg:col-span-1 space-y-6">
-                        {/* The Action Buttons (Approve, Needs Revision, Decline) */}
+                        {/* ✅ Use the reusable ApprovalButtons component */}
                         {isQALeadOrOwner && (
-                          <div className="space-y-2">
-                            <Button
-                              className="w-full bg-green-600 hover:bg-green-700 text-white"
-                              onClick={handleApproveClick}
-                              disabled={selectedTestCase.workflowStatus === "Approved"}
-                            >
-                              Approved
-                            </Button>
-                            
-                            <Button
-                                variant="secondary"
-                                className="w-full"
-                                onClick={handleNeedsRevisionClick}
-                                disabled={selectedTestCase.workflowStatus === "Needs revision"}
-                            >
-                                Needs Revision
-                            </Button>
-
-                            <Button
-                                variant="destructive"
-                                className="w-full"
-                                onClick={handleDeclineClick}
-                                disabled={selectedTestCase.workflowStatus === "Declined"}
-                            >
-                                Decline
-                            </Button>
-                          </div>
+                          <ApprovalButtons
+                            onApprove={handleApproveClick}
+                            onRequestRevision={handleNeedsRevisionClick}
+                            onDecline={handleDeclineClick}
+                            workflowStatus={selectedTestCase.workflowStatus}
+                          />
                         )}
 
                         <Button className="w-full justify-between">

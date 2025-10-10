@@ -1,4 +1,4 @@
-// old src/components/sheet/alttextarialabel/AltTextAriaLabelDetailsModal.tsx
+// Updated src/components/sheet/alttextarialabel/AltTextAriaLabelDetailsModal.tsx
 
 import { useState, useEffect } from "react";
 import { api } from "../../../../convex/_generated/api";
@@ -20,6 +20,7 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { DetailsModal } from "@/components/ui/mod/DetailsModal";
 import { ContentSection, MetadataField } from "@/components/ui/mod/ModalHelpers";
+import { ApprovalButtons } from "./ApprovalButtons"; // ✅ Import the new component
 
 interface AltTextAriaLabelDetailsModalProps {
   sheetId: string;
@@ -143,6 +144,11 @@ export default function AltTextAriaLabelDetailsModal({
   const isQALeadOrOwner =
     currentUser?.role === "qa_lead" || currentUser?.role === "owner";
 
+  // ✅ Hide button entirely if there are no test cases
+  if (!testCases || testCases.length === 0) {
+    return null;
+  }
+
   return (
     <>
       <Button
@@ -150,17 +156,14 @@ export default function AltTextAriaLabelDetailsModal({
         size="sm"
         onClick={handleOpen}
         className="relative"
-        disabled={!testCases || testCases.length === 0}
       >
         <ListChecks className="w-4 h-4 mr-2" />
         {isQALeadOrOwner
           ? "Please approve this now"
           : "Need Approval for QA Lead/Owner"}
-        {testCases.length > 0 && (
-          <span className="absolute -top-2 -right-2 flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold text-white bg-red-500 rounded-full">
-            {testCases.length}
-          </span>
-        )}
+        <span className="absolute -top-2 -right-2 flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold text-white bg-red-500 rounded-full">
+          {testCases.length}
+        </span>
       </Button>
 
       <DetailsModal isOpen={isOpen} onClose={() => setIsOpen(false)}>
@@ -222,7 +225,7 @@ export default function AltTextAriaLabelDetailsModal({
                             {testCase.pageSection || "Unnamed Section"}
                           </CardTitle>
                           <p className="text-xs text-muted-foreground line-clamp-1">
-                            {testCase.moduleName} {/* ✅ Changed from testCase.module */}
+                            {testCase.moduleName}
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">
                             Created by: {testCase.createdByName || "N/A"}
@@ -398,40 +401,12 @@ export default function AltTextAriaLabelDetailsModal({
 
                       <div className="lg:col-span-1 space-y-6">
                         {isQALeadOrOwner && (
-                          <div className="space-y-2">
-                            <Button
-                              className="w-full bg-green-600 hover:bg-green-700 text-white"
-                              onClick={handleApproveClick}
-                              disabled={
-                                selectedTestCase.workflowStatus === "Approved"
-                              }
-                            >
-                              Approved
-                            </Button>
-
-                            <Button
-                              variant="secondary"
-                              className="w-full"
-                              onClick={handleRequestRevisionClick}
-                              disabled={
-                                selectedTestCase.workflowStatus ===
-                                "Needs revision"
-                              }
-                            >
-                              Need Revision
-                            </Button>
-
-                            <Button
-                              variant="destructive"
-                              className="w-full"
-                              onClick={handleDeclineClick}
-                              disabled={
-                                selectedTestCase.workflowStatus === "Declined"
-                              }
-                            >
-                              Decline
-                            </Button>
-                          </div>
+                          <ApprovalButtons
+                            onApprove={handleApproveClick}
+                            onRequestRevision={handleRequestRevisionClick}
+                            onDecline={handleDeclineClick}
+                            workflowStatus={selectedTestCase.workflowStatus}
+                          />
                         )}
 
                         <Button className="w-full justify-between">
