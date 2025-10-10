@@ -1,4 +1,4 @@
-// src/components/common/ModuleNamebar.tsx
+// src/components/sheet/common/ModuleNamebar.tsx
 
 interface ModuleNamebarProps {
   title: string;
@@ -21,8 +21,11 @@ export function ModuleNamebar({
 }: ModuleNamebarProps) {
   return (
     <div
-      className={`absolute inset-0 w-full ${className}`}
-      style={{ height: "30px" }}
+      className={`absolute inset-0 w-full ${className} border-b-4`}
+      style={{ 
+        height: "40px",
+        borderBottomColor: bgColor,
+      }}
     >
       {/* Checkbox */}
       <label className="mt-3 sticky left-4 z-10 flex items-center gap-2 cursor-pointer">

@@ -15,12 +15,7 @@ import {
   NewAltTextAriaLabelTestCase,
   TableColumn,
 } from "@/components/sheet/common/types/testCaseTypes";
-
-// Centralized className constants
-const CELL_BASE = "border border-gray-300 px-3 py-2 text-sm text-gray-900";
-const CELL_CHECKBOX = "border border-gray-300 px-2 py-2 text-center";
-const CELL_WITH_WRAP = `${CELL_BASE} whitespace-pre-wrap`;
-const CELL_WORKFLOW = "border border-gray-300 px-3 py-2";
+import { CELL_BASE, CELL_CHECKBOX, CELL_WITH_WRAP, CELL_WORKFLOW } from "../styles/cellStyles";
 
 // Define the specific type for alt text test cases
 type AltTextTestCase = Doc<"altTextAriaLabelTestCases"> & {

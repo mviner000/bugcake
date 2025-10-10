@@ -18,11 +18,8 @@ import {
   TableColumn,
   BaseTestCase,
 } from "@/components/sheet/common/types/testCaseTypes";
+import { CELL_BASE, CELL_CHECKBOX, CELL_WITH_WRAP } from "../styles/cellStyles";
 
-// Centralized className constants
-const CELL_BASE = "border border-gray-300 px-3 py-2 text-sm text-gray-900";
-const CELL_CHECKBOX = "border border-gray-300 px-2 py-2 text-center";
-const CELL_WITH_WRAP = `${CELL_BASE} whitespace-pre-wrap`;
 
 // Define the specific type for functionality test cases
 type FunctionalityTestCase = Doc<"functionalityTestCases"> & BaseTestCase;
