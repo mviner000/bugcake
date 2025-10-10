@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Doc } from "convex/_generated/dataModel";
-import { TableColumn } from "@/types/testCaseTypes";
+import { TableColumn } from "@/components/sheet/common/types/testCaseTypes";
 
 interface FormField {
   key: string;

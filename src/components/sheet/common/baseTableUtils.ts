@@ -5,7 +5,7 @@ import {
   WorkflowStatus,
   StatusCounts,
   GroupedTestCases,
-} from "@/types/testCaseTypes";
+} from "@/components/sheet/common/types/testCaseTypes";
 
 /**
  * Calculate status counts from test cases

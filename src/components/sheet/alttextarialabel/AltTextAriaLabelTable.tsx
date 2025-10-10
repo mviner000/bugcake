@@ -14,7 +14,13 @@ import {
   WorkflowStatus, 
   NewAltTextAriaLabelTestCase,
   TableColumn,
-} from "@/types/testCaseTypes";
+} from "@/components/sheet/common/types/testCaseTypes";
+
+// Centralized className constants
+const CELL_BASE = "border border-gray-300 px-3 py-2 text-sm text-gray-900";
+const CELL_CHECKBOX = "border border-gray-300 px-2 py-2 text-center";
+const CELL_WITH_WRAP = `${CELL_BASE} whitespace-pre-wrap`;
+const CELL_WORKFLOW = "border border-gray-300 px-3 py-2";
 
 // Define the specific type for alt text test cases
 type AltTextTestCase = Doc<"altTextAriaLabelTestCases"> & {
@@ -213,7 +219,7 @@ export function AltTextAriaLabelTable({
         <td
           data-column="checkbox"
           style={{ width: `${getColumnWidth("checkbox", 30)}px` }}
-          className="border border-gray-300 px-2 py-2 text-center"
+          className={CELL_CHECKBOX}
         >
           <input
             type="checkbox"
@@ -225,49 +231,49 @@ export function AltTextAriaLabelTable({
         <td
           data-column="workflowStatus"
           style={{ width: `${getColumnWidth("workflowStatus", 200)}px` }}
-          className="border border-gray-300 px-3 py-2"
+          className={CELL_WORKFLOW}
         >
           <WorkflowStatusBadge status={testCase.workflowStatus} />
         </td>
         <td
           data-column="tcId"
           style={{ width: `${getColumnWidth("tcId", 80)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+          className={CELL_BASE}
         >
           TC_{String(testCase.sequenceNumber).padStart(3, '0')}
         </td>
         <td
           data-column="persona"
           style={{ width: `${getColumnWidth("persona", 150)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+          className={CELL_BASE}
         >
           {testCase.persona}
         </td>
         <td
           data-column="module"
           style={{ width: `${getColumnWidth("module", 150)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+          className={CELL_BASE}
         >
           {testCase.moduleName}
         </td>
         <td
           data-column="subModule"
           style={{ width: `${getColumnWidth("subModule", 150)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+          className={CELL_BASE}
         >
           {testCase.subModule ?? "N/A"}
         </td>
         <td
           data-column="pageSection"
           style={{ width: `${getColumnWidth("pageSection", 180)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+          className={CELL_BASE}
         >
           {testCase.pageSection}
         </td>
         <td
           data-column="wireframeLink"
           style={{ width: `${getColumnWidth("wireframeLink", 180)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+          className={CELL_BASE}
         >
           {testCase.wireframeLink ? (
             <a
@@ -285,7 +291,7 @@ export function AltTextAriaLabelTable({
         <td
           data-column="imagesIcons"
           style={{ width: `${getColumnWidth("imagesIcons", 150)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+          className={CELL_BASE}
         >
           {testCase.imagesIcons ? (
             <img
@@ -300,70 +306,70 @@ export function AltTextAriaLabelTable({
         <td
           data-column="remarks"
           style={{ width: `${getColumnWidth("remarks", 200)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900 whitespace-pre-wrap"
+          className={CELL_WITH_WRAP}
         >
           {testCase.remarks ?? "N/A"}
         </td>
         <td
           data-column="altTextAriaLabel"
           style={{ width: `${getColumnWidth("altTextAriaLabel", 250)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900 whitespace-pre-wrap"
+          className={CELL_WITH_WRAP}
         >
           {testCase.altTextAriaLabel}
         </td>
         <td
           data-column="seImplementation"
           style={{ width: `${getColumnWidth("seImplementation", 150)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+          className={CELL_BASE}
         >
           <SEImplementationBadge status={testCase.seImplementation} />
         </td>
         <td
           data-column="actualResults"
           style={{ width: `${getColumnWidth("actualResults", 200)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900 whitespace-pre-wrap"
+          className={CELL_WITH_WRAP}
         >
           {testCase.actualResults ?? "N/A"}
         </td>
         <td
           data-column="testingStatus"
           style={{ width: `${getColumnWidth("testingStatus", 120)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+          className={CELL_BASE}
         >
           <TestingStatusBadge status={testCase.testingStatus} />
         </td>
         <td
           data-column="executedBy"
           style={{ width: `${getColumnWidth("executedBy", 150)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+          className={CELL_BASE}
         >
           {testCase.executedByName}
         </td>
         <td
           data-column="notes"
           style={{ width: `${getColumnWidth("notes", 200)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900 whitespace-pre-wrap"
+          className={CELL_WITH_WRAP}
         >
           {testCase.notes ?? "N/A"}
         </td>
         <td
           data-column="jiraUserStory"
           style={{ width: `${getColumnWidth("jiraUserStory", 180)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+          className={CELL_BASE}
         >
           {testCase.jiraUserStory ?? "N/A"}
         </td>
         <td
           data-column="createdBy"
           style={{ width: `${getColumnWidth("createdBy", 150)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+          className={CELL_BASE}
         >
           {testCase.createdByName}
         </td>
         <td
           data-column="createdAt"
           style={{ width: `${getColumnWidth("createdAt", 130)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+          className={CELL_BASE}
         >
           {new Date(testCase.createdAt).toLocaleDateString('en-US', {
             month: '2-digit',

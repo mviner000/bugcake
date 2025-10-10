@@ -22,7 +22,7 @@ import {
   GroupedTestCases,
   ModuleCheckboxState,
   ColorConfig,
-} from "@/types/testCaseTypes";
+} from "@/components/sheet/common/types/testCaseTypes";
 
 /**
  * Props for the BaseTable component

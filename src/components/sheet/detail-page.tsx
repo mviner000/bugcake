@@ -10,7 +10,7 @@ import { AltTextAriaLabelTable } from "./alttextarialabel/AltTextAriaLabelTable"
 import { FunctionalityTestCasesTable } from "./functionality/FunctionalityTestCasesTable"; 
 import { Header } from "./Header";
 import { AccessRequest } from "./access-request";
-import { WorkflowStatus } from "@/types/testCaseTypes";
+import { WorkflowStatus } from "@/components/sheet/common/types/testCaseTypes";
 import { Doc, Id } from "convex/_generated/dataModel";
 
 type SheetType = "altTextAriaLabel" | "functionality";

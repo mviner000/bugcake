@@ -17,7 +17,12 @@ import {
   NewFunctionalityTestCase,
   TableColumn,
   BaseTestCase,
-} from "@/types/testCaseTypes";
+} from "@/components/sheet/common/types/testCaseTypes";
+
+// Centralized className constants
+const CELL_BASE = "border border-gray-300 px-3 py-2 text-sm text-gray-900";
+const CELL_CHECKBOX = "border border-gray-300 px-2 py-2 text-center";
+const CELL_WITH_WRAP = `${CELL_BASE} whitespace-pre-wrap`;
 
 // Define the specific type for functionality test cases
 type FunctionalityTestCase = Doc<"functionalityTestCases"> & BaseTestCase;
@@ -198,7 +203,7 @@ export function FunctionalityTestCasesTable({
         <td
           data-column="checkbox"
           style={{ width: `${getColumnWidth("checkbox", 30)}px` }}
-          className="border border-gray-300 px-2 py-2 text-center"
+          className={CELL_CHECKBOX}
         >
           <input
             type="checkbox"
@@ -211,7 +216,7 @@ export function FunctionalityTestCasesTable({
         <td
           data-column="workflowStatus"
           style={{ width: `${getColumnWidth("workflowStatus", 200)}px` }}
-          className="border border-gray-300 px-3 py-2"
+          className={CELL_BASE}
         >
           <WorkflowStatusBadge status={testCase.workflowStatus} />
         </td>
@@ -219,7 +224,7 @@ export function FunctionalityTestCasesTable({
         <td
           data-column="tcId"
           style={{ width: `${getColumnWidth("tcId", 80)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+          className={CELL_BASE}
         >
           TC_{String(testCase.sequenceNumber).padStart(3, '0')}
         </td>
@@ -227,7 +232,7 @@ export function FunctionalityTestCasesTable({
         <td
           data-column="level"
           style={{ width: `${getColumnWidth("level", 100)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+          className={CELL_BASE}
         >
           {testCase.level}
         </td>
@@ -235,7 +240,7 @@ export function FunctionalityTestCasesTable({
         <td
           data-column="scenario"
           style={{ width: `${getColumnWidth("scenario", 120)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+          className={CELL_BASE}
         >
           {testCase.scenario}
         </td>
@@ -243,7 +248,7 @@ export function FunctionalityTestCasesTable({
         <td
           data-column="module"
           style={{ width: `${getColumnWidth("module", 150)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+          className={CELL_BASE}
         >
           {testCase.moduleName}
         </td>
@@ -251,7 +256,7 @@ export function FunctionalityTestCasesTable({
         <td
           data-column="subModule"
           style={{ width: `${getColumnWidth("subModule", 150)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+          className={CELL_BASE}
         >
           {testCase.subModule ?? "N/A"}
         </td>
@@ -259,7 +264,7 @@ export function FunctionalityTestCasesTable({
         <td
           data-column="title"
           style={{ width: `${getColumnWidth("title", 200)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+          className={CELL_BASE}
         >
           {testCase.title}
         </td>
@@ -267,7 +272,7 @@ export function FunctionalityTestCasesTable({
         <td
           data-column="preConditions"
           style={{ width: `${getColumnWidth("preConditions", 180)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900 whitespace-pre-wrap"
+          className={CELL_WITH_WRAP}
         >
           {testCase.preConditions ?? "N/A"}
         </td>
@@ -275,7 +280,7 @@ export function FunctionalityTestCasesTable({
         <td
           data-column="steps"
           style={{ width: `${getColumnWidth("steps", 250)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900 whitespace-pre-wrap"
+          className={CELL_WITH_WRAP}
         >
           {testCase.steps}
         </td>
@@ -283,7 +288,7 @@ export function FunctionalityTestCasesTable({
         <td
           data-column="expectedResults"
           style={{ width: `${getColumnWidth("expectedResults", 250)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900 whitespace-pre-wrap"
+          className={CELL_WITH_WRAP}
         >
           {testCase.expectedResults}
         </td>
@@ -291,7 +296,7 @@ export function FunctionalityTestCasesTable({
         <td
           data-column="status"
           style={{ width: `${getColumnWidth("status", 120)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+          className={CELL_BASE}
         >
           <TestingStatusBadge status={testCase.status} />
         </td>
@@ -299,7 +304,7 @@ export function FunctionalityTestCasesTable({
         <td
           data-column="executedBy"
           style={{ width: `${getColumnWidth("executedBy", 150)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+          className={CELL_BASE}
         >
           {testCase.executedByName}
         </td>
@@ -307,7 +312,7 @@ export function FunctionalityTestCasesTable({
         <td
           data-column="jiraUserStory"
           style={{ width: `${getColumnWidth("jiraUserStory", 180)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+          className={CELL_BASE}
         >
           {testCase.jiraUserStory}
         </td>
@@ -315,7 +320,7 @@ export function FunctionalityTestCasesTable({
         <td
           data-column="createdBy"
           style={{ width: `${getColumnWidth("createdBy", 150)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+          className={CELL_BASE}
         >
           {testCase.createdByName}
         </td>
@@ -323,7 +328,7 @@ export function FunctionalityTestCasesTable({
         <td
           data-column="createdAt"
           style={{ width: `${getColumnWidth("createdAt", 130)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-900"
+          className={CELL_BASE}
         >
           {new Date(testCase.createdAt).toLocaleDateString('en-US', {
             month: '2-digit',
