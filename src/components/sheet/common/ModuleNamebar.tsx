@@ -20,8 +20,11 @@ interface ModuleNamebarProps {
   isChecked: boolean
   isIndeterminate: boolean
   onCheckboxChange: (checked: boolean) => void
-  itemCount?: number // ✅ optional
-  members?: TeamMember[] // ✅ added to receive members
+  itemCount?: number 
+  members?: TeamMember[] 
+  // 💡 NEW: The required IDs for the request modal
+  moduleId: string 
+  sheetId: string 
 }
 
 export function ModuleNamebar({
@@ -32,7 +35,10 @@ export function ModuleNamebar({
   onCheckboxChange,
   className = "",
   itemCount,
-  members, // ✅ destructured
+  members,
+  // 💡 Destructure the new props
+  moduleId,
+  sheetId, 
 }: ModuleNamebarProps) {
   const [avatarLeftPosition, setAvatarLeftPosition] = useState(1000)
   const [addButtonLeftPosition, setAddButtonLeftPosition] = useState(112)
@@ -109,16 +115,18 @@ export function ModuleNamebar({
   return (
     <>
     <AssigneeModal
-        open={isAssigneeModalOpen}
-        onOpenChange={setIsAssigneeModalOpen}
-        moduleName="modulename"
-      />
+      open={isAssigneeModalOpen}
+      onOpenChange={setIsAssigneeModalOpen}
+      moduleName={title} // Use the actual title prop
+    />
     <RequestForModuleAccessModal
         open={isRequestModalOpen}
         onOpenChange={setIsRequestModalOpen}
-        moduleName="modulename"
-        sheetId="demo-sheet-id"
-      />
+        moduleName={title} // Use the actual title prop
+        // 💡 FIX: Pass the actual moduleId and sheetId props
+        moduleId={moduleId} 
+        sheetId={sheetId}
+    />
     <div
       className={`mt-[4px] absolute inset-0 w-full ${className} border-b-4 z-1`}
       style={{

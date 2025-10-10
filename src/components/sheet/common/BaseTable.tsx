@@ -351,15 +351,18 @@ export function BaseTable<T extends BaseTestCase>({
                         <tr style={{ height: '46px' }}>
                         <td colSpan={columns.length} className="p-0 relative">
                             <ModuleNamebar
-                            title={`${moduleName}`}
-                            itemCount={moduleTestCases.length}
-                            bgColor={color.bgColor}
-                            textColor={color.textColor}
-                            isChecked={isChecked}
-                            isIndeterminate={isIndeterminate}
-                            onCheckboxChange={(checked) =>
-                                handleModuleCheckboxChange(moduleId, checked)
-                            }
+                                title={`${moduleName}`}
+                                itemCount={moduleTestCases.length}
+                                bgColor={color.bgColor}
+                                textColor={color.textColor}
+                                isChecked={isChecked}
+                                isIndeterminate={isIndeterminate}
+                                onCheckboxChange={(checked) =>
+                                    handleModuleCheckboxChange(moduleId, checked)
+                                }
+                                // 💡 THE CRITICAL FIX IS HERE
+                                moduleId={moduleId} 
+                                sheetId={sheetId} // sheetId is already a prop of BaseTable
                             />
                         </td>
                         </tr>

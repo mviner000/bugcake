@@ -2607,60 +2607,6 @@ export const getModulesForSheet = query({
 // =======================================================
 
 /**
- * Allows an authenticated user to request to be an assignee for a specific module.
- */
-export const requestModuleAccess = mutation({
-  args: {
-    moduleId: v.id("modules"),
-    sheetId: v.id("sheets"), // Included to easily check permissions later
-    message: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    // 1. Authentication check
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("You must be signed in to request access.");
-    }
-
-    // 2. Check for existing requests to prevent duplicates
-    const existingRequest = await ctx.db
-      .query("moduleAccessRequests")
-      .withIndex("by_module_and_requester", (q) =>
-        q.eq("moduleId", args.moduleId).eq("requesterId", userId)
-      )
-      .unique();
-
-    if (existingRequest) {
-      if (existingRequest.status === "pending") {
-        throw new Error("You already have a pending request for this module.");
-      }
-      if (existingRequest.status === "approved") {
-        throw new Error("You are already an assignee for this module.");
-      }
-      // If the request was previously "declined", allow the user to re-request.
-      if (existingRequest.status === "declined") {
-        await ctx.db.patch(existingRequest._id, {
-          status: "pending",
-          message: args.message,
-        });
-        return { success: true, message: "Your access request has been resubmitted." };
-      }
-    }
-
-    // 3. Create a new request record
-    await ctx.db.insert("moduleAccessRequests", {
-      moduleId: args.moduleId,
-      sheetId: args.sheetId,
-      requesterId: userId,
-      status: "pending",
-      message: args.message,
-    });
-
-    return { success: true, message: "Your request to be an assignee has been submitted." };
-  },
-});
-
-/**
  * Retrieves all pending module access requests for a given sheet.
  * Only users with 'owner' or 'qa_lead' roles for the sheet can view these.
  */
@@ -2805,3 +2751,54 @@ export const declineModuleAccessRequest = mutation({
     return { success: true, message: "Module access request declined." };
   },
 });
+
+/**
+ * Creates a new module access request and sets the status to 'pending'.
+ */
+export const requestModuleAccess = mutation({
+  args: {
+    moduleId: v.id("modules"),
+    sheetId: v.id("sheets"),
+    message: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // 1. Authorization: Ensure the user is logged in
+    const requesterId = await getAuthUserId(ctx);
+    if (!requesterId) {
+      throw new Error("Authentication required to request module access.");
+    }
+
+    // 2. Normalize the IDs
+    const normalizedRequesterId = ctx.db.normalizeId("users", requesterId);
+    if (!normalizedRequesterId) {
+        throw new Error("Invalid user ID.");
+    }
+
+    // 3. Check for an existing pending request to prevent spam
+    const existingRequest = await ctx.db
+      .query("moduleAccessRequests")
+      .withIndex("by_module_and_requester", (q) =>
+        q.eq("moduleId", args.moduleId).eq("requesterId", normalizedRequesterId)
+      )
+      .filter((q) => q.eq(q.field("status"), "pending"))
+      .unique();
+
+    if (existingRequest) {
+      return { success: false, message: "A pending request for this module already exists." };
+    }
+
+    // 4. Insert the new request document
+    const requestId = await ctx.db.insert("moduleAccessRequests", {
+      moduleId: args.moduleId,
+      sheetId: args.sheetId,
+      requesterId: normalizedRequesterId,
+      status: "pending",
+      message: args.message,
+    });
+
+    // You may want to trigger a notification action here, e.g., to the sheet owner
+
+    // 💡 THE FIX IS HERE: Removed .id from requestId
+    return { success: true, requestId: requestId }; 
+  },
+})
