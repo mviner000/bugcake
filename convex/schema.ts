@@ -403,5 +403,35 @@ export default defineSchema({
     .index("by_sheet_and_user", ["sheetId", "userId"])
     // Index for quickly fetching all users who have access to a specific sheet (Critical for Share Modal)
     .index("by_sheet", ["sheetId"]),
+
+    // =======================================================
+  // NEW 'moduleAccessRequests' table
+  // =======================================================
+  moduleAccessRequests: defineTable({
+    // Foreign key to the module the user is requesting access to
+    moduleId: v.id("modules"),
+    
+    // Foreign key to the sheet this module belongs to for efficient querying.
+    sheetId: v.id("sheets"),
+
+    // The user who is making the request
+    requesterId: v.id("users"),
+
+    // The status of the request
+    status: v.union(
+      v.literal("pending"),
+      v.literal("approved"),
+      v.literal("declined")
+    ),
+
+    // Optional message from the requester for context
+    message: v.optional(v.string()),
+  })
+    // Index to find all requests for a specific sheet (for admins/owners to review)
+    .index("by_sheetId", ["sheetId"])
+    // Index to find all requests made by a specific user (for their dashboard)
+    .index("by_requesterId", ["requesterId"])
+    // Index to prevent duplicate requests and quickly find a specific request
+    .index("by_module_and_requester", ["moduleId", "requesterId"]),
 });
 

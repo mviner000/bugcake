@@ -2601,3 +2601,207 @@ export const getModulesForSheet = query({
     return modules;
   },
 });
+
+// =======================================================
+// MODULE ASSIGNEE ACCESS REQUESTS
+// =======================================================
+
+/**
+ * Allows an authenticated user to request to be an assignee for a specific module.
+ */
+export const requestModuleAccess = mutation({
+  args: {
+    moduleId: v.id("modules"),
+    sheetId: v.id("sheets"), // Included to easily check permissions later
+    message: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // 1. Authentication check
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("You must be signed in to request access.");
+    }
+
+    // 2. Check for existing requests to prevent duplicates
+    const existingRequest = await ctx.db
+      .query("moduleAccessRequests")
+      .withIndex("by_module_and_requester", (q) =>
+        q.eq("moduleId", args.moduleId).eq("requesterId", userId)
+      )
+      .unique();
+
+    if (existingRequest) {
+      if (existingRequest.status === "pending") {
+        throw new Error("You already have a pending request for this module.");
+      }
+      if (existingRequest.status === "approved") {
+        throw new Error("You are already an assignee for this module.");
+      }
+      // If the request was previously "declined", allow the user to re-request.
+      if (existingRequest.status === "declined") {
+        await ctx.db.patch(existingRequest._id, {
+          status: "pending",
+          message: args.message,
+        });
+        return { success: true, message: "Your access request has been resubmitted." };
+      }
+    }
+
+    // 3. Create a new request record
+    await ctx.db.insert("moduleAccessRequests", {
+      moduleId: args.moduleId,
+      sheetId: args.sheetId,
+      requesterId: userId,
+      status: "pending",
+      message: args.message,
+    });
+
+    return { success: true, message: "Your request to be an assignee has been submitted." };
+  },
+});
+
+/**
+ * Retrieves all pending module access requests for a given sheet.
+ * Only users with 'owner' or 'qa_lead' roles for the sheet can view these.
+ */
+export const getPendingModuleAccessRequests = query({
+  args: {
+    sheetId: v.id("sheets"),
+  },
+  handler: async (ctx, args) => {
+    // 1. Authorization check
+    const currentUserId = await getAuthUserId(ctx);
+    if (!currentUserId) {
+      throw new Error("Authentication required.");
+    }
+
+    const currentUserPermission = await ctx.db
+      .query("sheetPermissions")
+      .withIndex("by_sheet_and_user", (q) =>
+        q.eq("sheetId", args.sheetId).eq("userId", currentUserId)
+      )
+      .unique();
+
+    // Only owners and qa_leads are permitted to view requests
+    if (!currentUserPermission || !["owner", "qa_lead"].includes(currentUserPermission.role)) {
+      // Return an empty array instead of throwing an error for a better UX
+      return [];
+    }
+
+    // 2. Fetch all requests with "pending" status for the specified sheet
+    const pendingRequests = await ctx.db
+      .query("moduleAccessRequests")
+      .withIndex("by_sheetId", (q) => q.eq("sheetId", args.sheetId))
+      .filter((q) => q.eq(q.field("status"), "pending"))
+      .collect();
+
+    // 3. Enhance requests with details about the requester and the module
+    const requestsWithDetails = await Promise.all(
+      pendingRequests.map(async (request) => {
+        const requester = await ctx.db.get(request.requesterId);
+        const module = await ctx.db.get(request.moduleId);
+
+        return {
+          ...request,
+          requesterName: requester?.name || requester?.email || "Unknown User",
+          requesterEmail: requester?.email || "N/A",
+          requesterImage: requester?.image,
+          moduleName: module?.name || "Unknown Module",
+        };
+      })
+    );
+
+    return requestsWithDetails;
+  },
+});
+
+/**
+ * Approves a module access request. This updates the request status
+ * and adds the user to the module's `assigneeIds` array.
+ */
+export const approveModuleAccessRequest = mutation({
+  args: {
+    requestId: v.id("moduleAccessRequests"),
+  },
+  handler: async (ctx, args) => {
+    // 1. Authorization check
+    const currentUserId = await getAuthUserId(ctx);
+    if (!currentUserId) {
+      throw new Error("Authentication required.");
+    }
+
+    const request = await ctx.db.get(args.requestId);
+    if (!request || request.status !== 'pending') {
+      throw new Error("Access request not found or is not pending.");
+    }
+
+    const currentUserPermission = await ctx.db
+      .query("sheetPermissions")
+      .withIndex("by_sheet_and_user", (q) =>
+        q.eq("sheetId", request.sheetId).eq("userId", currentUserId)
+      )
+      .unique();
+
+    if (!currentUserPermission || !["owner", "qa_lead"].includes(currentUserPermission.role)) {
+      throw new Error("You do not have permission to approve requests for this sheet.");
+    }
+
+    // 2. Update the request status to "approved"
+    await ctx.db.patch(args.requestId, { status: "approved" });
+
+    // 3. Add the user to the module's assignees list
+    const module = await ctx.db.get(request.moduleId);
+    if (!module) {
+      console.warn(`Module with ID ${request.moduleId} not found while approving request ${args.requestId}`);
+      return { success: true, message: "Request approved, but the associated module was not found." };
+    }
+
+    const currentAssignees = module.assigneeIds || [];
+    
+    // ✅ FIX: Compare ID types directly using '===' instead of '.equals()'
+    if (!currentAssignees.some(id => id === request.requesterId)) {
+      await ctx.db.patch(request.moduleId, {
+        assigneeIds: [...currentAssignees, request.requesterId],
+      });
+    }
+
+    return { success: true, message: "Module access request approved." };
+  },
+});
+
+/**
+ * Declines a pending module access request.
+ */
+export const declineModuleAccessRequest = mutation({
+  args: {
+    requestId: v.id("moduleAccessRequests"),
+  },
+  handler: async (ctx, args) => {
+    // 1. Authorization check
+    const currentUserId = await getAuthUserId(ctx);
+    if (!currentUserId) {
+      throw new Error("Authentication required.");
+    }
+
+    const request = await ctx.db.get(args.requestId);
+    if (!request || request.status !== 'pending') {
+      throw new Error("Access request not found or is not pending.");
+    }
+
+    const currentUserPermission = await ctx.db
+      .query("sheetPermissions")
+      .withIndex("by_sheet_and_user", (q) =>
+        q.eq("sheetId", request.sheetId).eq("userId", currentUserId)
+      )
+      .unique();
+
+    if (!currentUserPermission || !["owner", "qa_lead"].includes(currentUserPermission.role)) {
+      throw new Error("You do not have permission to decline requests for this sheet.");
+    }
+
+    // 2. Update the request status to "declined"
+    await ctx.db.patch(args.requestId, { status: "declined" });
+
+    return { success: true, message: "Module access request declined." };
+  },
+});
