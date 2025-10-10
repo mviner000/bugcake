@@ -9,6 +9,7 @@ import { SEImplementationBadge } from "../common/SEImplementationBadge";
 import { ResizeHandle } from "../common/ResizeHandle";
 import { BaseTable } from "../common/BaseTable";
 import { calculateStatusCounts } from "../common/baseTableUtils";
+import { AddNewTestCaseForm } from "../common/AddNewTestCaseForm";
 import { 
   WorkflowStatus, 
   NewAltTextAriaLabelTestCase,
@@ -384,240 +385,143 @@ export function AltTextAriaLabelTable({
   }) => {
     const { getColumnWidth } = helpers;
 
+    // Define form fields for the AddNewTestCaseForm component
+    const formFields = [
+      {
+        key: 'persona',
+        type: 'select' as const,
+        value: newTestCase.persona,
+        options: [
+          { value: 'Super Admin', label: 'Super Admin' },
+          { value: 'Admin', label: 'Admin' },
+          { value: 'User', label: 'User' },
+          { value: 'Employee', label: 'Employee' },
+          { value: 'Reporting Manager', label: 'Reporting Manager' },
+          { value: 'Manager', label: 'Manager' },
+        ],
+      },
+      {
+        key: 'module',
+        type: 'select' as const,
+        value: newTestCase.module,
+        required: true,
+      },
+      {
+        key: 'subModule',
+        type: 'text' as const,
+        value: newTestCase.subModule,
+        placeholder: 'Sub Module',
+      },
+      {
+        key: 'pageSection',
+        type: 'text' as const,
+        value: newTestCase.pageSection,
+        placeholder: 'Page/Section *',
+        required: true,
+      },
+      {
+        key: 'wireframeLink',
+        type: 'url' as const,
+        value: newTestCase.wireframeLink,
+        placeholder: 'Wireframe Link',
+      },
+      {
+        key: 'imagesIcons',
+        type: 'url' as const,
+        value: newTestCase.imagesIcons,
+        placeholder: 'Image URL',
+      },
+      {
+        key: 'remarks',
+        type: 'textarea' as const,
+        value: newTestCase.remarks,
+        placeholder: 'Remarks',
+        rows: 2,
+      },
+      {
+        key: 'altTextAriaLabel',
+        type: 'textarea' as const,
+        value: newTestCase.altTextAriaLabel,
+        placeholder: 'Alt Text / Aria Label *',
+        rows: 2,
+        required: true,
+      },
+      {
+        key: 'seImplementation',
+        type: 'select' as const,
+        value: newTestCase.seImplementation,
+        options: [
+          { value: 'Not yet', label: 'Not yet' },
+          { value: 'Ongoing', label: 'Ongoing' },
+          { value: 'Done', label: 'Done' },
+          { value: 'Has Concerns', label: 'Has Concerns' },
+          { value: 'To Update', label: 'To Update' },
+          { value: 'Outdated', label: 'Outdated' },
+          { value: 'Not Available', label: 'Not Available' },
+        ],
+      },
+      {
+        key: 'actualResults',
+        type: 'textarea' as const,
+        value: newTestCase.actualResults,
+        placeholder: 'Actual Results',
+        rows: 2,
+      },
+      {
+        key: 'testingStatus',
+        type: 'select' as const,
+        value: newTestCase.testingStatus,
+        options: [
+          { value: 'Passed', label: 'Passed' },
+          { value: 'Failed', label: 'Failed' },
+          { value: 'Not Run', label: 'Not Run' },
+          { value: 'Blocked', label: 'Blocked' },
+          { value: 'Not Available', label: 'Not Available' },
+        ],
+      },
+      {
+        key: 'executedBy',
+        type: 'readonly' as const,
+        value: 'N/A',
+      },
+      {
+        key: 'notes',
+        type: 'textarea' as const,
+        value: newTestCase.notes,
+        placeholder: 'Notes',
+        rows: 2,
+      },
+      {
+        key: 'jiraUserStory',
+        type: 'text' as const,
+        value: newTestCase.jiraUserStory,
+        placeholder: 'Jira User Story',
+      },
+      {
+        key: 'createdBy',
+        type: 'readonly' as const,
+        value: 'Current User',
+      },
+      {
+        key: 'createdAt',
+        type: 'readonly' as const,
+        value: 'Today',
+      },
+    ];
+
+    const handleFieldChange = (key: string, value: string) => {
+      setNewTestCase({ ...newTestCase, [key]: value });
+    };
+
     return (
-      <tr className="bg-blue-50">
-        <td
-          data-column="checkbox"
-          style={{ width: `${getColumnWidth("checkbox", 30)}px` }}
-          className="border border-gray-300 px-2 py-2 text-center"
-        >
-        </td>
-        <td
-          data-column="workflowStatus"
-          style={{ width: `${getColumnWidth("workflowStatus", 200)}px` }}
-          className="border border-gray-300 px-3 py-2"
-        >
-          <WorkflowStatusBadge status="Open" />
-        </td>
-        <td
-          data-column="tcId"
-          style={{ width: `${getColumnWidth("tcId", 80)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-500"
-        >
-          TC_{String(testCases.length + 1).padStart(3, '0')}
-        </td>
-        <td
-          data-column="persona"
-          style={{ width: `${getColumnWidth("persona", 150)}px` }}
-          className="border border-gray-300 px-3 py-2"
-        >
-          <select
-            value={newTestCase.persona}
-            onChange={(e) => setNewTestCase({ ...newTestCase, persona: e.target.value as NewAltTextAriaLabelTestCase['persona'] })}
-            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="Super Admin">Super Admin</option>
-            <option value="Admin">Admin</option>
-            <option value="User">User</option>
-            <option value="Employee">Employee</option>
-            <option value="Reporting Manager">Reporting Manager</option>
-            <option value="Manager">Manager</option>
-          </select>
-        </td>
-        <td
-          data-column="module"
-          style={{ width: `${getColumnWidth("module", 150)}px` }}
-          className="border border-gray-300 px-3 py-2"
-        >
-          <select
-            value={newTestCase.module}
-            onChange={(e) => setNewTestCase({ ...newTestCase, module: e.target.value })}
-            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Select Module</option>
-            {modules.map(module => (
-              <option key={module._id} value={module._id}>
-                {module.name}
-              </option>
-            ))}
-          </select>
-        </td>
-        <td
-          data-column="subModule"
-          style={{ width: `${getColumnWidth("subModule", 150)}px` }}
-          className="border border-gray-300 px-3 py-2"
-        >
-          <input
-            type="text"
-            value={newTestCase.subModule}
-            onChange={(e) => setNewTestCase({ ...newTestCase, subModule: e.target.value })}
-            placeholder="Sub Module"
-            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </td>
-        <td
-          data-column="pageSection"
-          style={{ width: `${getColumnWidth("pageSection", 180)}px` }}
-          className="border border-gray-300 px-3 py-2"
-        >
-          <input
-            type="text"
-            value={newTestCase.pageSection}
-            onChange={(e) => setNewTestCase({ ...newTestCase, pageSection: e.target.value })}
-            placeholder="Page/Section *"
-            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </td>
-        <td
-          data-column="wireframeLink"
-          style={{ width: `${getColumnWidth("wireframeLink", 180)}px` }}
-          className="border border-gray-300 px-3 py-2"
-        >
-          <input
-            type="url"
-            value={newTestCase.wireframeLink}
-            onChange={(e) => setNewTestCase({ ...newTestCase, wireframeLink: e.target.value })}
-            placeholder="Wireframe Link"
-            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </td>
-        <td
-          data-column="imagesIcons"
-          style={{ width: `${getColumnWidth("imagesIcons", 150)}px` }}
-          className="border border-gray-300 px-3 py-2"
-        >
-          <input
-            type="url"
-            value={newTestCase.imagesIcons}
-            onChange={(e) => setNewTestCase({ ...newTestCase, imagesIcons: e.target.value })}
-            placeholder="Image URL"
-            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </td>
-        <td
-          data-column="remarks"
-          style={{ width: `${getColumnWidth("remarks", 200)}px` }}
-          className="border border-gray-300 px-3 py-2"
-        >
-          <textarea
-            value={newTestCase.remarks}
-            onChange={(e) => setNewTestCase({ ...newTestCase, remarks: e.target.value })}
-            placeholder="Remarks"
-            rows={2}
-            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </td>
-        <td
-          data-column="altTextAriaLabel"
-          style={{ width: `${getColumnWidth("altTextAriaLabel", 250)}px` }}
-          className="border border-gray-300 px-3 py-2"
-        >
-          <textarea
-            value={newTestCase.altTextAriaLabel}
-            onChange={(e) => setNewTestCase({ ...newTestCase, altTextAriaLabel: e.target.value })}
-            placeholder="Alt Text / Aria Label *"
-            rows={2}
-            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </td>
-        <td
-          data-column="seImplementation"
-          style={{ width: `${getColumnWidth("seImplementation", 150)}px` }}
-          className="border border-gray-300 px-3 py-2"
-        >
-          <select
-            value={newTestCase.seImplementation}
-            onChange={(e) => setNewTestCase({ ...newTestCase, seImplementation: e.target.value as NewAltTextAriaLabelTestCase['seImplementation'] })}
-            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="Not yet">Not yet</option>
-            <option value="Ongoing">Ongoing</option>
-            <option value="Done">Done</option>
-            <option value="Has Concerns">Has Concerns</option>
-            <option value="To Update">To Update</option>
-            <option value="Outdated">Outdated</option>
-            <option value="Not Available">Not Available</option>
-          </select>
-        </td>
-        <td
-          data-column="actualResults"
-          style={{ width: `${getColumnWidth("actualResults", 200)}px` }}
-          className="border border-gray-300 px-3 py-2"
-        >
-          <textarea
-            value={newTestCase.actualResults}
-            onChange={(e) => setNewTestCase({ ...newTestCase, actualResults: e.target.value })}
-            placeholder="Actual Results"
-            rows={2}
-            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </td>
-        <td
-          data-column="testingStatus"
-          style={{ width: `${getColumnWidth("testingStatus", 120)}px` }}
-          className="border border-gray-300 px-3 py-2"
-        >
-          <select
-            value={newTestCase.testingStatus}
-            onChange={(e) => setNewTestCase({ ...newTestCase, testingStatus: e.target.value as NewAltTextAriaLabelTestCase['testingStatus'] })}
-            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="Passed">Passed</option>
-            <option value="Failed">Failed</option>
-            <option value="Not Run">Not Run</option>
-            <option value="Blocked">Blocked</option>
-            <option value="Not Available">Not Available</option>
-          </select>
-        </td>
-        <td
-          data-column="executedBy"
-          style={{ width: `${getColumnWidth("executedBy", 150)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-500"
-        >
-          N/A
-        </td>
-        <td
-          data-column="notes"
-          style={{ width: `${getColumnWidth("notes", 200)}px` }}
-          className="border border-gray-300 px-3 py-2"
-        >
-          <textarea
-            value={newTestCase.notes}
-            onChange={(e) => setNewTestCase({ ...newTestCase, notes: e.target.value })}
-            placeholder="Notes"
-            rows={2}
-            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </td>
-        <td
-          data-column="jiraUserStory"
-          style={{ width: `${getColumnWidth("jiraUserStory", 180)}px` }}
-          className="border border-gray-300 px-3 py-2"
-        >
-          <input
-            type="text"
-            value={newTestCase.jiraUserStory}
-            onChange={(e) => setNewTestCase({ ...newTestCase, jiraUserStory: e.target.value })}
-            placeholder="Jira User Story"
-            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </td>
-        <td
-          data-column="createdBy"
-          style={{ width: `${getColumnWidth("createdBy", 150)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-500"
-        >
-          Current User
-        </td>
-        <td
-          data-column="createdAt"
-          style={{ width: `${getColumnWidth("createdAt", 130)}px` }}
-          className="border border-gray-300 px-3 py-2 text-sm text-gray-500"
-        >
-          Today
-        </td>
-        <td colSpan={1}></td>
-      </tr>
+      <AddNewTestCaseForm
+        columns={columns}
+        formFields={formFields}
+        onFieldChange={handleFieldChange}
+        getColumnWidth={getColumnWidth}
+        modules={modules}
+        nextSequenceNumber={testCases.length + 1}
+      />
     );
   };
 
