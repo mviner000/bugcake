@@ -1,6 +1,7 @@
 // src/components/sheet/common/ModuleNamebar.tsx
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useState, useEffect, useRef } from "react"
 
 interface TeamMember {
   name: string
@@ -30,6 +31,44 @@ export function ModuleNamebar({
   itemCount,
   members, // ✅ destructured
 }: ModuleNamebarProps) {
+  const [avatarLeftPosition, setAvatarLeftPosition] = useState(1000)
+  const [addButtonLeftPosition, setAddButtonLeftPosition] = useState(112)
+  const titleButtonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    const updatePosition = () => {
+      const screenWidth = window.innerWidth
+      const titleButtonWidth = titleButtonRef.current?.offsetWidth || 0
+      
+      // Calculate dynamic position based on screen width
+      // MODIFIED: Reduced offset from 300px to 180px to move avatars closer to the right edge
+      const calculatedAvatarPosition = screenWidth - 180 
+      
+      // Calculate the start position for the Add Button:
+      // Title Button's 'ml-11' (44px) + its 'left-4' (16px) + its width = 60px + width
+      const calculatedAddButtonPosition = 60 + titleButtonWidth 
+
+      setAvatarLeftPosition(calculatedAvatarPosition)
+      setAddButtonLeftPosition(calculatedAddButtonPosition)
+    }
+
+    updatePosition()
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', updatePosition) // Update on scroll for sticky positioning
+    
+    // Use ResizeObserver to track title button width changes
+    const resizeObserver = new ResizeObserver(updatePosition)
+    if (titleButtonRef.current) {
+      resizeObserver.observe(titleButtonRef.current)
+    }
+    
+    return () => {
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', updatePosition)
+      resizeObserver.disconnect()
+    }
+  }, [])
+
   const defaultMembers: TeamMember[] = [
     {
       name: "Team Member 1",
@@ -83,6 +122,7 @@ export function ModuleNamebar({
 
       {/* Title Button */}
       <button
+        ref={titleButtonRef}
         className="ml-11 sticky left-4 top-3/4 -translate-y-3/4 z-10 bg-blue-500 text-white px-3 py-[2.6px] border border-blue-500 transition-colors rounded-none"
         style={{ lineHeight: "normal", fontSize: "14px" }}
       >
@@ -99,13 +139,21 @@ export function ModuleNamebar({
 
       {/* Add Button */}
       <button
-        className="ml-4 cursor-pointer sticky left-28 top-3/4 -translate-y-[65%] z-10 border border-[#333333] text-[#333333] bg-transparent px-2 py-1 rounded hover:bg-blue-500 hover:text-white transition-colors"
-        style={{ lineHeight: "normal", fontSize: "14px" }}
+        className="ml-4 cursor-pointer sticky top-3/4 -translate-y-[65%] z-10 border border-[#333333] text-[#333333] bg-transparent px-2 py-1 rounded hover:bg-blue-500 hover:text-white transition-colors"
+        style={{ 
+          lineHeight: "normal", 
+          fontSize: "14px", 
+          left: `calc(${addButtonLeftPosition}px - 28px)` 
+        }}
       >
         <span className="font-bold">+ Add New</span>
       </button>
 
-      <button className="flex ml-4 cursor-pointer sticky left-52 top-3/4 -translate-y-[150%] z-10 px-2 py-1 transition-colors">
+      {/* Avatars - POSITIONING MODIFIED */}
+      <button 
+        className="flex ml-4 cursor-pointer sticky top-3/4 -translate-y-[150%] z-10 px-2 py-1 transition-colors"
+        style={{ left: `${avatarLeftPosition}px` }}
+      >
         {/* <span className="mt-1 text-[12px] px-1">assigned to:</span> */}
         {teamMembers.map((member, index) => (
           <Avatar key={index} className="h-6 w-6 border-2 border-background">

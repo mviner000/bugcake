@@ -9,7 +9,6 @@ import { formatWithNumbering } from "../../../utils/formatUtils";
 import { TestingStatusBadge } from "../common/StatusBadgeHelper";
 import { WorkflowStatusBadge } from "../common/WorkflowStatusBadge";
 import { ResizeHandle } from "../common/ResizeHandle";
-import { BaseTable } from "../common/BaseTable";
 import { calculateStatusCounts } from "../common/baseTableUtils";
 import { AddNewTestCaseForm } from "../common/AddNewTestCaseForm";
 import { 
@@ -19,6 +18,7 @@ import {
   BaseTestCase,
 } from "@/components/sheet/common/types/testCaseTypes";
 import { CELL_BASE, CELL_CHECKBOX, CELL_WITH_WRAP } from "../styles/cellStyles";
+import { BaseTable } from "../common/BaseTable";
 
 
 // Define the specific type for functionality test cases
