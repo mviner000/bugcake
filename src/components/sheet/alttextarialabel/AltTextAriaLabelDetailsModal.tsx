@@ -20,8 +20,7 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { DetailsModal } from "@/components/ui/mod/DetailsModal";
 import { ContentSection, MetadataField } from "@/components/ui/mod/ModalHelpers";
-import { ApprovalButtons } from "./ApprovalButtons"; // ✅ Import the new component
-
+import { ApprovalButtons } from "../common/ApprovalButtons";
 interface AltTextAriaLabelDetailsModalProps {
   sheetId: string;
 }

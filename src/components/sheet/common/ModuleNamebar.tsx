@@ -1,14 +1,23 @@
 // src/components/sheet/common/ModuleNamebar.tsx
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+
+interface TeamMember {
+  name: string
+  avatar: string
+  fallback: string
+}
+
 interface ModuleNamebarProps {
-  title: string;
-  bgColor: string;
-  textColor: string;
-  className?: string;
-  isChecked: boolean;
-  isIndeterminate: boolean;
-  onCheckboxChange: (checked: boolean) => void;
-  itemCount?: number; // ✅ optional
+  title: string
+  bgColor: string
+  textColor: string
+  className?: string
+  isChecked: boolean
+  isIndeterminate: boolean
+  onCheckboxChange: (checked: boolean) => void
+  itemCount?: number // ✅ optional
+  members?: TeamMember[] // ✅ added to receive members
 }
 
 export function ModuleNamebar({
@@ -19,7 +28,38 @@ export function ModuleNamebar({
   onCheckboxChange,
   className = "",
   itemCount,
+  members, // ✅ destructured
 }: ModuleNamebarProps) {
+  const defaultMembers: TeamMember[] = [
+    {
+      name: "Team Member 1",
+      avatar: "https://api.dicebear.com/7.x/initials/svg?seed=TM",
+      fallback: "TM",
+    },
+    {
+      name: "Team Member 2",
+      avatar: "https://api.dicebear.com/7.x/initials/svg?seed=JD",
+      fallback: "JD",
+    },
+    {
+      name: "Team Member 3",
+      avatar: "https://api.dicebear.com/7.x/initials/svg?seed=SK",
+      fallback: "SK",
+    },
+    {
+      name: "Team Member 4",
+      avatar: "https://api.dicebear.com/7.x/initials/svg?seed=AL",
+      fallback: "AL",
+    },
+    {
+      name: "Team Member 5",
+      avatar: "https://api.dicebear.com/7.x/initials/svg?seed=MR",
+      fallback: "MR",
+    },
+  ]
+
+  const teamMembers = members || defaultMembers
+
   return (
     <div
       className={`mt-[4px] absolute inset-0 w-full ${className} border-b-4 z-1`}
@@ -35,7 +75,7 @@ export function ModuleNamebar({
           className="ml-[8px] appearance-none w-[13px] h-[13px] border-[0.5px] border-[#171717] rounded-[3px] checked:bg-blue-500 checked:border-blue-500 cursor-pointer"
           checked={isChecked}
           ref={(el) => {
-            if (el) el.indeterminate = isIndeterminate;
+            if (el) el.indeterminate = isIndeterminate
           }}
           onChange={(e) => onCheckboxChange(e.target.checked)}
         />
@@ -43,12 +83,11 @@ export function ModuleNamebar({
 
       {/* Title Button */}
       <button
-        className=" ml-11 sticky left-4 top-3/4 -translate-y-3/4 z-10 bg-blue-500 text-white px-3 py-[2.6px] border border-blue-500 transition-colors rounded-none"
+        className="ml-11 sticky left-4 top-3/4 -translate-y-3/4 z-10 bg-blue-500 text-white px-3 py-[2.6px] border border-blue-500 transition-colors rounded-none"
         style={{ lineHeight: "normal", fontSize: "14px" }}
       >
         <span>{title}</span>
 
-        {/* ✅ Facebook-like red badge */}
         {itemCount !== undefined && itemCount > 0 && (
           <span
             className="absolute -top-2 -right-2 border border-[#333333] bg-white text-[#333333] text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center"
@@ -58,14 +97,26 @@ export function ModuleNamebar({
         )}
       </button>
 
-
       {/* Add Button */}
       <button
-        className="ml-4 cursor-pointer sticky left-24 top-3/4 -translate-y-3/4 z-10 border border-[#333333] text-[#333333] bg-transparent px-2 py-1 rounded hover:bg-blue-500 hover:text-white transition-colors"
+        className="ml-4 cursor-pointer sticky left-28 top-3/4 -translate-y-[65%] z-10 border border-[#333333] text-[#333333] bg-transparent px-2 py-1 rounded hover:bg-blue-500 hover:text-white transition-colors"
         style={{ lineHeight: "normal", fontSize: "14px" }}
       >
         <span className="font-bold">+ Add New</span>
       </button>
+
+      <button className="flex ml-4 cursor-pointer sticky left-52 top-3/4 -translate-y-[150%] z-10 px-2 py-1 transition-colors">
+        {/* <span className="mt-1 text-[12px] px-1">assigned to:</span> */}
+        {teamMembers.map((member, index) => (
+          <Avatar key={index} className="h-6 w-6 border-2 border-background">
+            <AvatarImage
+              src={member.avatar || "/placeholder.svg"}
+              alt={member.name}
+            />
+            <AvatarFallback>{member.fallback}</AvatarFallback>
+          </Avatar>
+        ))}
+      </button>
     </div>
-  );
+  )
 }
