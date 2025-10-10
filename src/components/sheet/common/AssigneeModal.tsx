@@ -28,7 +28,6 @@ interface AssigneeModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   moduleName?: string
-  sheetId?: string
 }
 
 const DUMMY_USERS: User[] = [

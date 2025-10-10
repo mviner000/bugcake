@@ -3,7 +3,8 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useState, useEffect, useRef } from "react"
 import { AssigneeModal } from "./AssigneeModal"
-import { RequestButton } from "./RequestButton"
+import { RequestForModuleAccessButton } from "./RequestForModuleAccessButton"
+import { RequestForModuleAccessModal } from "./RequestForModuleAccessModal"
 
 interface TeamMember {
   name: string
@@ -39,6 +40,7 @@ export function ModuleNamebar({
 
   
   const [isAssigneeModalOpen, setIsAssigneeModalOpen] = useState(false)
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false)
 
   useEffect(() => {
     const updatePosition = () => {
@@ -107,11 +109,16 @@ export function ModuleNamebar({
   return (
     <>
     <AssigneeModal
-          open={isAssigneeModalOpen}
-          onOpenChange={setIsAssigneeModalOpen}
-          moduleName="modulename"
-          sheetId="demo-sheet-id"
-        />
+        open={isAssigneeModalOpen}
+        onOpenChange={setIsAssigneeModalOpen}
+        moduleName="modulename"
+      />
+    <RequestForModuleAccessModal
+        open={isRequestModalOpen}
+        onOpenChange={setIsRequestModalOpen}
+        moduleName="modulename"
+        sheetId="demo-sheet-id"
+      />
     <div
       className={`mt-[4px] absolute inset-0 w-full ${className} border-b-4 z-1`}
       style={{
@@ -163,11 +170,12 @@ export function ModuleNamebar({
 
 
       {/* Request Button */}
-      <RequestButton
+      <RequestForModuleAccessButton
         className="ml-4 sticky top-3/4 -translate-y-[65%] z-10"
         style={{ 
           left: `calc(${avatarLeftPosition}px - 70px)` 
         }}
+        onClick={() => setIsRequestModalOpen(true)}
       />
       {/* Avatars - POSITIONING MODIFIED */}
       <button 
