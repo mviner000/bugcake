@@ -10,12 +10,12 @@ import { AltTextAriaLabelTable } from "./alttextarialabel/AltTextAriaLabelTable"
 import { FunctionalityTestCasesTable } from "./functionality/FunctionalityTestCasesTable"; 
 import { Header } from "./Header";
 import { AccessRequest } from "./access-request";
-import { WorkflowStatus } from "./common/WorkflowStatusBadge"; 
-import { Doc } from "convex/_generated/dataModel";
+import { WorkflowStatus } from "@/types/testCaseTypes";
+import { Doc, Id } from "convex/_generated/dataModel";
 
 type SheetType = "altTextAriaLabel" | "functionality";
 
-// ✅ NEW: Define proper types for test cases with extended properties
+// ✅ UPDATED: Proper types that match BaseTestCase
 type FunctionalityTestCaseWithDetails = Doc<"functionalityTestCases"> & {
   createdByName: string;
   executedByName: string;
@@ -24,6 +24,7 @@ type FunctionalityTestCaseWithDetails = Doc<"functionalityTestCases"> & {
   createdAt: number;
   workflowStatus: WorkflowStatus;
   moduleName: string;
+  module?: Id<"modules">; // ✅ Make optional with ?
 };
 
 type AltTextTestCaseWithDetails = Doc<"altTextAriaLabelTestCases"> & {
@@ -34,6 +35,7 @@ type AltTextTestCaseWithDetails = Doc<"altTextAriaLabelTestCases"> & {
   createdAt: number;
   workflowStatus: WorkflowStatus;
   moduleName: string;
+  module: Id<"modules">; // Required for alt text test cases
 };
 
 export function DetailPage() {

@@ -875,7 +875,7 @@ export const createFunctionalityTestCase = mutation({
     title: v.string(),
     level: v.union(v.literal("High"), v.literal("Low")),
     scenario: v.union(v.literal("Happy Path"), v.literal("Unhappy Path")),
-    module: v.optional(v.id("modules")),
+    module: v.id("modules"), // UPDATED: Made required (removed v.optional)
     subModule: v.optional(v.string()),
     preConditions: v.optional(v.string()),
     steps: v.string(),
@@ -906,27 +906,22 @@ export const createFunctionalityTestCase = mutation({
         throw new Error("Invalid Sheet ID provided.");
     }
 
-    // UPDATED: Restructured module ID normalization to handle the 'null' case
-    let normalizedModuleId: Id<"modules"> | undefined = undefined;
-    if (args.module) {
-      const potentialId = ctx.db.normalizeId("modules", args.module);
-      if (potentialId === null) {
-        throw new Error("Invalid Module ID provided.");
-      }
-      normalizedModuleId = potentialId;
+    // UPDATED: Simplified module ID normalization (now required, not optional)
+    const normalizedModuleId = ctx.db.normalizeId("modules", args.module);
+    if (!normalizedModuleId) {
+      throw new Error("Invalid Module ID provided.");
     }
 
     const now = Date.now();
     const defaultRowHeight = 20;
 
     // 2. Insert the new functionalityTestCases document
-    // This now works because `normalizedModuleId` is guaranteed to be `Id<"modules"> | undefined`
     const newTestCaseId = await ctx.db.insert("functionalityTestCases", {
       sheetId: normalizedSheetId,
       title: args.title,
       level: args.level,
       scenario: args.scenario,
-      module: normalizedModuleId,
+      module: normalizedModuleId, // UPDATED: Now always defined
       subModule: args.subModule,
       preConditions: args.preConditions,
       steps: args.steps,

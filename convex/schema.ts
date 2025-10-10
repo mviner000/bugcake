@@ -210,7 +210,7 @@ export default defineSchema({
     // Core info
     title: v.string(), // Test Case Title
     // UPDATED: 'module' now references the new 'modules' table
-    module: v.optional(v.id("modules")),
+    module: v.id("modules"),
     subModule: v.optional(v.string()),
 
     // Classification
