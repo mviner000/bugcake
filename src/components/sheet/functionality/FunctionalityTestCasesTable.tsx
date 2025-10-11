@@ -26,7 +26,7 @@ type FunctionalityTestCase = Doc<"functionalityTestCases"> & BaseTestCase;
 
 interface FunctionalityTestCasesTableProps {
   testCases: FunctionalityTestCase[];
-  sheetId: string;
+  sheetId: Id<"sheets">; 
   activeWorkflowStatus: WorkflowStatus;
   onWorkflowStatusChange: (status: WorkflowStatus) => void;
   modules: Doc<"modules">[];

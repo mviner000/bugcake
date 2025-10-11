@@ -31,7 +31,7 @@ type AltTextTestCase = Doc<"altTextAriaLabelTestCases"> & {
 
 interface AltTextAriaLabelTableProps {
   testCases: AltTextTestCase[];
-  sheetId: string;
+  sheetId: Id<"sheets">; 
   activeWorkflowStatus: WorkflowStatus;
   onWorkflowStatusChange: (status: WorkflowStatus) => void;
   modules: Doc<"modules">[];

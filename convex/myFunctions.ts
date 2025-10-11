@@ -8,6 +8,9 @@ import { Doc } from "./_generated/dataModel";
 import { Id } from "./_generated/dataModel";
 import { workflowStatusEnum } from "./schema";
 
+
+type UserRole = "owner" | "viewer" | "qa_lead" | "qa_tester";
+
 // Write your Convex functions in any file inside this directory (`convex`).
 // See https://docs.convex.dev/functions for more.
 
@@ -2802,3 +2805,66 @@ export const requestModuleAccess = mutation({
     return { success: true, requestId: requestId }; 
   },
 })
+
+/**
+ * Retrieves all users who currently have access (assignment) to a specific module.
+ */
+export const getUsersWithModuleAccess = query({
+  args: {
+    moduleId: v.id("modules"),
+  },
+  handler: async (ctx, args) => {
+    // 1. Authorization check: Must be authenticated
+    const currentUserId = await getAuthUserId(ctx);
+    if (!currentUserId) {
+      // If not authenticated, we return an empty array or throw, depending on client requirements
+      return []; 
+    }
+
+    // Fetch the module to get its sheetId
+    const module = await ctx.db.get(args.moduleId);
+    if (!module) {
+        // Return empty if module is not found, as this is a non-critical query
+        return [];
+    }
+
+    // 2. Permission check: Ensure the user has access to the *sheet*
+    const currentUserPermission = await ctx.db
+      .query("sheetPermissions")
+      .withIndex("by_sheet_and_user", (q) =>
+        q.eq("sheetId", module.sheetId).eq("userId", currentUserId)
+      )
+      .unique();
+
+    // ✅ LOGIC FIX: If the user doesn't have ANY permission to the sheet, they can't see the module details.
+    if (!currentUserPermission) {
+      return [];
+    }
+
+    // 3. Get assignee IDs from the module
+    const currentModule = await ctx.db.get(args.moduleId);
+    const assigneeIds = currentModule?.assigneeIds || [];
+
+    // 4. Fetch details for each assigned user
+    const usersWithAccess = await Promise.all(
+      assigneeIds.map(async (userId) => {
+        const user = await ctx.db.get(userId);
+        
+        // For module assignees, we default the role to "qa_tester" for display purposes
+        // since the approval process grants this role.
+        const role: UserRole = "qa_tester";
+
+        return {
+          id: userId,
+          name: user?.name || user?.email || "Unknown User",
+          email: user?.email || "N/A",
+          role: role,
+          // FIX: Use simple equality (===)
+          isCurrentUser: userId === currentUserId, 
+        };
+      })
+    );
+
+    return usersWithAccess;
+  },
+});

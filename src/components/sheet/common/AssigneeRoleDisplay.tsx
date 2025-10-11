@@ -1,24 +1,26 @@
-// src/components/sheet/common/AssigneeRoleDisplay.tsx
 
-interface User {
+// src/components/sheet/common/AssigneeRoleDisplay.tsx
+interface UserForDisplay { 
   id: any
   name: string
   email: string
   role: "owner" | "viewer" | "qa_lead" | "qa_tester"
-  avatarUrl: string | null
+  avatarUrl: string | null | undefined 
   isCurrentUser: boolean
 }
 
 interface AssigneeRoleDisplayProps {
-  usersWithAccess: User[] | undefined
+  usersWithAccess: UserForDisplay[] | undefined
 }
 
 export function AssigneeRoleDisplay({ usersWithAccess }: AssigneeRoleDisplayProps) {
-  if (!usersWithAccess || usersWithAccess.length === 0) {
+  const validUsers = Array.isArray(usersWithAccess) ? (usersWithAccess as UserForDisplay[]) : []
+
+  if (validUsers.length === 0) {
     return null
   }
 
-  const roleCounts = usersWithAccess.reduce(
+  const roleCounts = validUsers.reduce(
     (acc, user) => {
       acc[user.role] = (acc[user.role] || 0) + 1
       return acc
