@@ -2808,6 +2808,7 @@ export const requestModuleAccess = mutation({
 
 /**
  * Retrieves all users who currently have access (assignment) to a specific module.
+ * Includes module assignees and the sheet owner (who always has access).
  */
 export const getUsersWithModuleAccess = query({
   args: {
@@ -2817,18 +2818,22 @@ export const getUsersWithModuleAccess = query({
     // 1. Authorization check: Must be authenticated
     const currentUserId = await getAuthUserId(ctx);
     if (!currentUserId) {
-      // If not authenticated, we return an empty array or throw, depending on client requirements
-      return []; 
+      return [];
     }
 
-    // Fetch the module to get its sheetId
+    // 2. Fetch the module
     const module = await ctx.db.get(args.moduleId);
     if (!module) {
-        // Return empty if module is not found, as this is a non-critical query
-        return [];
+      return [];
     }
 
-    // 2. Permission check: Ensure the user has access to the *sheet*
+    // 3. Fetch the sheet (to get owner)
+    const sheet = await ctx.db.get(module.sheetId);
+    if (!sheet) {
+      return [];
+    }
+
+    // 4. Permission check: Ensure the user has access to the *sheet*
     const currentUserPermission = await ctx.db
       .query("sheetPermissions")
       .withIndex("by_sheet_and_user", (q) =>
@@ -2836,38 +2841,52 @@ export const getUsersWithModuleAccess = query({
       )
       .unique();
 
-    // ✅ LOGIC FIX: If the user doesn't have ANY permission to the sheet, they can't see the module details.
     if (!currentUserPermission) {
       return [];
     }
 
-    // 3. Get assignee IDs from the module
+    // 5. Build list of users with access
+    // Start with owner
+    const userIdsWithAccess = new Set<Id<"users">>([sheet.owner]);
+
+    // Add module assignees
     const currentModule = await ctx.db.get(args.moduleId);
     const assigneeIds = currentModule?.assigneeIds || [];
+    assigneeIds.forEach((id) => userIdsWithAccess.add(id));
 
-    // 4. Fetch details for each assigned user
+    // 6. Also include users with approved access requests (optional if your module tracks them)
+    const approvedRequests = await ctx.db
+      .query("moduleAccessRequests")
+      .withIndex("by_module_and_requester", (q) => q.eq("moduleId", args.moduleId))
+      .filter((q) => q.eq(q.field("status"), "approved"))
+      .collect();
+
+    approvedRequests.forEach((req) => userIdsWithAccess.add(req.requesterId));
+
+    // 7. Fetch user details
     const usersWithAccess = await Promise.all(
-      assigneeIds.map(async (userId) => {
+      Array.from(userIdsWithAccess).map(async (userId) => {
         const user = await ctx.db.get(userId);
-        
-        // For module assignees, we default the role to "qa_tester" for display purposes
-        // since the approval process grants this role.
-        const role: UserRole = "qa_tester";
+        if (!user) return null;
+
+        let role: UserRole = "qa_tester";
+        if (userId === sheet.owner) role = "owner";
 
         return {
           id: userId,
-          name: user?.name || user?.email || "Unknown User",
-          email: user?.email || "N/A",
-          role: role,
-          // FIX: Use simple equality (===)
-          isCurrentUser: userId === currentUserId, 
+          name: user.name || user.email || "Unknown User",
+          email: user.email || "N/A",
+          role,
+          isCurrentUser: userId === currentUserId,
         };
       })
     );
 
-    return usersWithAccess;
+    // 8. Return valid users only
+    return usersWithAccess.filter((u): u is NonNullable<typeof u> => u !== null);
   },
 });
+
 
 /**
  * Gets the current user's role and module access status for a specific module.
@@ -2962,5 +2981,70 @@ export const getUserModuleAccess = query({
       moduleAccessStatus: "none" as const,
       hasAccess: false,
     };
+  },
+});
+/**
+ * Fetches all users with approved access to a specific module
+ * Includes the sheet owner (who always has access) plus approved requesters
+ */
+export const getModuleAssignees = query({
+  args: {
+    moduleId: v.id("modules"),
+  },
+  handler: async (ctx, args) => {
+    // 1. Fetch the module to verify it exists
+    const module = await ctx.db.get(args.moduleId);
+    if (!module) {
+      return [];
+    }
+
+    // 2. Fetch the sheet to get the owner
+    const sheet = await ctx.db.get(module.sheetId);
+    if (!sheet) {
+      return [];
+    }
+
+    // 3. Start with the owner's ID (owner always has access)
+    const userIdsWithAccess = new Set<Id<"users">>([sheet.owner]);
+
+    // 4. Find all APPROVED access requests for this module
+    const approvedRequests = await ctx.db
+      .query("moduleAccessRequests")
+      .withIndex("by_module_and_requester", (q) => 
+        q.eq("moduleId", args.moduleId)
+      )
+      .filter((q) => q.eq(q.field("status"), "approved"))
+      .collect();
+
+    // 5. Add all approved requesters to the set
+    approvedRequests.forEach(req => {
+      userIdsWithAccess.add(req.requesterId);
+    });
+
+    // 6. Fetch user details for everyone with access
+    const assignees = await Promise.all(
+      Array.from(userIdsWithAccess).map(async (userId) => {
+        const user = await ctx.db.get(userId);
+        if (!user) {
+          return null;
+        }
+
+        // Format for ModuleNamebar TeamMember interface
+        return {
+          name: user.name || user.email || "Unknown User",
+          email: user.email || undefined,
+          avatar: user.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.name || user.email || "U")}`,
+          fallback: (user.name || user.email || "U")
+            .split(" ")
+            .map(n => n[0])
+            .join("")
+            .toUpperCase()
+            .slice(0, 2),
+        };
+      })
+    );
+
+    // Filter out any null results (in case a user was deleted)
+    return assignees.filter((assignee): assignee is NonNullable<typeof assignee> => assignee !== null);
   },
 });

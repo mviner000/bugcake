@@ -1,16 +1,20 @@
 // src/components/sheet/common/ModuleNamebar.tsx
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useState, useEffect, useRef } from "react"
 import { AssigneeModal } from "./AssigneeModal"
 import { RequestForModuleAccessButton } from "./RequestForModuleAccessButton"
 import { RequestForModuleAccessModal } from "./RequestForModuleAccessModal"
 import { Id } from "convex/_generated/dataModel"
+import { useQuery } from "convex/react"
+import { api } from "../../../../convex/_generated/api";
 
 interface TeamMember {
   name: string
   avatar: string
   fallback: string
+  email?: string // ✅ NEW: Added email field
 }
 
 interface ModuleNamebarProps {
@@ -22,13 +26,11 @@ interface ModuleNamebarProps {
   isIndeterminate: boolean
   onCheckboxChange: (checked: boolean) => void
   itemCount?: number 
-  members?: TeamMember[] 
   moduleId: Id<"modules"> 
   sheetId: Id<"sheets">
   // Props for conditional rendering
   currentUserRole?: "owner" | "qa_lead" | "qa_tester" | "viewer"
   currentUserModuleAccessStatus?: "approved" | "pending" | "declined" | "none"
-  // ✅ NEW: Callback when Add button is clicked
   onAddClick?: () => void
 }
 
@@ -40,12 +42,11 @@ export function ModuleNamebar({
   onCheckboxChange,
   className = "",
   itemCount,
-  members,
   moduleId,
   sheetId,
   currentUserRole,
   currentUserModuleAccessStatus,
-  onAddClick, // ✅ NEW
+  onAddClick,
 }: ModuleNamebarProps) {
   const [avatarLeftPosition, setAvatarLeftPosition] = useState(1000)
   const [addButtonLeftPosition, setAddButtonLeftPosition] = useState(112)
@@ -54,32 +55,57 @@ export function ModuleNamebar({
   const [isAssigneeModalOpen, setIsAssigneeModalOpen] = useState(false)
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false)
 
+  // ✅ NEW: Fetch module assignees dynamically
+  const moduleAssignees = useQuery(api.myFunctions.getModuleAssignees, {
+    moduleId: moduleId,
+  })
+
   // Logic to determine if "Add New" button should be shown
   const shouldShowAddButton = (() => {
-    // Owner and QA Lead always see the button
     if (currentUserRole === "owner" || currentUserRole === "qa_lead") {
       return true
     }
     
-    // QA Tester sees it only if they have approved module access
     if (currentUserRole === "qa_tester" && currentUserModuleAccessStatus === "approved") {
       return true
     }
     
-    // Hide for: viewer, qa_tester without access, pending, or declined
     return false
   })()
 
   // Logic to determine if "Request Access" button should be shown
   const shouldShowRequestButton = (() => {
-    // Only show for QA Tester who doesn't have approved access
     if (currentUserRole === "qa_tester" && currentUserModuleAccessStatus !== "approved") {
       return true
     }
     
-    // Hide for everyone else (owner, qa_lead, viewer, and approved qa_tester)
     return false
   })()
+
+  // ✅ UPDATED: Use fetched assignees or show default placeholder
+  const teamMembers: TeamMember[] = moduleAssignees && moduleAssignees.length > 0 
+    ? moduleAssignees 
+    : [{
+        name: "No Assignees",
+        avatar: "https://api.dicebear.com/7.x/initials/svg?seed=NA",
+        fallback: "NA",
+      }]
+
+  // Calculate dynamic avatar width based on team member count
+  const avatarTotalWidth = teamMembers.length * 30
+
+  // ✅ Dynamic offset based on avatar count
+  const dynamicOffsetPx =
+    teamMembers.length >= 5
+      ? 110
+      : teamMembers.length === 4
+      ? 50
+      : teamMembers.length === 3
+      ? 20
+      : teamMembers.length === 2
+      ? -10
+      : -40
+
 
   useEffect(() => {
     const updatePosition = () => {
@@ -108,36 +134,6 @@ export function ModuleNamebar({
       resizeObserver.disconnect()
     }
   }, [])
-
-  const defaultMembers: TeamMember[] = [
-    {
-      name: "Team Member 1",
-      avatar: "https://api.dicebear.com/7.x/initials/svg?seed=TM",
-      fallback: "TM",
-    },
-    {
-      name: "Team Member 2",
-      avatar: "https://api.dicebear.com/7.x/initials/svg?seed=JD",
-      fallback: "JD",
-    },
-    {
-      name: "Team Member 3",
-      avatar: "https://api.dicebear.com/7.x/initials/svg?seed=SK",
-      fallback: "SK",
-    },
-    {
-      name: "Team Member 4",
-      avatar: "https://api.dicebear.com/7.x/initials/svg?seed=AL",
-      fallback: "AL",
-    },
-    {
-      name: "Team Member 5",
-      avatar: "https://api.dicebear.com/7.x/initials/svg?seed=MR",
-      fallback: "MR",
-    },
-  ]
-
-  const teamMembers = members || defaultMembers
 
   return (
     <>
@@ -192,10 +188,10 @@ export function ModuleNamebar({
         )}
       </button>
 
-      {/* ✅ UPDATED: Conditionally render Add Button with onClick handler */}
+      {/* Conditionally render Add Button */}
       {shouldShowAddButton && (
         <button
-          onClick={onAddClick} // ✅ NEW: Trigger callback
+          onClick={onAddClick}
           className="ml-4 cursor-pointer sticky top-3/4 -translate-y-[65%] z-10 border border-[#333333] text-[#333333] bg-transparent px-2 py-1 rounded hover:bg-blue-500 hover:text-white transition-colors"
           style={{ 
             lineHeight: "normal", 
@@ -207,33 +203,88 @@ export function ModuleNamebar({
         </button>
       )}
 
-      {/* ✅ Conditionally render Request Button */}
+      {/* Conditionally render Request Button */}
       {shouldShowRequestButton && (
         <RequestForModuleAccessButton
           className="ml-4 sticky top-3/4 -translate-y-[65%] z-10"
-          style={{ 
-            left: `calc(${avatarLeftPosition}px - 70px)` 
+          style={{
+            left: `calc(${avatarLeftPosition}px + ${dynamicOffsetPx}px - ${avatarTotalWidth}px)`,
           }}
           onClick={() => setIsRequestModalOpen(true)}
         />
       )}
 
-      {/* Avatars */}
-      <button 
-        className="flex ml-4 cursor-pointer sticky top-3/4 -translate-y-[150%] z-10 px-2 py-1 transition-colors"
-        style={{ left: `${avatarLeftPosition}px` }}
-        onClick={() => setIsAssigneeModalOpen(true)}
-      >
-        {teamMembers.map((member, index) => (
-          <Avatar key={index} className="h-6 w-6 border-2 border-background">
-            <AvatarImage
-              src={member.avatar || "/placeholder.svg"}
-              alt={member.name}
-            />
-            <AvatarFallback>{member.fallback}</AvatarFallback>
-          </Avatar>
-        ))}
-      </button>
+      <TooltipProvider>
+        <button 
+          className="flex ml-4 sticky top-3/4 -translate-y-[150%] z-10 px-2 py-1"
+          style={{ left: `${avatarLeftPosition}px` }}
+        >
+          {!moduleAssignees ? (
+            // Loading state
+            <Avatar className="h-6 w-6 border-2 border-background animate-pulse">
+              <AvatarFallback>...</AvatarFallback>
+            </Avatar>
+          ) : (
+            <>
+              {/* Show all if ≤ 5 members, otherwise only 4 + dropdown */}
+              {(teamMembers.length <= 5 ? teamMembers : teamMembers.slice(0, 4)).map((member, index) => (
+                <Tooltip key={index} delayDuration={300}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setIsAssigneeModalOpen(true)}
+                      className="cursor-pointer transition-transform hover:scale-110"
+                    >
+                      <Avatar className="h-6 w-6 border-2 border-background">
+                        <AvatarImage
+                          src={member.avatar}
+                          alt={member.name}
+                        />
+                        <AvatarFallback>{member.fallback}</AvatarFallback>
+                      </Avatar>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent 
+                    side="bottom" 
+                    className="bg-white border border-gray-200 shadow-lg"
+                  >
+                    <div className="flex flex-col gap-1 py-1">
+                      <p className="font-semibold text-sm text-gray-900">
+                        {member.name}
+                      </p>
+                      {member.email && (
+                        <p className="text-xs text-gray-600">
+                          {member.email}
+                        </p>
+                      )}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+
+              {/* Show dropdown button only when there are more than 5 members */}
+              {teamMembers.length > 5 && (
+                <button
+                  onClick={() => {}}
+                  className="border outline-black cursor-pointer flex items-center justify-center h-6 w-6 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors ml-[2px]"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-3.5 w-3.5 text-gray-700"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+                  </svg>
+                </button>
+              )}
+            </>
+          )}
+        </button>
+      </TooltipProvider>
+
+
     </div>
     </>
   )
