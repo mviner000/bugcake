@@ -1,6 +1,7 @@
 // src/components/sheet/common/BaseTable.tsx
 
 import React, { useState, useRef, useMemo, ReactNode } from "react";
+// Id is already imported here
 import { Doc, Id } from "convex/_generated/dataModel";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
@@ -40,7 +41,8 @@ interface BaseTableProps<T extends {
 }> {
   // Data
   testCases: T[];
-  sheetId: string;
+  // 💡 FIX 1: Change sheetId type from 'string' to 'Id<"sheets">'
+  sheetId: Id<"sheets">; 
   modules: Doc<"modules">[];
   
   // Workflow status management
@@ -339,6 +341,22 @@ export function BaseTable<T extends BaseTestCase>({
               <>
                 {Object.entries(groupedTestCases).map(
                   ([moduleId, moduleTestCases], groupIndex) => {
+
+                    // 💡 FIX 2: Skip rendering the ModuleNamebar for the temporary 'ungrouped' key
+                    if (moduleId === "ungrouped") {
+                      return moduleTestCases.map((testCase) => (
+                          <React.Fragment key={testCase._id}>
+                              {renderTestCaseRow(testCase, {
+                                  handleCheckboxChange,
+                                  handleRowMouseDown,
+                                  selectedRows,
+                                  getColumnWidth,
+                                  resizingRow,
+                              })}
+                          </React.Fragment>
+                      ));
+                    }
+
                     const moduleName =
                       moduleTestCases[0]?.moduleName || "Unknown Module";
                     const color = getModuleColor(groupIndex);
@@ -360,9 +378,9 @@ export function BaseTable<T extends BaseTestCase>({
                                 onCheckboxChange={(checked) =>
                                     handleModuleCheckboxChange(moduleId, checked)
                                 }
-                                // 💡 THE CRITICAL FIX IS HERE
-                                moduleId={moduleId} 
-                                sheetId={sheetId} // sheetId is already a prop of BaseTable
+                                // 💡 FIX 3: Use type assertion on the valid moduleId
+                                moduleId={moduleId as Id<"modules">} 
+                                sheetId={sheetId}
                             />
                         </td>
                         </tr>

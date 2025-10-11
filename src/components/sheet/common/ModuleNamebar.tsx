@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react"
 import { AssigneeModal } from "./AssigneeModal"
 import { RequestForModuleAccessButton } from "./RequestForModuleAccessButton"
 import { RequestForModuleAccessModal } from "./RequestForModuleAccessModal"
+import { Id } from "convex/_generated/dataModel"
 
 interface TeamMember {
   name: string
@@ -23,8 +24,8 @@ interface ModuleNamebarProps {
   itemCount?: number 
   members?: TeamMember[] 
   // 💡 NEW: The required IDs for the request modal
-  moduleId: string 
-  sheetId: string 
+  moduleId: Id<"modules"> 
+  sheetId: Id<"sheets"> 
 }
 
 export function ModuleNamebar({
@@ -118,6 +119,9 @@ export function ModuleNamebar({
       open={isAssigneeModalOpen}
       onOpenChange={setIsAssigneeModalOpen}
       moduleName={title} // Use the actual title prop
+      // 💡 NEW: Pass the actual moduleId and sheetId props
+      moduleId={moduleId} 
+      sheetId={sheetId}
     />
     <RequestForModuleAccessModal
         open={isRequestModalOpen}
