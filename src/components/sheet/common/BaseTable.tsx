@@ -549,6 +549,7 @@ export function BaseTable<T extends BaseTestCase>({
 
       {/* Add New Row Button - Only show when actively adding */}
       {isAdding && onSaveNew && onCancelNew && (
+        <div className="-ml-3 fixed bsolute top-0 bg-white w-full z-40">
         <TableActionButtons
           isAdding={isAdding}
           isSaving={isSaving}
@@ -556,6 +557,7 @@ export function BaseTable<T extends BaseTestCase>({
           onSave={onSaveNew}
           onCancel={handleCancel}
         />
+        </div>
       )}
 
       {/* Visual feedback during resize */}
