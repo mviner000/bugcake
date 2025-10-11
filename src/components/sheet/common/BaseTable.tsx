@@ -464,91 +464,83 @@ export function BaseTable<T extends BaseTestCase>({
                   );
                 })}
                 
-                {/* Empty state message after all modules */}
-                <tr>
-                  <td colSpan={columns.length} className="text-center py-8 text-gray-500">
-                    <p>No {activeWorkflowStatus.toLowerCase()} test cases found.</p>
-                  </td>
-                </tr>
               </>
             ) : (
               <>
-                {Object.entries(groupedTestCases).map(
-                  ([moduleId, moduleTestCases], groupIndex) => {
+                {modules.map((module, index) => {
+                  const moduleId = module._id;
+                  const moduleName = module.name;
+                  const color = getModuleColor(index);
+                  
+                  // Get test cases for this module (may be empty array)
+                  const moduleTestCases = groupedTestCases[moduleId] || [];
+                  
+                  const { isChecked, isIndeterminate } = getModuleCheckboxState(moduleId);
 
-                    // Skip rendering the ModuleNamebar for the temporary 'ungrouped' key
-                    if (moduleId === "ungrouped") {
-                      return moduleTestCases.map((testCase) => (
-                          <React.Fragment key={testCase._id}>
-                              {renderTestCaseRow(testCase, {
-                                  handleCheckboxChange,
-                                  handleRowMouseDown,
-                                  selectedRows,
-                                  getColumnWidth,
-                                  resizingRow,
+                  return (
+                    <React.Fragment key={moduleId}>
+                      {/* Module Name Bar - ALWAYS rendered */}
+                      <tr style={{ height: '46px' }}>
+                        <td colSpan={columns.length} className="p-0 relative">
+                          <ModuleNamebarWithAccess
+                            moduleId={moduleId}
+                            sheetId={sheetId}
+                            moduleName={moduleName}
+                            itemCount={moduleTestCases.length}
+                            bgColor={color.bgColor}
+                            textColor={color.textColor}
+                            isChecked={isChecked}
+                            isIndeterminate={isIndeterminate}
+                            onCheckboxChange={(checked) =>
+                              handleModuleCheckboxChange(moduleId, checked)
+                            }
+                            onAddClick={() => handleModuleAddClick(moduleId)}
+                          />
+                        </td>
+                      </tr>
+                      
+                      {/* Show input row directly after this module's namebar if active */}
+                      {isAdding && activeAddingModuleId === moduleId && renderNewTestCaseRow && (
+                        <tr className="relative z-50">
+                          <td colSpan={columns.length} className="p-0">
+                            <div className="relative">
+                              {renderNewTestCaseRow({
+                                getColumnWidth,
+                                preselectedModuleId: moduleId,
                               })}
-                          </React.Fragment>
-                      ));
-                    }
-
-                    const moduleName =
-                      moduleTestCases[0]?.moduleName || "Unknown Module";
-                    const color = getModuleColor(groupIndex);
-                    const { isChecked, isIndeterminate } =
-                      getModuleCheckboxState(moduleId);
-
-                    return (
-                      <React.Fragment key={moduleId}>
-                        {/* Module Name Bar with Checkbox */}
-                        <tr style={{ height: '46px' }}>
-                          <td colSpan={columns.length} className="p-0 relative">
-                            <ModuleNamebarWithAccess
-                              moduleId={moduleId as Id<"modules">}
-                              sheetId={sheetId}
-                              moduleName={moduleName}
-                              itemCount={moduleTestCases.length}
-                              bgColor={color.bgColor}
-                              textColor={color.textColor}
-                              isChecked={isChecked}
-                              isIndeterminate={isIndeterminate}
-                              onCheckboxChange={(checked) =>
-                                handleModuleCheckboxChange(moduleId, checked)
-                              }
-                              onAddClick={() => handleModuleAddClick(moduleId)}
-                            />
+                            </div>
                           </td>
                         </tr>
-                        
-                        {/* Show input row directly after this module's namebar if active */}
-                        {isAdding && activeAddingModuleId === moduleId && renderNewTestCaseRow && (
-                          <tr className="relative z-50">
-                            <td colSpan={columns.length} className="p-0">
-                              <div className="relative">
-                                {renderNewTestCaseRow({
-                                  getColumnWidth,
-                                  preselectedModuleId: moduleId,
-                                })}
-                              </div>
-                            </td>
-                          </tr>
-                        )}
+                      )}
 
-                        {/* Test Cases for this module */}
-                        {moduleTestCases.map((testCase) => (
-                          <React.Fragment key={testCase._id}>
-                            {renderTestCaseRow(testCase, {
-                              handleCheckboxChange,
-                              handleRowMouseDown,
-                              selectedRows,
-                              getColumnWidth,
-                              resizingRow,
-                            })}
-                          </React.Fragment>
-                        ))}
-                      </React.Fragment>
-                    );
-                  }
-                )}
+                      {/* Test Cases for this module (if any) */}
+                      {moduleTestCases.map((testCase) => (
+                        <React.Fragment key={testCase._id}>
+                          {renderTestCaseRow(testCase, {
+                            handleCheckboxChange,
+                            handleRowMouseDown,
+                            selectedRows,
+                            getColumnWidth,
+                            resizingRow,
+                          })}
+                        </React.Fragment>
+                      ))}
+                    </React.Fragment>
+                  );
+                })}
+                
+                {/* Handle ungrouped test cases (if any) */}
+                {groupedTestCases["ungrouped"]?.map((testCase) => (
+                  <React.Fragment key={testCase._id}>
+                    {renderTestCaseRow(testCase, {
+                      handleCheckboxChange,
+                      handleRowMouseDown,
+                      selectedRows,
+                      getColumnWidth,
+                      resizingRow,
+                    })}
+                  </React.Fragment>
+                ))}
               </>
             )}
           </tbody>
