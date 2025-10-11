@@ -404,6 +404,12 @@ export function BaseTable<T extends BaseTestCase>({
                   buttonText={emptyStateButtonText}
                   colSpan={columns.length}
                   modules={modules}
+                  sheetId={sheetId}
+                  onModuleAddClick={handleModuleAddClick}
+                  isAdding={isAdding}
+                  activeAddingModuleId={activeAddingModuleId}
+                  renderNewTestCaseRow={renderNewTestCaseRow}
+                  getColumnWidth={getColumnWidth}
                 />
               ) : (
                 <tr>
@@ -416,6 +422,55 @@ export function BaseTable<T extends BaseTestCase>({
                   </td>
                 </tr>
               )
+            ) : testCases.length === 0 && isAdding ? (
+              /* Empty state with modules but in adding mode */
+              <>
+                {modules.map((module, index) => {
+                  const color = getModuleColor(index);
+                  return (
+                    <React.Fragment key={module._id}>
+                      {/* Module Namebar Row */}
+                      <tr style={{ height: '46px' }}>
+                        <td colSpan={columns.length} className="p-0 relative">
+                          <ModuleNamebarWithAccess
+                            moduleId={module._id}
+                            sheetId={sheetId}
+                            moduleName={module.name}
+                            itemCount={0}
+                            bgColor={color.bgColor}
+                            textColor={color.textColor}
+                            isChecked={false}
+                            isIndeterminate={false}
+                            onCheckboxChange={() => {}}
+                            onAddClick={() => handleModuleAddClick(module._id)}
+                          />
+                        </td>
+                      </tr>
+                      
+                      {/* Show input row directly after this module's namebar if active */}
+                      {isAdding && activeAddingModuleId === module._id && renderNewTestCaseRow && (
+                        <tr className="relative z-50">
+                          <td colSpan={columns.length} className="p-0">
+                            <div className="relative">
+                              {renderNewTestCaseRow({
+                                getColumnWidth,
+                                preselectedModuleId: module._id,
+                              })}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+                
+                {/* Empty state message after all modules */}
+                <tr>
+                  <td colSpan={columns.length} className="text-center py-8 text-gray-500">
+                    <p>No {activeWorkflowStatus.toLowerCase()} test cases found.</p>
+                  </td>
+                </tr>
+              </>
             ) : (
               <>
                 {Object.entries(groupedTestCases).map(
