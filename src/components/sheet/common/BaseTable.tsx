@@ -41,7 +41,6 @@ interface BaseTableProps<T extends {
 }> {
   // Data
   testCases: T[];
-  // 💡 FIX 1: Change sheetId type from 'string' to 'Id<"sheets">'
   sheetId: Id<"sheets">; 
   modules: Doc<"modules">[];
   
@@ -85,6 +84,53 @@ interface BaseTableProps<T extends {
   // Custom empty state
   emptyStateMessage?: string;
   emptyStateButtonText?: string;
+}
+
+/**
+ * Component to wrap ModuleNamebar with access data
+ */
+function ModuleNamebarWithAccess({
+  moduleId,
+  sheetId,
+  moduleName,
+  itemCount,
+  bgColor,
+  textColor,
+  isChecked,
+  isIndeterminate,
+  onCheckboxChange,
+}: {
+  moduleId: Id<"modules">;
+  sheetId: Id<"sheets">;
+  moduleName: string;
+  itemCount: number;
+  bgColor: string;
+  textColor: string;
+  isChecked: boolean;
+  isIndeterminate: boolean;
+  onCheckboxChange: (checked: boolean) => void;
+}) {
+  // Fetch access data for this specific module
+  const accessData = useQuery(api.myFunctions.getUserModuleAccess, {
+    moduleId: moduleId,
+    sheetId: sheetId,
+  });
+
+  return (
+    <ModuleNamebar
+      title={moduleName}
+      itemCount={itemCount}
+      bgColor={bgColor}
+      textColor={textColor}
+      isChecked={isChecked}
+      isIndeterminate={isIndeterminate}
+      onCheckboxChange={onCheckboxChange}
+      moduleId={moduleId}
+      sheetId={sheetId}
+      currentUserRole={accessData?.role}
+      currentUserModuleAccessStatus={accessData?.moduleAccessStatus}
+    />
+  );
 }
 
 /**
@@ -342,7 +388,7 @@ export function BaseTable<T extends BaseTestCase>({
                 {Object.entries(groupedTestCases).map(
                   ([moduleId, moduleTestCases], groupIndex) => {
 
-                    // 💡 FIX 2: Skip rendering the ModuleNamebar for the temporary 'ungrouped' key
+                    // Skip rendering the ModuleNamebar for the temporary 'ungrouped' key
                     if (moduleId === "ungrouped") {
                       return moduleTestCases.map((testCase) => (
                           <React.Fragment key={testCase._id}>
@@ -367,22 +413,21 @@ export function BaseTable<T extends BaseTestCase>({
                       <React.Fragment key={moduleId}>
                         {/* Module Name Bar with Checkbox */}
                         <tr style={{ height: '46px' }}>
-                        <td colSpan={columns.length} className="p-0 relative">
-                            <ModuleNamebar
-                                title={`${moduleName}`}
-                                itemCount={moduleTestCases.length}
-                                bgColor={color.bgColor}
-                                textColor={color.textColor}
-                                isChecked={isChecked}
-                                isIndeterminate={isIndeterminate}
-                                onCheckboxChange={(checked) =>
-                                    handleModuleCheckboxChange(moduleId, checked)
-                                }
-                                // 💡 FIX 3: Use type assertion on the valid moduleId
-                                moduleId={moduleId as Id<"modules">} 
-                                sheetId={sheetId}
+                          <td colSpan={columns.length} className="p-0 relative">
+                            <ModuleNamebarWithAccess
+                              moduleId={moduleId as Id<"modules">}
+                              sheetId={sheetId}
+                              moduleName={moduleName}
+                              itemCount={moduleTestCases.length}
+                              bgColor={color.bgColor}
+                              textColor={color.textColor}
+                              isChecked={isChecked}
+                              isIndeterminate={isIndeterminate}
+                              onCheckboxChange={(checked) =>
+                                handleModuleCheckboxChange(moduleId, checked)
+                              }
                             />
-                        </td>
+                          </td>
                         </tr>
                         {/* Test Cases for this module */}
                         {moduleTestCases.map((testCase) => (

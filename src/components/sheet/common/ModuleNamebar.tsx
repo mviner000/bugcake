@@ -23,9 +23,11 @@ interface ModuleNamebarProps {
   onCheckboxChange: (checked: boolean) => void
   itemCount?: number 
   members?: TeamMember[] 
-  // 💡 NEW: The required IDs for the request modal
   moduleId: Id<"modules"> 
-  sheetId: Id<"sheets"> 
+  sheetId: Id<"sheets">
+  // NEW: Props for conditional rendering
+  currentUserRole?: "owner" | "qa_lead" | "qa_tester" | "viewer"
+  currentUserModuleAccessStatus?: "approved" | "pending" | "declined" | "none"
 }
 
 export function ModuleNamebar({
@@ -37,29 +39,51 @@ export function ModuleNamebar({
   className = "",
   itemCount,
   members,
-  // 💡 Destructure the new props
   moduleId,
-  sheetId, 
+  sheetId,
+  currentUserRole,
+  currentUserModuleAccessStatus,
 }: ModuleNamebarProps) {
   const [avatarLeftPosition, setAvatarLeftPosition] = useState(1000)
   const [addButtonLeftPosition, setAddButtonLeftPosition] = useState(112)
   const titleButtonRef = useRef<HTMLButtonElement>(null)
 
-  
   const [isAssigneeModalOpen, setIsAssigneeModalOpen] = useState(false)
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false)
+
+  // ✅ NEW: Logic to determine if "Add New" button should be shown
+  const shouldShowAddButton = (() => {
+    // Owner and QA Lead always see the button
+    if (currentUserRole === "owner" || currentUserRole === "qa_lead") {
+      return true
+    }
+    
+    // QA Tester sees it only if they have approved module access
+    if (currentUserRole === "qa_tester" && currentUserModuleAccessStatus === "approved") {
+      return true
+    }
+    
+    // Hide for: viewer, qa_tester without access, pending, or declined
+    return false
+  })()
+
+  // ✅ NEW: Logic to determine if "Request Access" button should be shown
+  const shouldShowRequestButton = (() => {
+    // Only show for QA Tester who doesn't have approved access
+    if (currentUserRole === "qa_tester" && currentUserModuleAccessStatus !== "approved") {
+      return true
+    }
+    
+    // Hide for everyone else (owner, qa_lead, viewer, and approved qa_tester)
+    return false
+  })()
 
   useEffect(() => {
     const updatePosition = () => {
       const screenWidth = window.innerWidth
       const titleButtonWidth = titleButtonRef.current?.offsetWidth || 0
       
-      // Calculate dynamic position based on screen width
-      // MODIFIED: Reduced offset from 300px to 185px to move avatars closer to the right edge
       const calculatedAvatarPosition = screenWidth - 185 
-      
-      // Calculate the start position for the Add Button:
-      // Title Button's 'ml-11' (44px) + its 'left-4' (16px) + its width = 60px + width
       const calculatedAddButtonPosition = 60 + titleButtonWidth 
 
       setAvatarLeftPosition(calculatedAvatarPosition)
@@ -68,9 +92,8 @@ export function ModuleNamebar({
 
     updatePosition()
     window.addEventListener('resize', updatePosition)
-    window.addEventListener('scroll', updatePosition) // Update on scroll for sticky positioning
+    window.addEventListener('scroll', updatePosition)
     
-    // Use ResizeObserver to track title button width changes
     const resizeObserver = new ResizeObserver(updatePosition)
     if (titleButtonRef.current) {
       resizeObserver.observe(titleButtonRef.current)
@@ -118,16 +141,14 @@ export function ModuleNamebar({
     <AssigneeModal
       open={isAssigneeModalOpen}
       onOpenChange={setIsAssigneeModalOpen}
-      moduleName={title} // Use the actual title prop
-      // 💡 NEW: Pass the actual moduleId and sheetId props
+      moduleName={title}
       moduleId={moduleId} 
       sheetId={sheetId}
     />
     <RequestForModuleAccessModal
         open={isRequestModalOpen}
         onOpenChange={setIsRequestModalOpen}
-        moduleName={title} // Use the actual title prop
-        // 💡 FIX: Pass the actual moduleId and sheetId props
+        moduleName={title}
         moduleId={moduleId} 
         sheetId={sheetId}
     />
@@ -168,34 +189,37 @@ export function ModuleNamebar({
         )}
       </button>
 
-      {/* Add Button */}
-      <button
-        className="ml-4 cursor-pointer sticky top-3/4 -translate-y-[65%] z-10 border border-[#333333] text-[#333333] bg-transparent px-2 py-1 rounded hover:bg-blue-500 hover:text-white transition-colors"
-        style={{ 
-          lineHeight: "normal", 
-          fontSize: "14px", 
-          left: `calc(${addButtonLeftPosition}px - 28px)` 
-        }}
-      >
-        <span className="font-bold">+ Add New</span>
-      </button>
+      {/* ✅ UPDATED: Conditionally render Add Button */}
+      {shouldShowAddButton && (
+        <button
+          className="ml-4 cursor-pointer sticky top-3/4 -translate-y-[65%] z-10 border border-[#333333] text-[#333333] bg-transparent px-2 py-1 rounded hover:bg-blue-500 hover:text-white transition-colors"
+          style={{ 
+            lineHeight: "normal", 
+            fontSize: "14px", 
+            left: `calc(${addButtonLeftPosition}px - 28px)` 
+          }}
+        >
+          <span className="font-bold">+ Add New</span>
+        </button>
+      )}
 
+      {/* ✅ UPDATED: Conditionally render Request Button */}
+      {shouldShowRequestButton && (
+        <RequestForModuleAccessButton
+          className="ml-4 sticky top-3/4 -translate-y-[65%] z-10"
+          style={{ 
+            left: `calc(${avatarLeftPosition}px - 70px)` 
+          }}
+          onClick={() => setIsRequestModalOpen(true)}
+        />
+      )}
 
-      {/* Request Button */}
-      <RequestForModuleAccessButton
-        className="ml-4 sticky top-3/4 -translate-y-[65%] z-10"
-        style={{ 
-          left: `calc(${avatarLeftPosition}px - 70px)` 
-        }}
-        onClick={() => setIsRequestModalOpen(true)}
-      />
-      {/* Avatars - POSITIONING MODIFIED */}
+      {/* Avatars */}
       <button 
         className="flex ml-4 cursor-pointer sticky top-3/4 -translate-y-[150%] z-10 px-2 py-1 transition-colors"
         style={{ left: `${avatarLeftPosition}px` }}
         onClick={() => setIsAssigneeModalOpen(true)}
       >
-        {/* <span className="mt-1 text-[12px] px-1">assigned to:</span> */}
         {teamMembers.map((member, index) => (
           <Avatar key={index} className="h-6 w-6 border-2 border-background">
             <AvatarImage

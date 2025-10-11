@@ -2868,3 +2868,99 @@ export const getUsersWithModuleAccess = query({
     return usersWithAccess;
   },
 });
+
+/**
+ * Gets the current user's role and module access status for a specific module.
+ * This determines what actions they can perform (add test cases, request access, etc.)
+ */
+export const getUserModuleAccess = query({
+  args: {
+    moduleId: v.id("modules"),
+    sheetId: v.id("sheets"),
+  },
+  handler: async (ctx, args) => {
+    // 1. Check authentication
+    const currentUserId = await getAuthUserId(ctx);
+    if (!currentUserId) {
+      return {
+        role: "viewer" as const,
+        moduleAccessStatus: "none" as const,
+        hasAccess: false,
+      };
+    }
+
+    // 2. Get the user's role on the sheet
+    const sheetPermission = await ctx.db
+      .query("sheetPermissions")
+      .withIndex("by_sheet_and_user", (q) =>
+        q.eq("sheetId", args.sheetId).eq("userId", currentUserId)
+      )
+      .unique();
+
+    // If no sheet permission, they're a viewer
+    if (!sheetPermission) {
+      return {
+        role: "viewer" as const,
+        moduleAccessStatus: "none" as const,
+        hasAccess: false,
+      };
+    }
+
+    const userRole = sheetPermission.role;
+
+    // 3. Owners and QA Leads have full access to all modules
+    if (userRole === "owner" || userRole === "qa_lead") {
+      return {
+        role: userRole,
+        moduleAccessStatus: "approved" as const,
+        hasAccess: true,
+      };
+    }
+
+    // 4. For QA Testers, check module-specific access
+    if (userRole === "qa_tester") {
+      // Check if user is assigned to the module
+      const module = await ctx.db.get(args.moduleId);
+      const isAssigned = module?.assigneeIds?.some(id => id === currentUserId) || false;
+
+      if (isAssigned) {
+        return {
+          role: "qa_tester" as const,
+          moduleAccessStatus: "approved" as const,
+          hasAccess: true,
+        };
+      }
+
+      // Check if there's a pending or declined request
+      const accessRequest = await ctx.db
+        .query("moduleAccessRequests")
+        .withIndex("by_module_and_requester", (q) =>
+          q.eq("moduleId", args.moduleId).eq("requesterId", currentUserId)
+        )
+        .order("desc")
+        .first();
+
+      if (accessRequest) {
+        return {
+          role: "qa_tester" as const,
+          moduleAccessStatus: accessRequest.status,
+          hasAccess: false,
+        };
+      }
+
+      // No request exists yet
+      return {
+        role: "qa_tester" as const,
+        moduleAccessStatus: "none" as const,
+        hasAccess: false,
+      };
+    }
+
+    // 5. Viewers can only view
+    return {
+      role: "viewer" as const,
+      moduleAccessStatus: "none" as const,
+      hasAccess: false,
+    };
+  },
+});
