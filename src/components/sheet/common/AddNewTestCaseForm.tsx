@@ -12,6 +12,7 @@ interface FormField {
   options?: { value: string; label: string }[];
   required?: boolean;
   rows?: number;
+  disabled?: boolean; // ✅ NEW: Support for disabled fields
 }
 
 interface AddNewTestCaseFormProps {
@@ -42,6 +43,10 @@ export function AddNewTestCaseForm({
   
   const renderFormField = (field: FormField) => {
     const baseInputClass = "w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500";
+    // ✅ NEW: Add disabled styling
+    const disabledClass = field.disabled 
+      ? "bg-gray-100 cursor-not-allowed text-gray-600" 
+      : "bg-white";
 
     switch (field.type) {
       case 'readonly':
@@ -56,7 +61,8 @@ export function AddNewTestCaseForm({
           <select
             value={field.value}
             onChange={(e) => onFieldChange(field.key, e.target.value)}
-            className={baseInputClass}
+            disabled={field.disabled} // ✅ NEW: Apply disabled state
+            className={`${baseInputClass} ${disabledClass}`}
           >
             {field.options?.map(opt => (
               <option key={opt.value} value={opt.value}>
@@ -73,7 +79,8 @@ export function AddNewTestCaseForm({
             onChange={(e) => onFieldChange(field.key, e.target.value)}
             placeholder={field.placeholder}
             rows={field.rows || 2}
-            className={baseInputClass}
+            disabled={field.disabled} // ✅ NEW: Apply disabled state
+            className={`${baseInputClass} ${disabledClass}`}
           />
         );
 
@@ -85,7 +92,7 @@ export function AddNewTestCaseForm({
               onChange={(value) => onFieldChange(field.key, value)}
               placeholder={field.placeholder}
               rows={field.rows || 3}
-              className="text-sm"
+              className={`text-sm ${field.disabled ? disabledClass : ''}`}
             />
           );
         }
@@ -96,7 +103,8 @@ export function AddNewTestCaseForm({
             onChange={(e) => onFieldChange(field.key, e.target.value)}
             placeholder={field.placeholder}
             rows={field.rows || 3}
-            className={baseInputClass}
+            disabled={field.disabled} // ✅ NEW: Apply disabled state
+            className={`${baseInputClass} ${disabledClass}`}
           />
         );
 
@@ -107,7 +115,8 @@ export function AddNewTestCaseForm({
             value={field.value}
             onChange={(e) => onFieldChange(field.key, e.target.value)}
             placeholder={field.placeholder}
-            className={baseInputClass}
+            disabled={field.disabled} // ✅ NEW: Apply disabled state
+            className={`${baseInputClass} ${disabledClass}`}
           />
         );
 
@@ -119,7 +128,8 @@ export function AddNewTestCaseForm({
             value={field.value}
             onChange={(e) => onFieldChange(field.key, e.target.value)}
             placeholder={field.placeholder}
-            className={baseInputClass}
+            disabled={field.disabled} // ✅ NEW: Apply disabled state
+            className={`${baseInputClass} ${disabledClass}`}
           />
         );
     }
@@ -157,6 +167,7 @@ export function AddNewTestCaseForm({
             { value: '', label: 'Select Module' },
             ...modules.map(m => ({ value: m._id, label: m.name }))
           ],
+          disabled: moduleField.disabled, // ✅ NEW: Preserve disabled state
         };
       }
     }
@@ -165,7 +176,7 @@ export function AddNewTestCaseForm({
   };
 
   return (
-    <tr className="bg-blue-50">
+    <tr className="bg-blue-50 border-l-4 border-blue-500">
       {columns.map((column) => {
         const field = getFieldForColumn(column.key);
         const width = getColumnWidth(column.key, column.width);

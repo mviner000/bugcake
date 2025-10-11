@@ -1,6 +1,6 @@
 // src/components/sheet/functionality/FunctionalityTestCasesTable.tsx
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Doc, Id } from "convex/_generated/dataModel";
 import { api } from "../../../../convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
@@ -71,6 +71,7 @@ export function FunctionalityTestCasesTable({
 
   const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [preselectedModuleId, setPreselectedModuleId] = useState<string | null>(null); // ✅ NEW: Track preselected module
   const [newTestCase, setNewTestCase] = useState<NewFunctionalityTestCase>({
     title: "",
     level: "High",
@@ -84,13 +85,22 @@ export function FunctionalityTestCasesTable({
     jiraUserStory: "",
   });
 
-  const handleAddNew = () => {
+  // ✅ FIXED: Move useEffect to component level
+  useEffect(() => {
+    if (preselectedModuleId && preselectedModuleId !== newTestCase.module) {
+      setNewTestCase(prev => ({ ...prev, module: preselectedModuleId }));
+    }
+  }, [preselectedModuleId, newTestCase.module]);
+
+  // UPDATED: Handle add with optional module preselection
+  const handleAddNew = (moduleId?: string) => {
     setIsAdding(true);
+    setPreselectedModuleId(moduleId || null); // ✅ Store preselected module ID
     setNewTestCase({
       title: "",
       level: "High",
       scenario: "Happy Path",
-      module: "",
+      module: moduleId || "", // Preselect module if provided
       subModule: "",
       preConditions: "",
       steps: "",
@@ -122,6 +132,7 @@ export function FunctionalityTestCasesTable({
         jiraUserStory: newTestCase.jiraUserStory ? newTestCase.jiraUserStory.trim() : undefined,
       });
       setIsAdding(false);
+      setPreselectedModuleId(null); // ✅ Reset preselected module
       setNewTestCase({
         title: "",
         level: "High",
@@ -144,6 +155,7 @@ export function FunctionalityTestCasesTable({
 
   const handleCancelNew = () => {
     setIsAdding(false);
+    setPreselectedModuleId(null); // ✅ Reset preselected module
     setNewTestCase({
       title: "",
       level: "High",
@@ -342,10 +354,13 @@ export function FunctionalityTestCasesTable({
     );
   };
 
+  // ✅ FIXED: No hooks inside this function anymore
   const renderNewTestCaseRow = (helpers: {
     getColumnWidth: (key: string, defaultWidth: number) => number;
+    preselectedModuleId?: string;
   }) => {
     const { getColumnWidth } = helpers;
+    // Note: preselectedModuleId is already handled by the useEffect at component level
 
     // Define form fields for the AddNewTestCaseForm component
     const formFields = [
@@ -372,6 +387,7 @@ export function FunctionalityTestCasesTable({
         type: 'select' as const,
         value: newTestCase.module,
         required: true,
+        disabled: !!preselectedModuleId, // Disable if preselected
       },
       {
         key: 'subModule',

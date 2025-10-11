@@ -25,9 +25,11 @@ interface ModuleNamebarProps {
   members?: TeamMember[] 
   moduleId: Id<"modules"> 
   sheetId: Id<"sheets">
-  // NEW: Props for conditional rendering
+  // Props for conditional rendering
   currentUserRole?: "owner" | "qa_lead" | "qa_tester" | "viewer"
   currentUserModuleAccessStatus?: "approved" | "pending" | "declined" | "none"
+  // ✅ NEW: Callback when Add button is clicked
+  onAddClick?: () => void
 }
 
 export function ModuleNamebar({
@@ -43,6 +45,7 @@ export function ModuleNamebar({
   sheetId,
   currentUserRole,
   currentUserModuleAccessStatus,
+  onAddClick, // ✅ NEW
 }: ModuleNamebarProps) {
   const [avatarLeftPosition, setAvatarLeftPosition] = useState(1000)
   const [addButtonLeftPosition, setAddButtonLeftPosition] = useState(112)
@@ -51,7 +54,7 @@ export function ModuleNamebar({
   const [isAssigneeModalOpen, setIsAssigneeModalOpen] = useState(false)
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false)
 
-  // ✅ NEW: Logic to determine if "Add New" button should be shown
+  // Logic to determine if "Add New" button should be shown
   const shouldShowAddButton = (() => {
     // Owner and QA Lead always see the button
     if (currentUserRole === "owner" || currentUserRole === "qa_lead") {
@@ -67,7 +70,7 @@ export function ModuleNamebar({
     return false
   })()
 
-  // ✅ NEW: Logic to determine if "Request Access" button should be shown
+  // Logic to determine if "Request Access" button should be shown
   const shouldShowRequestButton = (() => {
     // Only show for QA Tester who doesn't have approved access
     if (currentUserRole === "qa_tester" && currentUserModuleAccessStatus !== "approved") {
@@ -189,9 +192,10 @@ export function ModuleNamebar({
         )}
       </button>
 
-      {/* ✅ UPDATED: Conditionally render Add Button */}
+      {/* ✅ UPDATED: Conditionally render Add Button with onClick handler */}
       {shouldShowAddButton && (
         <button
+          onClick={onAddClick} // ✅ NEW: Trigger callback
           className="ml-4 cursor-pointer sticky top-3/4 -translate-y-[65%] z-10 border border-[#333333] text-[#333333] bg-transparent px-2 py-1 rounded hover:bg-blue-500 hover:text-white transition-colors"
           style={{ 
             lineHeight: "normal", 
@@ -203,7 +207,7 @@ export function ModuleNamebar({
         </button>
       )}
 
-      {/* ✅ UPDATED: Conditionally render Request Button */}
+      {/* ✅ Conditionally render Request Button */}
       {shouldShowRequestButton && (
         <RequestForModuleAccessButton
           className="ml-4 sticky top-3/4 -translate-y-[65%] z-10"

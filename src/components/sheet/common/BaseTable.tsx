@@ -1,7 +1,6 @@
 // src/components/sheet/common/BaseTable.tsx
 
 import React, { useState, useRef, useMemo, ReactNode } from "react";
-// Id is already imported here
 import { Doc, Id } from "convex/_generated/dataModel";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
@@ -66,6 +65,8 @@ interface BaseTableProps<T extends {
   ) => ReactNode;
   renderNewTestCaseRow?: (helpers: {
     getColumnWidth: (key: string, defaultWidth: number) => number;
+    // NEW: Pass the selected module ID
+    preselectedModuleId?: string;
   }) => ReactNode;
   
   // CRUD operations
@@ -75,7 +76,7 @@ interface BaseTableProps<T extends {
   // New row state management
   isAdding?: boolean;
   isSaving?: boolean;
-  onAddNew?: () => void;
+  onAddNew?: (moduleId?: string) => void; // UPDATED: Accept optional moduleId
   
   // Batch operations
   batchUpdateMutation: any;
@@ -99,6 +100,7 @@ function ModuleNamebarWithAccess({
   isChecked,
   isIndeterminate,
   onCheckboxChange,
+  onAddClick, // NEW: Add click handler
 }: {
   moduleId: Id<"modules">;
   sheetId: Id<"sheets">;
@@ -109,6 +111,7 @@ function ModuleNamebarWithAccess({
   isChecked: boolean;
   isIndeterminate: boolean;
   onCheckboxChange: (checked: boolean) => void;
+  onAddClick: () => void; // NEW: Callback for Add button
 }) {
   // Fetch access data for this specific module
   const accessData = useQuery(api.myFunctions.getUserModuleAccess, {
@@ -129,6 +132,7 @@ function ModuleNamebarWithAccess({
       sheetId={sheetId}
       currentUserRole={accessData?.role}
       currentUserModuleAccessStatus={accessData?.moduleAccessStatus}
+      onAddClick={onAddClick} // NEW: Pass the callback
     />
   );
 }
@@ -141,6 +145,7 @@ function ModuleNamebarWithAccess({
 export function BaseTable<T extends BaseTestCase>({
   testCases,
   sheetId,
+  modules,
   activeWorkflowStatus,
   onWorkflowStatusChange,
   statusCounts,
@@ -185,6 +190,7 @@ export function BaseTable<T extends BaseTestCase>({
 
   // Local state
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const [activeAddingModuleId, setActiveAddingModuleId] = useState<string | null>(null); // NEW
   const tableRef = useRef<HTMLTableElement>(null);
 
   // Group test cases by module
@@ -297,6 +303,22 @@ export function BaseTable<T extends BaseTestCase>({
     }
   };
 
+  // NEW: Handle module-specific add click
+  const handleModuleAddClick = (moduleId: string) => {
+    setActiveAddingModuleId(moduleId);
+    if (onAddNew) {
+      onAddNew(moduleId);
+    }
+  };
+
+  // NEW: Handle cancel - reset active module
+  const handleCancel = () => {
+    setActiveAddingModuleId(null);
+    if (onCancelNew) {
+      onCancelNew();
+    }
+  };
+
   return (
     <div className="flex flex-col">
       {/* Top Bar Button */}
@@ -368,7 +390,7 @@ export function BaseTable<T extends BaseTestCase>({
                     emptyStateMessage ||
                     `No ${activeWorkflowStatus.toLowerCase()} test cases found.`
                   }
-                  onAdd={onAddNew}
+                  onAdd={() => onAddNew()}
                   buttonText={emptyStateButtonText}
                   colSpan={columns.length}
                 />
@@ -426,9 +448,19 @@ export function BaseTable<T extends BaseTestCase>({
                               onCheckboxChange={(checked) =>
                                 handleModuleCheckboxChange(moduleId, checked)
                               }
+                              onAddClick={() => handleModuleAddClick(moduleId)} // NEW
                             />
                           </td>
                         </tr>
+                        
+                        {/* NEW: Show input row directly after this module's namebar if active */}
+                        {isAdding && activeAddingModuleId === moduleId && renderNewTestCaseRow && (
+                          renderNewTestCaseRow({
+                            getColumnWidth,
+                            preselectedModuleId: moduleId,
+                          })
+                        )}
+
                         {/* Test Cases for this module */}
                         {moduleTestCases.map((testCase) => (
                           <React.Fragment key={testCase._id}>
@@ -445,25 +477,20 @@ export function BaseTable<T extends BaseTestCase>({
                     );
                   }
                 )}
-
-                {/* New Row Input */}
-                {isAdding && renderNewTestCaseRow && renderNewTestCaseRow({
-                  getColumnWidth,
-                })}
               </>
             )}
           </tbody>
         </table>
       </div>
 
-      {/* Add New Row Button */}
-      {(testCases.length > 0 || isAdding) && onAddNew && onSaveNew && onCancelNew && (
+      {/* Add New Row Button - Only show when actively adding */}
+      {isAdding && onSaveNew && onCancelNew && (
         <TableActionButtons
           isAdding={isAdding}
           isSaving={isSaving}
-          onAdd={onAddNew}
+          onAdd={() => {}} // Not used when already adding
           onSave={onSaveNew}
-          onCancel={onCancelNew}
+          onCancel={handleCancel} // Use custom handler
         />
       )}
 
