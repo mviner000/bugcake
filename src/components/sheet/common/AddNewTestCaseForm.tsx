@@ -42,7 +42,7 @@ export function AddNewTestCaseForm({
 }: AddNewTestCaseFormProps) {
   
   const renderFormField = (field: FormField) => {
-    const baseInputClass = "w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500";
+    const baseInputClass = "w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 relative z-50";
     // ✅ NEW: Add disabled styling
     const disabledClass = field.disabled 
       ? "bg-gray-100 cursor-not-allowed text-gray-600" 
@@ -176,7 +176,7 @@ export function AddNewTestCaseForm({
   };
 
   return (
-    <tr className="bg-blue-50 border-l-4 border-blue-500">
+    <tr className="bg-blue-50 border-l-4 border-blue-500 relative z-50">
       {columns.map((column) => {
         const field = getFieldForColumn(column.key);
         const width = getColumnWidth(column.key, column.width);

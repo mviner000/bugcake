@@ -24,7 +24,7 @@ export const TableActionButtons: React.FC<TableActionButtonsProps> = ({
 }) => {
   if (isAdding) {
     return (
-      <div className="flex justify-center gap-2 py-4">
+      <div className="bg-white/80 z-40 flex justify-center gap-2 py-4">
         <button
           onClick={onSave}
           disabled={isSaving}

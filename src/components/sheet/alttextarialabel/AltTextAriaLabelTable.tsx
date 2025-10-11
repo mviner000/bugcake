@@ -1,5 +1,5 @@
 // src/components/sheet/alttextarialabel/AltTextAriaLabelTable.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Doc, Id } from "convex/_generated/dataModel";
 import { api } from "../../../../convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
@@ -67,6 +67,7 @@ export function AltTextAriaLabelTable({
 
   const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [preselectedModuleId, setPreselectedModuleId] = useState<string | null>(null); // ✅ NEW: Track preselected module
   const [newTestCase, setNewTestCase] = useState<NewAltTextAriaLabelTestCase>({
     persona: "User",
     module: "",
@@ -83,11 +84,20 @@ export function AltTextAriaLabelTable({
     jiraUserStory: "",
   });
 
-  const handleAddNew = () => {
+  // ✅ NEW: Move useEffect to component level
+  useEffect(() => {
+    if (preselectedModuleId && preselectedModuleId !== newTestCase.module) {
+      setNewTestCase(prev => ({ ...prev, module: preselectedModuleId }));
+    }
+  }, [preselectedModuleId, newTestCase.module]);
+
+  // ✅ UPDATED: Handle add with optional module preselection
+  const handleAddNew = (moduleId?: string) => {
     setIsAdding(true);
+    setPreselectedModuleId(moduleId || null); // ✅ Store preselected module ID
     setNewTestCase({
       persona: "User",
-      module: "",
+      module: moduleId || "", // Preselect module if provided
       subModule: "",
       pageSection: "",
       wireframeLink: "",
@@ -127,6 +137,7 @@ export function AltTextAriaLabelTable({
         jiraUserStory: newTestCase.jiraUserStory ? newTestCase.jiraUserStory.trim() : undefined,
       });
       setIsAdding(false);
+      setPreselectedModuleId(null); // ✅ Reset preselected module
       setNewTestCase({
         persona: "User",
         module: "",
@@ -152,6 +163,7 @@ export function AltTextAriaLabelTable({
 
   const handleCancelNew = () => {
     setIsAdding(false);
+    setPreselectedModuleId(null); // ✅ Reset preselected module
     setNewTestCase({
       persona: "User",
       module: "",
@@ -381,10 +393,13 @@ export function AltTextAriaLabelTable({
     );
   };
 
+  // ✅ FIXED: No hooks inside this function anymore
   const renderNewTestCaseRow = (helpers: {
     getColumnWidth: (key: string, defaultWidth: number) => number;
+    preselectedModuleId?: string;
   }) => {
     const { getColumnWidth } = helpers;
+    // Note: preselectedModuleId is already handled by the useEffect at component level
 
     // Define form fields for the AddNewTestCaseForm component
     const formFields = [
@@ -406,6 +421,7 @@ export function AltTextAriaLabelTable({
         type: 'select' as const,
         value: newTestCase.module,
         required: true,
+        disabled: !!preselectedModuleId, // ✅ Disable if preselected
       },
       {
         key: 'subModule',
@@ -501,12 +517,12 @@ export function AltTextAriaLabelTable({
       {
         key: 'createdBy',
         type: 'readonly' as const,
-        value: 'Current User',
+        value: 'You',
       },
       {
         key: 'createdAt',
         type: 'readonly' as const,
-        value: 'Today',
+        value: 'Now',
       },
     ];
 

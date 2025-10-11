@@ -145,7 +145,6 @@ function ModuleNamebarWithAccess({
 export function BaseTable<T extends BaseTestCase>({
   testCases,
   sheetId,
-  modules,
   activeWorkflowStatus,
   onWorkflowStatusChange,
   statusCounts,
@@ -320,7 +319,18 @@ export function BaseTable<T extends BaseTestCase>({
   };
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col relative">
+      {/* ✅ NEW: Overlay when adding new test case */}
+      {isAdding && (
+        <div 
+          className="fixed inset-0 z-40"
+          style={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.15)',
+            pointerEvents: 'none' 
+          }}
+        />
+      )}
+
       {/* Top Bar Button */}
       <div className="flex justify-start px-4">
         <Button size="sm" variant="outline" onClick={handleSendToApproval}>
@@ -453,12 +463,18 @@ export function BaseTable<T extends BaseTestCase>({
                           </td>
                         </tr>
                         
-                        {/* NEW: Show input row directly after this module's namebar if active */}
+                        {/* ✅ NEW: Show input row directly after this module's namebar if active */}
                         {isAdding && activeAddingModuleId === moduleId && renderNewTestCaseRow && (
-                          renderNewTestCaseRow({
-                            getColumnWidth,
-                            preselectedModuleId: moduleId,
-                          })
+                          <tr className="relative z-50">
+                            <td colSpan={columns.length} className="p-0">
+                              <div className="relative">
+                                {renderNewTestCaseRow({
+                                  getColumnWidth,
+                                  preselectedModuleId: moduleId,
+                                })}
+                              </div>
+                            </td>
+                          </tr>
                         )}
 
                         {/* Test Cases for this module */}
