@@ -65,7 +65,6 @@ interface BaseTableProps<T extends {
   ) => ReactNode;
   renderNewTestCaseRow?: (helpers: {
     getColumnWidth: (key: string, defaultWidth: number) => number;
-    // NEW: Pass the selected module ID
     preselectedModuleId?: string;
   }) => ReactNode;
   
@@ -76,7 +75,7 @@ interface BaseTableProps<T extends {
   // New row state management
   isAdding?: boolean;
   isSaving?: boolean;
-  onAddNew?: (moduleId?: string) => void; // UPDATED: Accept optional moduleId
+  onAddNew?: (moduleId?: string) => void;
   
   // Batch operations
   batchUpdateMutation: any;
@@ -100,7 +99,7 @@ function ModuleNamebarWithAccess({
   isChecked,
   isIndeterminate,
   onCheckboxChange,
-  onAddClick, // NEW: Add click handler
+  onAddClick,
 }: {
   moduleId: Id<"modules">;
   sheetId: Id<"sheets">;
@@ -111,7 +110,7 @@ function ModuleNamebarWithAccess({
   isChecked: boolean;
   isIndeterminate: boolean;
   onCheckboxChange: (checked: boolean) => void;
-  onAddClick: () => void; // NEW: Callback for Add button
+  onAddClick: () => void;
 }) {
   // Fetch access data for this specific module
   const accessData = useQuery(api.myFunctions.getUserModuleAccess, {
@@ -132,7 +131,7 @@ function ModuleNamebarWithAccess({
       sheetId={sheetId}
       currentUserRole={accessData?.role}
       currentUserModuleAccessStatus={accessData?.moduleAccessStatus}
-      onAddClick={onAddClick} // NEW: Pass the callback
+      onAddClick={onAddClick}
     />
   );
 }
@@ -145,6 +144,7 @@ function ModuleNamebarWithAccess({
 export function BaseTable<T extends BaseTestCase>({
   testCases,
   sheetId,
+  modules,
   activeWorkflowStatus,
   onWorkflowStatusChange,
   statusCounts,
@@ -189,7 +189,7 @@ export function BaseTable<T extends BaseTestCase>({
 
   // Local state
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
-  const [activeAddingModuleId, setActiveAddingModuleId] = useState<string | null>(null); // NEW
+  const [activeAddingModuleId, setActiveAddingModuleId] = useState<string | null>(null);
   const tableRef = useRef<HTMLTableElement>(null);
 
   // Group test cases by module
@@ -302,7 +302,7 @@ export function BaseTable<T extends BaseTestCase>({
     }
   };
 
-  // NEW: Handle module-specific add click
+  // Handle module-specific add click
   const handleModuleAddClick = (moduleId: string) => {
     setActiveAddingModuleId(moduleId);
     if (onAddNew) {
@@ -310,7 +310,7 @@ export function BaseTable<T extends BaseTestCase>({
     }
   };
 
-  // NEW: Handle cancel - reset active module
+  // Handle cancel - reset active module
   const handleCancel = () => {
     setActiveAddingModuleId(null);
     if (onCancelNew) {
@@ -320,7 +320,7 @@ export function BaseTable<T extends BaseTestCase>({
 
   return (
     <div className="flex flex-col relative">
-      {/* ✅ NEW: Overlay when adding new test case */}
+      {/* Overlay when adding new test case */}
       {isAdding && (
         <div 
           className="fixed inset-0 z-40"
@@ -403,6 +403,7 @@ export function BaseTable<T extends BaseTestCase>({
                   onAdd={() => onAddNew()}
                   buttonText={emptyStateButtonText}
                   colSpan={columns.length}
+                  modules={modules}
                 />
               ) : (
                 <tr>
@@ -458,12 +459,12 @@ export function BaseTable<T extends BaseTestCase>({
                               onCheckboxChange={(checked) =>
                                 handleModuleCheckboxChange(moduleId, checked)
                               }
-                              onAddClick={() => handleModuleAddClick(moduleId)} // NEW
+                              onAddClick={() => handleModuleAddClick(moduleId)}
                             />
                           </td>
                         </tr>
                         
-                        {/* ✅ NEW: Show input row directly after this module's namebar if active */}
+                        {/* Show input row directly after this module's namebar if active */}
                         {isAdding && activeAddingModuleId === moduleId && renderNewTestCaseRow && (
                           <tr className="relative z-50">
                             <td colSpan={columns.length} className="p-0">
@@ -504,9 +505,9 @@ export function BaseTable<T extends BaseTestCase>({
         <TableActionButtons
           isAdding={isAdding}
           isSaving={isSaving}
-          onAdd={() => {}} // Not used when already adding
+          onAdd={() => {}}
           onSave={onSaveNew}
-          onCancel={handleCancel} // Use custom handler
+          onCancel={handleCancel}
         />
       )}
 
