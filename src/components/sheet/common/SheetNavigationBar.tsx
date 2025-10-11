@@ -1,4 +1,4 @@
-// components/sheet/sheet-navigation-bar.tsx
+// components/sheet/SheetNavigationBar.tsx
 
 import { Menu, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"

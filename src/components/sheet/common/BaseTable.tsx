@@ -14,6 +14,7 @@ import { ResizeFeedback } from "./ResizeFeedback";
 import { ModuleNamebar } from "./ModuleNamebar";
 import { Button } from "@/components/ui/button";
 import { SheetNavigationBar } from "./SheetNavigationBar";
+import { toast } from "sonner";
 import {
   WorkflowStatus,
   StatusCounts,
@@ -71,6 +72,7 @@ interface BaseTableProps<T extends {
   // CRUD operations
   onSaveNew?: () => Promise<void>;
   onCancelNew?: () => void;
+  onSaveSuccess?: () => void;
   
   // New row state management
   isAdding?: boolean;
@@ -154,6 +156,7 @@ export function BaseTable<T extends BaseTestCase>({
   renderNewTestCaseRow,
   onSaveNew,
   onCancelNew,
+  onSaveSuccess,
   isAdding = false,
   isSaving = false,
   onAddNew,
@@ -190,6 +193,7 @@ export function BaseTable<T extends BaseTestCase>({
   // Local state
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [activeAddingModuleId, setActiveAddingModuleId] = useState<string | null>(null);
+  const [previousWorkflowStatus, setPreviousWorkflowStatus] = useState<WorkflowStatus | null>(null);
   const tableRef = useRef<HTMLTableElement>(null);
 
   // Group test cases by module
@@ -304,17 +308,77 @@ export function BaseTable<T extends BaseTestCase>({
 
   // Handle module-specific add click
   const handleModuleAddClick = (moduleId: string) => {
+    // Save current status before switching to "Open"
+    if (activeWorkflowStatus !== "Open") {
+      setPreviousWorkflowStatus(activeWorkflowStatus);
+      onWorkflowStatusChange("Open");
+    }
+    
     setActiveAddingModuleId(moduleId);
     if (onAddNew) {
       onAddNew(moduleId);
     }
   };
 
-  // Handle cancel - reset active module
+  // Handle cancel - reset active module and restore previous status
   const handleCancel = () => {
     setActiveAddingModuleId(null);
+    
+    // Restore previous workflow status if it was changed
+    if (previousWorkflowStatus !== null) {
+      onWorkflowStatusChange(previousWorkflowStatus);
+      setPreviousWorkflowStatus(null);
+    }
+    
     if (onCancelNew) {
       onCancelNew();
+    }
+  };
+
+  // Handle save with toast notification
+  const handleSave = async () => {
+    if (!onSaveNew) return;
+    
+    try {
+      await onSaveNew();
+      
+      // Show success toast
+      toast.success("Test case added successfully!", {
+        duration: 3000,
+      });
+      
+      // Reset state
+      setActiveAddingModuleId(null);
+      
+      // Restore previous workflow status if it was changed
+      if (previousWorkflowStatus !== null) {
+        onWorkflowStatusChange(previousWorkflowStatus);
+        setPreviousWorkflowStatus(null);
+      }
+      
+      // Call the success callback if provided
+      if (onSaveSuccess) {
+        onSaveSuccess();
+      }
+    } catch (error) {
+      // Show error toast
+      const message = error instanceof Error ? error.message : "Failed to add test case";
+      toast.error(message, {
+        duration: 4000,
+      });
+    }
+  };
+
+  // Handle global add (when clicking the main add button)
+  const handleGlobalAdd = () => {
+    // Save current status before switching to "Open"
+    if (activeWorkflowStatus !== "Open") {
+      setPreviousWorkflowStatus(activeWorkflowStatus);
+      onWorkflowStatusChange("Open");
+    }
+    
+    if (onAddNew) {
+      onAddNew();
     }
   };
 
@@ -400,7 +464,7 @@ export function BaseTable<T extends BaseTestCase>({
                     emptyStateMessage ||
                     `No ${activeWorkflowStatus.toLowerCase()} test cases found.`
                   }
-                  onAdd={() => onAddNew()}
+                  onAdd={handleGlobalAdd}
                   buttonText={emptyStateButtonText}
                   colSpan={columns.length}
                   modules={modules}
@@ -549,12 +613,12 @@ export function BaseTable<T extends BaseTestCase>({
 
       {/* Add New Row Button - Only show when actively adding */}
       {isAdding && onSaveNew && onCancelNew && (
-        <div className="-ml-3 fixed bsolute top-0 bg-white w-full z-40">
+        <div className="-ml-3 fixed shadow-md bsolute top-0 bg-white w-full z-40">
         <TableActionButtons
           isAdding={isAdding}
           isSaving={isSaving}
           onAdd={() => {}}
-          onSave={onSaveNew}
+          onSave={handleSave}
           onCancel={handleCancel}
         />
         </div>

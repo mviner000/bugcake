@@ -3,6 +3,7 @@
 import { Authenticated, Unauthenticated, useQuery } from "convex/react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useAuthActions } from "@convex-dev/auth/react";
+import { Toaster } from "@/components/ui/sonner";
 
 import { api } from "../convex/_generated/api";
 
@@ -60,7 +61,7 @@ function AuthenticatedApp() {
           <Route path="/sheet/:sheetId" element={<DetailPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/rbac" element={<RBACPage />} />
-          <Route path="/create-template" element={<MultiStepFormPage />} /> {/* Add this route */}
+          <Route path="/create-template" element={<MultiStepFormPage />} />
           {/* Redirect authenticated users away from auth pages */}
           <Route path="/signin" element={<Navigate to="/" replace />} />
           <Route path="/signup" element={<Navigate to="/" replace />} />
@@ -102,6 +103,7 @@ export default function App() {
       <Unauthenticated>
         <UnauthenticatedRoutes />
       </Unauthenticated>
+      <Toaster />
     </BrowserRouter>
   );
 }
