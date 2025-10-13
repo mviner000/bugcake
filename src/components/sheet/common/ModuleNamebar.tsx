@@ -90,29 +90,46 @@ export function ModuleNamebar({
         avatar: "https://api.dicebear.com/7.x/initials/svg?seed=NA",
         fallback: "NA",
       }]
-
   // Calculate dynamic avatar width based on team member count
   const avatarTotalWidth = teamMembers.length * 30
 
   // ✅ Dynamic offset based on avatar count
+  // Offset decreases by 6px for each member removed from 5
+  const OFFSET_STEP_PX = 6;
+  const BASE_OFFSET_PX = 18; // Offset for 5+ members
+
   const dynamicOffsetPx =
     teamMembers.length >= 5
-      ? 110
+      ? BASE_OFFSET_PX
       : teamMembers.length === 4
-      ? 50
+      ? BASE_OFFSET_PX - OFFSET_STEP_PX      // 18 - 6 = 12
       : teamMembers.length === 3
-      ? 20
+      ? BASE_OFFSET_PX - OFFSET_STEP_PX * 2  // 18 - 12 = 6
       : teamMembers.length === 2
-      ? -10
-      : -40
+      ? BASE_OFFSET_PX - OFFSET_STEP_PX * 3  // 18 - 18 = 0
+      : BASE_OFFSET_PX - OFFSET_STEP_PX * 4; // 18 - 24 = -6
 
+  // Avatar offset decreases by 24px for each member removed
+  const AVATAR_OFFSET_STEP = 24;
+  const BASE_AVATAR_OFFSET = 62; // Offset for 5+ members
 
+  const dynamicAvatarOffset =
+    teamMembers.length >= 5
+      ? BASE_AVATAR_OFFSET
+      : teamMembers.length === 4
+      ? BASE_AVATAR_OFFSET - AVATAR_OFFSET_STEP      // 62 - 24 = 38
+      : teamMembers.length === 3
+      ? BASE_AVATAR_OFFSET - AVATAR_OFFSET_STEP * 2  // 62 - 48 = 14
+      : teamMembers.length === 2
+      ? BASE_AVATAR_OFFSET - AVATAR_OFFSET_STEP * 3  // 62 - 72 = -10
+      : BASE_AVATAR_OFFSET - AVATAR_OFFSET_STEP * 4; // 62 - 96 = -34
+      
   useEffect(() => {
     const updatePosition = () => {
       const screenWidth = window.innerWidth
       const titleButtonWidth = titleButtonRef.current?.offsetWidth || 0
       
-      const calculatedAvatarPosition = screenWidth - 185 
+      const calculatedAvatarPosition = screenWidth - 120
       const calculatedAddButtonPosition = 60 + titleButtonWidth 
 
       setAvatarLeftPosition(calculatedAvatarPosition)
@@ -217,7 +234,7 @@ export function ModuleNamebar({
       <TooltipProvider>
         <button 
           className="flex ml-4 sticky top-3/4 -translate-y-[150%] z-10 px-2 py-1"
-          style={{ left: `${avatarLeftPosition}px` }}
+          style={{ left: `${avatarLeftPosition - dynamicAvatarOffset}px` }}
         >
           {!moduleAssignees ? (
             // Loading state
