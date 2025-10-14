@@ -2,13 +2,14 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { useState, useEffect, useRef } from "react"
+import { useState, useRef } from "react"
 import { AssigneeModal } from "./AssigneeModal"
 import { RequestForModuleAccessButton } from "./RequestForModuleAccessButton"
 import { RequestForModuleAccessModal } from "./RequestForModuleAccessModal"
 import { Id } from "convex/_generated/dataModel"
 import { useQuery } from "convex/react"
-import { api } from "../../../../convex/_generated/api";
+import { api } from "../../../../convex/_generated/api"
+import { useModuleNamebarPositions } from "@/hooks/useModuleNamebarPositions"
 
 interface TeamMember {
   name: string
@@ -50,8 +51,6 @@ export function ModuleNamebar({
   onAddClick,
   isCheckboxDisabled = false,
 }: ModuleNamebarProps) {
-  const [avatarLeftPosition, setAvatarLeftPosition] = useState(1000)
-  const [addButtonLeftPosition, setAddButtonLeftPosition] = useState(112)
   const titleButtonRef = useRef<HTMLButtonElement>(null)
 
   const [isAssigneeModalOpen, setIsAssigneeModalOpen] = useState(false)
@@ -92,67 +91,20 @@ export function ModuleNamebar({
         avatar: "https://api.dicebear.com/7.x/initials/svg?seed=NA",
         fallback: "NA",
       }]
+
   // Calculate dynamic avatar width based on team member count
   const avatarTotalWidth = teamMembers.length * 30
 
-  // ✅ Dynamic offset based on avatar count
-  // Offset decreases by 6px for each member removed from 5
-  const OFFSET_STEP_PX = 6;
-  const BASE_OFFSET_PX = 18; // Offset for 5+ members
-
-  const dynamicOffsetPx =
-    teamMembers.length >= 5
-      ? BASE_OFFSET_PX
-      : teamMembers.length === 4
-      ? BASE_OFFSET_PX - OFFSET_STEP_PX      // 18 - 6 = 12
-      : teamMembers.length === 3
-      ? BASE_OFFSET_PX - OFFSET_STEP_PX * 2  // 18 - 12 = 6
-      : teamMembers.length === 2
-      ? BASE_OFFSET_PX - OFFSET_STEP_PX * 3  // 18 - 18 = 0
-      : BASE_OFFSET_PX - OFFSET_STEP_PX * 4; // 18 - 24 = -6
-
-  // Avatar offset decreases by 24px for each member removed
-  const AVATAR_OFFSET_STEP = 24;
-  const BASE_AVATAR_OFFSET = 62; // Offset for 5+ members
-
-  const dynamicAvatarOffset =
-    teamMembers.length >= 5
-      ? BASE_AVATAR_OFFSET
-      : teamMembers.length === 4
-      ? BASE_AVATAR_OFFSET - AVATAR_OFFSET_STEP      // 62 - 24 = 38
-      : teamMembers.length === 3
-      ? BASE_AVATAR_OFFSET - AVATAR_OFFSET_STEP * 2  // 62 - 48 = 14
-      : teamMembers.length === 2
-      ? BASE_AVATAR_OFFSET - AVATAR_OFFSET_STEP * 3  // 62 - 72 = -10
-      : BASE_AVATAR_OFFSET - AVATAR_OFFSET_STEP * 4; // 62 - 96 = -34
-      
-  useEffect(() => {
-    const updatePosition = () => {
-      const screenWidth = window.innerWidth
-      const titleButtonWidth = titleButtonRef.current?.offsetWidth || 0
-      
-      const calculatedAvatarPosition = screenWidth - 120
-      const calculatedAddButtonPosition = 60 + titleButtonWidth 
-
-      setAvatarLeftPosition(calculatedAvatarPosition)
-      setAddButtonLeftPosition(calculatedAddButtonPosition)
-    }
-
-    updatePosition()
-    window.addEventListener('resize', updatePosition)
-    window.addEventListener('scroll', updatePosition)
-    
-    const resizeObserver = new ResizeObserver(updatePosition)
-    if (titleButtonRef.current) {
-      resizeObserver.observe(titleButtonRef.current)
-    }
-    
-    return () => {
-      window.removeEventListener('resize', updatePosition)
-      window.removeEventListener('scroll', updatePosition)
-      resizeObserver.disconnect()
-    }
-  }, [])
+  // Use the custom hook for position calculations
+  const {
+    avatarLeftPosition,
+    addButtonLeftPosition,
+    dynamicOffsetPx,
+    dynamicAvatarOffset,
+  } = useModuleNamebarPositions({
+    teamMemberCount: teamMembers.length,
+    titleButtonRef,
+  })
 
   return (
     <>
