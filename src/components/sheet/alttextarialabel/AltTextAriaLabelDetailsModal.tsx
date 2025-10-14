@@ -5,9 +5,11 @@ import { User, Layers3, Link } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { CardHeader, CardTitle } from "@/components/ui/card";
 import { ContentSection } from "@/components/ui/mod/ModalHelpers";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ApprovalDetailsModal, {
   getStatusVariant,
-} from "../common/ApprovalDetailsModal";
+} from "../common/modal/ApprovalDetailsModal";
+import StatusHistoryTimeline from "../common/StatusHistoryTimeline";
 
 interface AltTextAriaLabelDetailsModalProps {
   sheetId: string;
@@ -41,111 +43,124 @@ const renderSidebarItem = (testCase: any, index: number) => (
 // This function defines the main content area when a test case is selected.
 const renderDetailsView = (selectedTestCase: any) => (
   <div className="lg:col-span-2 space-y-8">
-    <h3 className="text-2xl font-bold -mb-2">
+    <h3 className="text-2xl font-bold mb-1">
       {selectedTestCase.pageSection}
     </h3>
 
-    <ContentSection title="Module Hierarchy">
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <Layers3 className="w-4 h-4 mt-0.5 flex-shrink-0" />
-        <div>
-          {selectedTestCase.moduleName} / {selectedTestCase.subModule} /{" "}
-          {selectedTestCase.pageSection}
-        </div>
-      </div>
-    </ContentSection>
+    <Tabs defaultValue="details" className="w-full">
+      <TabsList className="w-full grid grid-cols-2">
+        <TabsTrigger value="details">Details</TabsTrigger>
+        <TabsTrigger value="history">Status History</TabsTrigger>
+      </TabsList>
 
-    <ContentSection title="Persona">
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <User className="w-4 h-4 mt-0.5 flex-shrink-0" />
-        <div>{selectedTestCase.persona}</div>
-      </div>
-    </ContentSection>
+      <TabsContent value="details" className="space-y-8 mt-6">
+        <ContentSection title="Module Hierarchy">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Layers3 className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <div>
+              {selectedTestCase.moduleName} / {selectedTestCase.subModule} /{" "}
+              {selectedTestCase.pageSection}
+            </div>
+          </div>
+        </ContentSection>
 
-    <div className="space-y-2">
-      <h4 className="text-sm font-semibold text-muted-foreground">
-        Status Overview
-      </h4>
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-muted-foreground">
-            TESTING STATUS:
-          </span>
-          <Badge variant={getStatusVariant(selectedTestCase.testingStatus)}>
-            {selectedTestCase.testingStatus}
-          </Badge>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-muted-foreground">
-            SE IMPLEMENTATION:
-          </span>
-          <Badge variant={getStatusVariant(selectedTestCase.seImplementation)}>
-            {selectedTestCase.seImplementation}
-          </Badge>
-        </div>
-      </div>
-    </div>
+        <ContentSection title="Persona">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <User className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <div>{selectedTestCase.persona}</div>
+          </div>
+        </ContentSection>
 
-    <ContentSection title="Remarks">
-      <p className="whitespace-pre-wrap text-muted-foreground">
-        {selectedTestCase.remarks}
-      </p>
-    </ContentSection>
-
-    <ContentSection title="Images, Icons & Alt Text">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg">
-        <div>
-          <h5 className="font-semibold mb-2">Images/Icons</h5>
-          {selectedTestCase.imagesIcons ? (
-            <img
-              src={selectedTestCase.imagesIcons}
-              alt={selectedTestCase.altTextAriaLabel}
-              className="rounded-md border object-cover w-full h-32"
-            />
-          ) : (
-            <p className="text-xs text-muted-foreground italic">
-              No image provided
-            </p>
-          )}
+        <div className="space-y-2">
+          <h4 className="text-sm font-semibold text-muted-foreground">
+            Status Overview
+          </h4>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-muted-foreground">
+                TESTING STATUS:
+              </span>
+              <Badge variant={getStatusVariant(selectedTestCase.testingStatus)}>
+                {selectedTestCase.testingStatus}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-muted-foreground">
+                SE IMPLEMENTATION:
+              </span>
+              <Badge variant={getStatusVariant(selectedTestCase.seImplementation)}>
+                {selectedTestCase.seImplementation}
+              </Badge>
+            </div>
+          </div>
         </div>
-        <div>
-          <h5 className="font-semibold mb-2">Alt Text / Aria Label</h5>
+
+        <ContentSection title="Remarks">
           <p className="whitespace-pre-wrap text-muted-foreground">
-            {selectedTestCase.altTextAriaLabel}
+            {selectedTestCase.remarks}
           </p>
-        </div>
-      </div>
-    </ContentSection>
+        </ContentSection>
 
-    {selectedTestCase.wireframeLink && (
-      <ContentSection title="Wireframe">
-        <a
-          href={selectedTestCase.wireframeLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 text-primary hover:underline"
-        >
-          <Link className="w-4 h-4" />
-          <span className="break-all">{selectedTestCase.wireframeLink}</span>
-        </a>
-      </ContentSection>
-    )}
+        <ContentSection title="Images, Icons & Alt Text">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg">
+            <div>
+              <h5 className="font-semibold mb-2">Images/Icons</h5>
+              {selectedTestCase.imagesIcons ? (
+                <img
+                  src={selectedTestCase.imagesIcons}
+                  alt={selectedTestCase.altTextAriaLabel}
+                  className="rounded-md border object-cover w-full h-32"
+                />
+              ) : (
+                <p className="text-xs text-muted-foreground italic">
+                  No image provided
+                </p>
+              )}
+            </div>
+            <div>
+              <h5 className="font-semibold mb-2">Alt Text / Aria Label</h5>
+              <p className="whitespace-pre-wrap text-muted-foreground">
+                {selectedTestCase.altTextAriaLabel}
+              </p>
+            </div>
+          </div>
+        </ContentSection>
 
-    {selectedTestCase.actualResults && (
-      <ContentSection title="Actual Results">
-        <p className="whitespace-pre-wrap text-muted-foreground">
-          {selectedTestCase.actualResults}
-        </p>
-      </ContentSection>
-    )}
+        {selectedTestCase.wireframeLink && (
+          <ContentSection title="Wireframe">
+            <a
+              href={selectedTestCase.wireframeLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-primary hover:underline"
+            >
+              <Link className="w-4 h-4" />
+              <span className="break-all">{selectedTestCase.wireframeLink}</span>
+            </a>
+          </ContentSection>
+        )}
 
-    {selectedTestCase.notes && (
-      <ContentSection title="Notes">
-        <p className="whitespace-pre-wrap text-muted-foreground">
-          {selectedTestCase.notes}
-        </p>
-      </ContentSection>
-    )}
+        {selectedTestCase.actualResults && (
+          <ContentSection title="Actual Results">
+            <p className="whitespace-pre-wrap text-muted-foreground">
+              {selectedTestCase.actualResults}
+            </p>
+          </ContentSection>
+        )}
+
+        {selectedTestCase.notes && (
+          <ContentSection title="Notes">
+            <p className="whitespace-pre-wrap text-muted-foreground">
+              {selectedTestCase.notes}
+            </p>
+          </ContentSection>
+        )}
+      </TabsContent>
+
+      <TabsContent value="history" className="mt-6">
+        <StatusHistoryTimeline />
+      </TabsContent>
+    </Tabs>
   </div>
 );
 

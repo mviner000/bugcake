@@ -1,7 +1,7 @@
 import { useState, useEffect, ReactNode } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { Id } from "convex/_generated/dataModel";
-import { api } from "../../../../convex/_generated/api";
+import { api } from "../../../../../convex/_generated/api";
 import {
   X,
   User,
@@ -14,8 +14,8 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { DetailsModal } from "@/components/ui/mod/DetailsModal";
 import { MetadataField } from "@/components/ui/mod/ModalHelpers";
-import { ApprovalButtons } from "./ApprovalButtons";
-import { ApprovalBadgeButton } from "./ApprovalBadgeButton";
+import { ApprovalButtons } from "../ApprovalButtons";
+import { ApprovalBadgeButton } from "../ApprovalBadgeButton";
 
 // --- Props Interface ---
 interface ApprovalDetailsModalProps {
