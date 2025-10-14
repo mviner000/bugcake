@@ -1,11 +1,10 @@
-// Updated src/components/sheet/alttextarialabel/AltTextAriaLabelDetailsModal.tsx
+// src/components/sheet/alttextarialabel/AltTextAriaLabelDetailsModal.tsx
 
 import { useState, useEffect } from "react";
 import { api } from "../../../../convex/_generated/api";
 import { useQuery, useMutation } from "convex/react";
 import { Id } from "convex/_generated/dataModel";
 import {
-  ListChecks,
   X,
   User,
   Layers3,
@@ -21,6 +20,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { DetailsModal } from "@/components/ui/mod/DetailsModal";
 import { ContentSection, MetadataField } from "@/components/ui/mod/ModalHelpers";
 import { ApprovalButtons } from "../common/ApprovalButtons";
+import { ApprovalBadgeButton } from "../common/ApprovalBadgeButton";
+
 interface AltTextAriaLabelDetailsModalProps {
   sheetId: string;
 }
@@ -143,27 +144,13 @@ export default function AltTextAriaLabelDetailsModal({
   const isQALeadOrOwner =
     currentUser?.role === "qa_lead" || currentUser?.role === "owner";
 
-  // ✅ Hide button entirely if there are no test cases
-  if (!testCases || testCases.length === 0) {
-    return null;
-  }
-
   return (
     <>
-      <Button
-        variant="outline"
-        size="sm"
+      <ApprovalBadgeButton
+        count={testCases.length}
+        isQALeadOrOwner={isQALeadOrOwner}
         onClick={handleOpen}
-        className="relative"
-      >
-        <ListChecks className="w-4 h-4 mr-2" />
-        {isQALeadOrOwner
-          ? "Please approve this now"
-          : "Need Approval for QA Lead/Owner"}
-        <span className="absolute -top-2 -right-2 flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold text-white bg-red-500 rounded-full">
-          {testCases.length}
-        </span>
-      </Button>
+      />
 
       <DetailsModal isOpen={isOpen} onClose={() => setIsOpen(false)}>
         <div className="w-[92vw] h-[90vh] flex flex-col">
