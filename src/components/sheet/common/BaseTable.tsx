@@ -102,6 +102,7 @@ function ModuleNamebarWithAccess({
   isIndeterminate,
   onCheckboxChange,
   onAddClick,
+  isCheckboxDisabled = false,
 }: {
   moduleId: Id<"modules">;
   sheetId: Id<"sheets">;
@@ -113,6 +114,7 @@ function ModuleNamebarWithAccess({
   isIndeterminate: boolean;
   onCheckboxChange: (checked: boolean) => void;
   onAddClick: () => void;
+  isCheckboxDisabled?: boolean;
 }) {
   // Fetch access data for this specific module
   const accessData = useQuery(api.myFunctions.getUserModuleAccess, {
@@ -134,6 +136,7 @@ function ModuleNamebarWithAccess({
       currentUserRole={accessData?.role}
       currentUserModuleAccessStatus={accessData?.moduleAccessStatus}
       onAddClick={onAddClick}
+      isCheckboxDisabled={isCheckboxDisabled}
     />
   );
 }
@@ -395,13 +398,14 @@ export function BaseTable<T extends BaseTestCase>({
         />
       )}
 
-      {/* Top Bar Button */}
-      <div className="flex justify-start px-4">
-        <Button size="sm" variant="outline" onClick={handleSendToApproval}>
-          Send To Approval for QA Lead{" "}
-          {selectedRows.size > 0 && `(${selectedRows.size})`}
-        </Button>
-      </div>
+      {/* Top Bar Button - Only show when items are selected */}
+      {selectedRows.size > 0 && (
+        <div className="flex justify-start px-4">
+          <Button size="sm" variant="outline" onClick={handleSendToApproval}>
+            Send To Approval for QA Lead ({selectedRows.size})
+          </Button>
+        </div>
+      )}
 
       {/* Navigation Bar with Status Filter */}
       <SheetNavigationBar
@@ -507,6 +511,7 @@ export function BaseTable<T extends BaseTestCase>({
                             isIndeterminate={false}
                             onCheckboxChange={() => {}}
                             onAddClick={() => handleModuleAddClick(module._id)}
+                            isCheckboxDisabled={true}
                           />
                         </td>
                       </tr>
@@ -559,6 +564,7 @@ export function BaseTable<T extends BaseTestCase>({
                               handleModuleCheckboxChange(moduleId, checked)
                             }
                             onAddClick={() => handleModuleAddClick(moduleId)}
+                            isCheckboxDisabled={moduleTestCases.length === 0}
                           />
                         </td>
                       </tr>

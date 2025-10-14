@@ -14,7 +14,7 @@ interface TeamMember {
   name: string
   avatar: string
   fallback: string
-  email?: string // ✅ NEW: Added email field
+  email?: string
 }
 
 interface ModuleNamebarProps {
@@ -32,6 +32,7 @@ interface ModuleNamebarProps {
   currentUserRole?: "owner" | "qa_lead" | "qa_tester" | "viewer"
   currentUserModuleAccessStatus?: "approved" | "pending" | "declined" | "none"
   onAddClick?: () => void
+  isCheckboxDisabled?: boolean
 }
 
 export function ModuleNamebar({
@@ -47,6 +48,7 @@ export function ModuleNamebar({
   currentUserRole,
   currentUserModuleAccessStatus,
   onAddClick,
+  isCheckboxDisabled = false,
 }: ModuleNamebarProps) {
   const [avatarLeftPosition, setAvatarLeftPosition] = useState(1000)
   const [addButtonLeftPosition, setAddButtonLeftPosition] = useState(112)
@@ -55,7 +57,7 @@ export function ModuleNamebar({
   const [isAssigneeModalOpen, setIsAssigneeModalOpen] = useState(false)
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false)
 
-  // ✅ NEW: Fetch module assignees dynamically
+  // Fetch module assignees dynamically
   const moduleAssignees = useQuery(api.myFunctions.getModuleAssignees, {
     moduleId: moduleId,
   })
@@ -82,7 +84,7 @@ export function ModuleNamebar({
     return false
   })()
 
-  // ✅ UPDATED: Use fetched assignees or show default placeholder
+  // Use fetched assignees or show default placeholder
   const teamMembers: TeamMember[] = moduleAssignees && moduleAssignees.length > 0 
     ? moduleAssignees 
     : [{
@@ -179,8 +181,9 @@ export function ModuleNamebar({
       <label className="mt-3 sticky left-4 z-10 flex items-center gap-2 cursor-pointer">
         <input
           type="checkbox"
-          className="ml-[8px] appearance-none w-[13px] h-[13px] border-[0.5px] border-[#171717] rounded-[3px] checked:bg-blue-500 checked:border-blue-500 cursor-pointer"
+          className="ml-[8px] appearance-none w-[13px] h-[13px] border-[0.5px] border-[#171717] rounded-[3px] checked:bg-blue-500 checked:border-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           checked={isChecked}
+          disabled={isCheckboxDisabled}
           ref={(el) => {
             if (el) el.indeterminate = isIndeterminate
           }}
