@@ -24,6 +24,7 @@ import {
   ModuleCheckboxState,
   ColorConfig,
 } from "@/components/sheet/common/types/testCaseTypes";
+import { ChecklistCreationModal } from "./ChecklistCreationModal";
 
 /**
  * Props for the BaseTable component
@@ -168,12 +169,55 @@ export function BaseTable<T extends BaseTestCase>({
   emptyStateMessage,
   emptyStateButtonText = "Add First Test Case",
 }: BaseTableProps<T>) {
+
+  const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
+
   // Fetch column widths
   const fetchedColumnWidths = useQuery(api.myFunctions.getColumnWidths, {
     sheetId,
     testCaseType,
   });
   const updateColumnWidth = useMutation(api.myFunctions.updateColumnWidth);
+
+  const createChecklist = useMutation(api.myFunctions.createChecklistFromSheet);
+
+  const handleCreateChecklist = () => {
+    if (selectedRows.size === 0) {
+      toast.error("Please select at least one approved test case.");
+      return;
+    }
+    
+    // Open the modal
+    setIsChecklistModalOpen(true);
+  };
+
+
+
+  const handleChecklistSubmit = async (data: {
+    sprintName: string;
+    titleRevisionNumber: string;
+    testExecutorAssigneeId: string;
+    goalDateToFinish: number;
+    description?: string;
+  }) => {
+    try {
+      const result = await createChecklist({
+        sheetId,
+        selectedTestCaseIds: Array.from(selectedRows),
+        ...data,
+        testExecutorAssigneeId: data.testExecutorAssigneeId as Id<"users">,
+      });
+
+      alert(result.message || "Checklist created successfully!");
+
+      // Clear selection and close modal
+      setSelectedRows(new Set());
+      setIsChecklistModalOpen(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to create checklist";
+      alert(`❌ ${message}`);
+    }
+  };
 
   // Custom Hooks
   const { getColumnWidth } = useColumnWidths(fetchedColumnWidths);
@@ -398,14 +442,37 @@ export function BaseTable<T extends BaseTestCase>({
         />
       )}
 
-      {/* Top Bar Button - Only show when items are selected */}
+      {/* Checklist Creation Modal */}
+      {testCaseType === "functionality" && (
+        <ChecklistCreationModal
+          isOpen={isChecklistModalOpen}
+          onClose={() => setIsChecklistModalOpen(false)}
+          onSubmit={handleChecklistSubmit}
+          selectedCount={selectedRows.size}
+          sheetId={sheetId}
+        />
+      )}
+
+      {/* Top Bar Buttons - Only show when items are selected */}
       {selectedRows.size > 0 && (
-        <div className="flex justify-start px-4">
+        <div className="flex gap-2 justify-start px-4 py-2">
           <Button size="sm" variant="outline" onClick={handleSendToApproval}>
             Send To Approval for QA Lead ({selectedRows.size})
           </Button>
+          
+          {/* Only show for functionality test cases in Approved status */}
+          {testCaseType === "functionality" && activeWorkflowStatus === "Approved" && (
+            <Button 
+              size="sm" 
+              variant="default" 
+              onClick={handleCreateChecklist}
+            >
+              Create Checklist ({selectedRows.size})
+            </Button>
+          )}
         </div>
       )}
+      
 
       {/* Navigation Bar with Status Filter */}
       <SheetNavigationBar

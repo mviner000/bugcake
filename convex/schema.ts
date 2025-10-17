@@ -3,6 +3,15 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+
+
+export const checklistStatusEnum = v.union(
+  v.literal("Open"),
+  v.literal("In Progress"),
+  v.literal("Deferred"),
+  v.literal("Finished")
+);
+
 export const workflowStatusEnum = v.union(
   v.literal("Open"),
   v.literal("Waiting for QA Lead Approval"),
@@ -433,5 +442,100 @@ export default defineSchema({
     .index("by_requesterId", ["requesterId"])
     // Index to prevent duplicate requests and quickly find a specific request
     .index("by_module_and_requester", ["moduleId", "requesterId"]),
+
+
+  // Main checklist table
+  checklists: defineTable({
+    sheetId: v.id("sheets"), // Link to the original sheet
+    
+    // Sprint/Release Information
+    sprintName: v.string(), // e.g., "Sprint 24 - User Authentication"
+    titleRevisionNumber: v.string(), // e.g., "v1.0", "v2.1-hotfix"
+    
+    // Progress Tracking
+    status: checklistStatusEnum,
+    progress: v.number(), // Percentage: 0-100 (calculated from checklistItems)
+    
+    // Team Assignment
+    testExecutorAssigneeId: v.id("users"), // Primary executor
+    additionalAssignees: v.optional(v.array(v.id("users"))), // Optional: For team-based execution
+    
+    // Timeline
+    dateStarted: v.optional(v.number()), // Timestamp when status changed to "In Progress"
+    goalDateToFinish: v.number(), // Target completion date
+    dateFinished: v.optional(v.number()), // Actual completion timestamp
+    
+    // Metadata
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    
+    // Audit & Context
+    description: v.optional(v.string()), // Sprint goals, notes, etc.
+    sourceTestCaseCount: v.number(), // How many test cases were copied
+    
+    // NEW: Track which workflow statuses were included
+    includedWorkflowStatuses: v.array(v.string()), // e.g., ["Approved"]
+  })
+    .index("by_sheet", ["sheetId"])
+    .index("by_status", ["status"])
+    .index("by_executor", ["testExecutorAssigneeId"])
+    .index("by_sheet_and_status", ["sheetId", "status"])
+    .index("by_goalDate", ["goalDateToFinish"]),
+
+  // Checklist items (immutable copies of test cases)
+  checklistItems: defineTable({
+    checklistId: v.id("checklists"), // Parent checklist
+    
+    // SNAPSHOT: Copy all relevant fields from functionalityTestCases at creation time
+    // Core Test Case Data (immutable snapshot)
+    originalTestCaseId: v.string(), // Reference to original (for traceability, not for sync)
+    testCaseType: v.union(
+      v.literal("functionality"),
+      v.literal("altTextAriaLabel")
+    ),
+    
+    // Functionality Test Case Fields (snapshot)
+    title: v.string(),
+    module: v.string(), // Store module NAME (not ID) to avoid orphaning if module deleted
+    subModule: v.optional(v.string()),
+    level: v.union(v.literal("High"), v.literal("Low")),
+    scenario: v.union(v.literal("Happy Path"), v.literal("Unhappy Path")),
+    preConditions: v.optional(v.string()),
+    steps: v.string(),
+    expectedResults: v.string(),
+    
+    // Original metadata (for reference)
+    originalCreatedBy: v.string(), // Store name/email, not ID
+    originalCreatedAt: v.number(),
+    jiraUserStory: v.optional(v.string()),
+    
+    // Execution Status (MUTABLE - this is what changes during sprint)
+    executionStatus: v.union(
+      v.literal("Not Run"),
+      v.literal("Passed"),
+      v.literal("Failed"),
+      v.literal("Blocked"),
+      v.literal("Skipped")
+    ),
+    actualResults: v.optional(v.string()), // Captured during execution
+    executedBy: v.optional(v.id("users")),
+    executedAt: v.optional(v.number()),
+    
+    // Defect Tracking
+    defectsFound: v.optional(v.array(v.string())), // Array of Jira ticket IDs
+    notes: v.optional(v.string()), // Executor notes
+    
+    // Ordering
+    sequenceNumber: v.number(), // Preserve original order
+    
+    // Timestamps
+    createdAt: v.number(), // When this item was added to checklist
+    updatedAt: v.number(), // Last execution update
+  })
+    .index("by_checklist", ["checklistId"])
+    .index("by_executionStatus", ["executionStatus"])
+    .index("by_checklist_and_status", ["checklistId", "executionStatus"])
+    .index("by_originalTestCase", ["originalTestCaseId"]), // For traceability
 });
 

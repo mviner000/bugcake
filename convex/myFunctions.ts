@@ -3048,3 +3048,116 @@ export const getModuleAssignees = query({
     return assignees.filter((assignee): assignee is NonNullable<typeof assignee> => assignee !== null);
   },
 });
+
+
+export const createChecklistFromSheet = mutation({
+  args: {
+    sheetId: v.id("sheets"),
+    selectedTestCaseIds: v.array(v.string()),
+    sprintName: v.string(),
+    titleRevisionNumber: v.string(),
+    testExecutorAssigneeId: v.id("users"),
+    goalDateToFinish: v.number(),
+    description: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Authentication required to create a checklist.");
+    }
+
+    // Validate: All selected test cases must be "Approved"
+    const testCases: (Doc<"functionalityTestCases"> | null)[] = await Promise.all(
+      args.selectedTestCaseIds.map(async (id) => {
+        const normalizedId = ctx.db.normalizeId("functionalityTestCases", id);
+        if (!normalizedId) {
+          console.warn(`Invalid test case ID: ${id}`);
+          return null;
+        }
+        return await ctx.db.get(normalizedId);
+      })
+    );
+
+    // Filter out null values and check for non-approved cases
+    const validTestCases = testCases.filter((tc): tc is Doc<"functionalityTestCases"> => tc !== null);
+    
+    if (validTestCases.length === 0) {
+      throw new Error("No valid test cases found to create checklist.");
+    }
+
+    const unapprovedCases = validTestCases.filter(
+      (tc) => tc.workflowStatus !== "Approved"
+    );
+    
+    if (unapprovedCases.length > 0) {
+      throw new Error(
+        `Cannot create checklist: ${unapprovedCases.length} test case(s) are not approved. Only approved test cases can be added to checklists.`
+      );
+    }
+
+    const now = Date.now();
+
+    // Create the checklist
+    const checklistId = await ctx.db.insert("checklists", {
+      sheetId: args.sheetId,
+      sprintName: args.sprintName,
+      titleRevisionNumber: args.titleRevisionNumber,
+      status: "Open",
+      progress: 0,
+      testExecutorAssigneeId: args.testExecutorAssigneeId,
+      goalDateToFinish: args.goalDateToFinish,
+      description: args.description,
+      createdBy: userId,
+      createdAt: now,
+      updatedAt: now,
+      sourceTestCaseCount: validTestCases.length,
+      includedWorkflowStatuses: ["Approved"],
+    });
+
+    // Create immutable copies as checklistItems
+    let sequenceNumber = 1;
+    for (const testCase of validTestCases) {
+      const createdByUser = await ctx.db.get(testCase.createdBy);
+      
+      // Get module name (store name, not ID for immunity)
+      let moduleName = "No Module";
+      if (testCase.module) {
+        const module = await ctx.db.get(testCase.module);
+        moduleName = module?.name || "Unknown Module";
+      }
+
+      await ctx.db.insert("checklistItems", {
+        checklistId,
+        originalTestCaseId: testCase._id,
+        testCaseType: "functionality",
+        
+        // Snapshot data (immutable)
+        title: testCase.title,
+        module: moduleName,
+        subModule: testCase.subModule,
+        level: testCase.level,
+        scenario: testCase.scenario,
+        preConditions: testCase.preConditions,
+        steps: testCase.steps,
+        expectedResults: testCase.expectedResults,
+        
+        originalCreatedBy: createdByUser?.email || "Unknown",
+        originalCreatedAt: testCase.createdAt,
+        jiraUserStory: testCase.jiraUserStory,
+        
+        // Initial execution state
+        executionStatus: "Not Run",
+        sequenceNumber: sequenceNumber++,
+        
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    return { 
+      checklistId, 
+      itemCount: validTestCases.length,
+      message: `Successfully created checklist with ${validTestCases.length} test case(s)` 
+    };
+  },
+});
