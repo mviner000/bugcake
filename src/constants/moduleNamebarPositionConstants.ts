@@ -5,12 +5,12 @@
  */
 
 // Offset decreases by 6px for each member removed from 5
-export const OFFSET_STEP_PX = 6
-export const BASE_OFFSET_PX = 18 // Offset for 5+ members
+export const OFFSET_STEP_PX = 7
+export const BASE_OFFSET_PX = 10 // Offset for 5+ members
 
 // Avatar offset decreases by 24px for each member removed
 export const AVATAR_OFFSET_STEP = 24
-export const BASE_AVATAR_OFFSET = 62 // Offset for 5+ members
+export const BASE_AVATAR_OFFSET = 78 // Offset for 5+ members
 
 /**
  * Calculate dynamic offset based on team member count

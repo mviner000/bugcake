@@ -262,7 +262,7 @@ export function Dashboard() {
           <section className="mb-8 hidden md:block">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-normal text-gray-800">
-                Start a new checklist
+                Start a new test case sheet
               </h2>
               <div className="flex items-center space-x-2">
                 <span className="text-blue-600 hover:underline cursor-pointer text-sm">
