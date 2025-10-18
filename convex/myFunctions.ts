@@ -3050,7 +3050,7 @@ export const getModuleAssignees = query({
 });
 
 
-export const createChecklistFromSheet = mutation({
+export const createChecklistFromSheetFunctionality = mutation({
   args: {
     sheetId: v.id("sheets"),
     selectedTestCaseIds: v.array(v.string()),
@@ -3102,6 +3102,7 @@ export const createChecklistFromSheet = mutation({
       sheetId: args.sheetId,
       sprintName: args.sprintName,
       titleRevisionNumber: args.titleRevisionNumber,
+      testCaseType: "functionality", // ✅ ADD THIS
       status: "Open",
       progress: 0,
       testExecutorAssigneeId: args.testExecutorAssigneeId,
@@ -3158,6 +3159,121 @@ export const createChecklistFromSheet = mutation({
       checklistId, 
       itemCount: validTestCases.length,
       message: `Successfully created checklist with ${validTestCases.length} test case(s)` 
+    };
+  },
+});
+
+export const createChecklistFromSheetAltText = mutation({
+  args: {
+    sheetId: v.id("sheets"),
+    selectedTestCaseIds: v.array(v.string()),
+    sprintName: v.string(),
+    titleRevisionNumber: v.string(),
+    testExecutorAssigneeId: v.id("users"),
+    goalDateToFinish: v.number(),
+    description: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Authentication required to create a checklist.");
+    }
+
+    // Validate: All selected test cases must be "Approved"
+    const testCases: (Doc<"altTextAriaLabelTestCases"> | null)[] = await Promise.all(
+      args.selectedTestCaseIds.map(async (id) => {
+        const normalizedId = ctx.db.normalizeId("altTextAriaLabelTestCases", id);
+        if (!normalizedId) {
+          console.warn(`Invalid test case ID: ${id}`);
+          return null;
+        }
+        return await ctx.db.get(normalizedId);
+      })
+    );
+
+    // Filter out null values and check for non-approved cases
+    const validTestCases = testCases.filter((tc): tc is Doc<"altTextAriaLabelTestCases"> => tc !== null);
+    
+    if (validTestCases.length === 0) {
+      throw new Error("No valid test cases found to create checklist.");
+    }
+
+    const unapprovedCases = validTestCases.filter(
+      (tc) => tc.workflowStatus !== "Approved"
+    );
+    
+    if (unapprovedCases.length > 0) {
+      throw new Error(
+        `Cannot create checklist: ${unapprovedCases.length} test case(s) are not approved. Only approved test cases can be added to checklists.`
+      );
+    }
+
+    const now = Date.now();
+
+    // Create the checklist
+    const checklistId = await ctx.db.insert("checklists", {
+      sheetId: args.sheetId,
+      sprintName: args.sprintName,
+      titleRevisionNumber: args.titleRevisionNumber,
+      testCaseType: "altTextAriaLabel", // ✅ ADD THIS
+      status: "Open",
+      progress: 0,
+      testExecutorAssigneeId: args.testExecutorAssigneeId,
+      goalDateToFinish: args.goalDateToFinish,
+      description: args.description,
+      createdBy: userId,
+      createdAt: now,
+      updatedAt: now,
+      sourceTestCaseCount: validTestCases.length,
+      includedWorkflowStatuses: ["Approved"],
+    });
+
+    // Create immutable copies as checklistItems
+    let sequenceNumber = 1;
+    for (const testCase of validTestCases) {
+      const createdByUser = await ctx.db.get(testCase.createdBy);
+      
+      // Get module name (store name, not ID for immunity)
+      let moduleName = "No Module";
+      if (testCase.module) {
+        const module = await ctx.db.get(testCase.module);
+        moduleName = module?.name || "Unknown Module";
+      }
+
+      await ctx.db.insert("checklistItems", {
+        checklistId,
+        originalTestCaseId: testCase._id,
+        testCaseType: "altTextAriaLabel",
+        
+        // Snapshot data (immutable) - Alt Text specific fields
+        title: testCase.altTextAriaLabel, // Use altTextAriaLabel as title
+        module: moduleName,
+        subModule: testCase.subModule,
+        
+        // Store alt-text specific data in appropriate fields
+        level: "High", // Default for alt text
+        scenario: "Happy Path", // Default for alt text
+        preConditions: testCase.remarks, // Store remarks as preconditions
+        steps: `Persona: ${testCase.persona}\nPage/Section: ${testCase.pageSection}\nAlt Text/Aria Label: ${testCase.altTextAriaLabel}`,
+        expectedResults: `SE Implementation: ${testCase.seImplementation}\n${testCase.wireframeLink ? `Wireframe: ${testCase.wireframeLink}` : ''}`,
+        
+        originalCreatedBy: createdByUser?.email || "Unknown",
+        originalCreatedAt: testCase.createdAt,
+        jiraUserStory: testCase.jiraUserStory,
+        
+        // Initial execution state
+        executionStatus: "Not Run",
+        sequenceNumber: sequenceNumber++,
+        
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    return { 
+      checklistId, 
+      itemCount: validTestCases.length,
+      message: `Successfully created checklist with ${validTestCases.length} alt text/aria label test case(s)` 
     };
   },
 });

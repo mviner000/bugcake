@@ -446,24 +446,30 @@ export default defineSchema({
 
   // Main checklist table
   checklists: defineTable({
-    sheetId: v.id("sheets"), // Link to the original sheet
+    sheetId: v.id("sheets"),
     
     // Sprint/Release Information
-    sprintName: v.string(), // e.g., "Sprint 24 - User Authentication"
-    titleRevisionNumber: v.string(), // e.g., "v1.0", "v2.1-hotfix"
+    sprintName: v.string(),
+    titleRevisionNumber: v.string(),
+    
+    // ✅ NEW: Track the source test case type
+    testCaseType: v.union(
+      v.literal("functionality"),
+      v.literal("altTextAriaLabel")
+    ),
     
     // Progress Tracking
     status: checklistStatusEnum,
-    progress: v.number(), // Percentage: 0-100 (calculated from checklistItems)
+    progress: v.number(),
     
     // Team Assignment
-    testExecutorAssigneeId: v.id("users"), // Primary executor
-    additionalAssignees: v.optional(v.array(v.id("users"))), // Optional: For team-based execution
+    testExecutorAssigneeId: v.id("users"),
+    additionalAssignees: v.optional(v.array(v.id("users"))),
     
     // Timeline
-    dateStarted: v.optional(v.number()), // Timestamp when status changed to "In Progress"
-    goalDateToFinish: v.number(), // Target completion date
-    dateFinished: v.optional(v.number()), // Actual completion timestamp
+    dateStarted: v.optional(v.number()),
+    goalDateToFinish: v.number(),
+    dateFinished: v.optional(v.number()),
     
     // Metadata
     createdBy: v.id("users"),
@@ -471,17 +477,18 @@ export default defineSchema({
     updatedAt: v.number(),
     
     // Audit & Context
-    description: v.optional(v.string()), // Sprint goals, notes, etc.
-    sourceTestCaseCount: v.number(), // How many test cases were copied
-    
-    // NEW: Track which workflow statuses were included
-    includedWorkflowStatuses: v.array(v.string()), // e.g., ["Approved"]
+    description: v.optional(v.string()),
+    sourceTestCaseCount: v.number(),
+    includedWorkflowStatuses: v.array(v.string()),
   })
     .index("by_sheet", ["sheetId"])
     .index("by_status", ["status"])
     .index("by_executor", ["testExecutorAssigneeId"])
     .index("by_sheet_and_status", ["sheetId", "status"])
-    .index("by_goalDate", ["goalDateToFinish"]),
+    .index("by_goalDate", ["goalDateToFinish"])
+    // ✅ NEW: Index to filter checklists by type
+    .index("by_testCaseType", ["testCaseType"])
+    .index("by_sheet_and_type", ["sheetId", "testCaseType"]),
 
   // Checklist items (immutable copies of test cases)
   checklistItems: defineTable({

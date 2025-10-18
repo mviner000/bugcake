@@ -169,9 +169,6 @@ export function BaseTable<T extends BaseTestCase>({
   emptyStateMessage,
   emptyStateButtonText = "Add First Test Case",
 }: BaseTableProps<T>) {
-
-  const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
-
   // Fetch column widths
   const fetchedColumnWidths = useQuery(api.myFunctions.getColumnWidths, {
     sheetId,
@@ -179,45 +176,9 @@ export function BaseTable<T extends BaseTestCase>({
   });
   const updateColumnWidth = useMutation(api.myFunctions.updateColumnWidth);
 
-  const createChecklist = useMutation(api.myFunctions.createChecklistFromSheet);
-
-  const handleCreateChecklist = () => {
-    if (selectedRows.size === 0) {
-      toast.error("Please select at least one approved test case.");
-      return;
-    }
-    
-    // Open the modal
-    setIsChecklistModalOpen(true);
-  };
-
-
-
-  const handleChecklistSubmit = async (data: {
-    sprintName: string;
-    titleRevisionNumber: string;
-    testExecutorAssigneeId: string;
-    goalDateToFinish: number;
-    description?: string;
-  }) => {
-    try {
-      const result = await createChecklist({
-        sheetId,
-        selectedTestCaseIds: Array.from(selectedRows),
-        ...data,
-        testExecutorAssigneeId: data.testExecutorAssigneeId as Id<"users">,
-      });
-
-      alert(result.message || "Checklist created successfully!");
-
-      // Clear selection and close modal
-      setSelectedRows(new Set());
-      setIsChecklistModalOpen(false);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to create checklist";
-      alert(`❌ ${message}`);
-    }
-  };
+  // ✅ NEW: Dynamic checklist mutation based on test case type
+  const createChecklistFunctionality = useMutation(api.myFunctions.createChecklistFromSheetFunctionality);
+  const createChecklistAltText = useMutation(api.myFunctions.createChecklistFromSheetAltText);
 
   // Custom Hooks
   const { getColumnWidth } = useColumnWidths(fetchedColumnWidths);
@@ -241,6 +202,7 @@ export function BaseTable<T extends BaseTestCase>({
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [activeAddingModuleId, setActiveAddingModuleId] = useState<string | null>(null);
   const [previousWorkflowStatus, setPreviousWorkflowStatus] = useState<WorkflowStatus | null>(null);
+  const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
   const tableRef = useRef<HTMLTableElement>(null);
 
   // Group test cases by module
@@ -353,6 +315,51 @@ export function BaseTable<T extends BaseTestCase>({
     }
   };
 
+  // ✅ NEW: Checklist creation handler
+  const handleCreateChecklist = () => {
+    if (selectedRows.size === 0) {
+      toast.error("Please select at least one approved test case.");
+      return;
+    }
+    setIsChecklistModalOpen(true);
+  };
+
+  // ✅ NEW: Checklist submission handler (supports both test case types)
+  const handleChecklistSubmit = async (data: {
+    sprintName: string;
+    titleRevisionNumber: string;
+    testExecutorAssigneeId: string;
+    goalDateToFinish: number;
+    description?: string;
+  }) => {
+    try {
+      // Use the appropriate mutation based on test case type
+      const createChecklistMutation = testCaseType === "functionality" 
+        ? createChecklistFunctionality 
+        : createChecklistAltText;
+
+      const result = await createChecklistMutation({
+        sheetId,
+        selectedTestCaseIds: Array.from(selectedRows),
+        ...data,
+        testExecutorAssigneeId: data.testExecutorAssigneeId as Id<"users">,
+      });
+
+      toast.success(result.message || "Checklist created successfully!", {
+        duration: 3000,
+      });
+
+      // Clear selection and close modal
+      setSelectedRows(new Set());
+      setIsChecklistModalOpen(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to create checklist";
+      toast.error(message, {
+        duration: 4000,
+      });
+    }
+  };
+
   // Handle module-specific add click
   const handleModuleAddClick = (moduleId: string) => {
     // Save current status before switching to "Open"
@@ -442,16 +449,14 @@ export function BaseTable<T extends BaseTestCase>({
         />
       )}
 
-      {/* Checklist Creation Modal */}
-      {testCaseType === "functionality" && (
-        <ChecklistCreationModal
-          isOpen={isChecklistModalOpen}
-          onClose={() => setIsChecklistModalOpen(false)}
-          onSubmit={handleChecklistSubmit}
-          selectedCount={selectedRows.size}
-          sheetId={sheetId}
-        />
-      )}
+      {/* ✅ Checklist Creation Modal - Works for BOTH test case types */}
+      <ChecklistCreationModal
+        isOpen={isChecklistModalOpen}
+        onClose={() => setIsChecklistModalOpen(false)}
+        onSubmit={handleChecklistSubmit}
+        selectedCount={selectedRows.size}
+        sheetId={sheetId}
+      />
 
       {/* Top Bar Buttons - Only show when items are selected */}
       {selectedRows.size > 0 && (
@@ -460,8 +465,8 @@ export function BaseTable<T extends BaseTestCase>({
             Send To Approval for QA Lead ({selectedRows.size})
           </Button>
           
-          {/* Only show for functionality test cases in Approved status */}
-          {testCaseType === "functionality" && activeWorkflowStatus === "Approved" && (
+          {/* ✅ FIXED: Show for BOTH test case types when in Approved status */}
+          {activeWorkflowStatus === "Approved" && (
             <Button 
               size="sm" 
               variant="default" 
@@ -472,7 +477,6 @@ export function BaseTable<T extends BaseTestCase>({
           )}
         </div>
       )}
-      
 
       {/* Navigation Bar with Status Filter */}
       <SheetNavigationBar
@@ -599,7 +603,6 @@ export function BaseTable<T extends BaseTestCase>({
                     </React.Fragment>
                   );
                 })}
-                
               </>
             ) : (
               <>
@@ -687,13 +690,13 @@ export function BaseTable<T extends BaseTestCase>({
       {/* Add New Row Button - Only show when actively adding */}
       {isAdding && onSaveNew && onCancelNew && (
         <div className="-ml-3 fixed shadow-md bsolute top-0 bg-white w-full z-40">
-        <TableActionButtons
-          isAdding={isAdding}
-          isSaving={isSaving}
-          onAdd={() => {}}
-          onSave={handleSave}
-          onCancel={handleCancel}
-        />
+          <TableActionButtons
+            isAdding={isAdding}
+            isSaving={isSaving}
+            onAdd={() => {}}
+            onSave={handleSave}
+            onCancel={handleCancel}
+          />
         </div>
       )}
 
