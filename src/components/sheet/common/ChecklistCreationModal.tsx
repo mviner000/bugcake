@@ -1,3 +1,5 @@
+// src/components/sheet/common/ChecklistCreationModal.tsx
+
 import React, { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
@@ -14,13 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface ChecklistCreationModalProps {
   isOpen: boolean;
@@ -28,12 +25,13 @@ interface ChecklistCreationModalProps {
   onSubmit: (data: {
     sprintName: string;
     titleRevisionNumber: string;
-    testExecutorAssigneeId: string;
+    testExecutorAssigneeIds: string[];
     goalDateToFinish: number;
     description?: string;
   }) => Promise<void>;
   selectedCount: number;
   sheetId: Id<"sheets">;
+  testCaseType: "functionality" | "altTextAriaLabel"; // ✅ NEW: Show test case type
 }
 
 export function ChecklistCreationModal({
@@ -42,10 +40,11 @@ export function ChecklistCreationModal({
   onSubmit,
   selectedCount,
   sheetId,
+  testCaseType, // ✅ NEW: Receive test case type
 }: ChecklistCreationModalProps) {
   const [sprintName, setSprintName] = useState("");
   const [titleRevisionNumber, setTitleRevisionNumber] = useState("");
-  const [executorId, setExecutorId] = useState("");
+  const [executorIds, setExecutorIds] = useState<string[]>([]);
   const [goalDate, setGoalDate] = useState("");
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -55,11 +54,21 @@ export function ChecklistCreationModal({
     sheetId,
   });
 
+  const handleAddExecutor = (userId: string) => {
+    if (!executorIds.includes(userId)) {
+      setExecutorIds([...executorIds, userId]);
+    }
+  };
+
+  const handleRemoveExecutor = (userId: string) => {
+    setExecutorIds(executorIds.filter(id => id !== userId));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!sprintName.trim() || !titleRevisionNumber.trim() || !executorId || !goalDate) {
-      alert("Please fill in all required fields");
+    if (!sprintName.trim() || !titleRevisionNumber.trim() || executorIds.length === 0 || !goalDate) {
+      alert("Please fill in all required fields and select at least one executor");
       return;
     }
 
@@ -68,7 +77,7 @@ export function ChecklistCreationModal({
       await onSubmit({
         sprintName: sprintName.trim(),
         titleRevisionNumber: titleRevisionNumber.trim(),
-        testExecutorAssigneeId: executorId,
+        testExecutorAssigneeIds: executorIds,
         goalDateToFinish: new Date(goalDate).getTime(),
         description: description.trim() || undefined,
       });
@@ -76,7 +85,7 @@ export function ChecklistCreationModal({
       // Reset form
       setSprintName("");
       setTitleRevisionNumber("");
-      setExecutorId("");
+      setExecutorIds([]);
       setGoalDate("");
       setDescription("");
     } catch (error) {
@@ -86,38 +95,49 @@ export function ChecklistCreationModal({
     }
   };
 
+  // Get available users (not yet selected)
+  const availableUsers = usersWithAccess?.filter(
+    user => !executorIds.includes(user.id)
+  ) || [];
+
+  // Get selected users info
+  const selectedUsers = executorIds.map(id => 
+    usersWithAccess?.find(user => user.id === id)
+  ).filter(Boolean);
+
+  // ✅ NEW: Format test case type for display
+  const testCaseTypeLabel = testCaseType === "functionality" 
+    ? "Functionality" 
+    : "Alt Text / Aria Label";
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create Test Execution Checklist</DialogTitle>
-          <DialogDescription>
+          <DialogTitle>
+            <div className="flex items-center">
+              Create Test Execution Checklist
+              <Badge variant="secondary" className="ml-1 bg-blue-500 text-white dark:bg-blue-600">
+                {testCaseTypeLabel || "No type"}
+              </Badge>
+            </div>
+          </DialogTitle>
+          <DialogDescription className="text-xs">
             Create a sprint checklist from {selectedCount} approved test case(s).
             This creates an immutable snapshot for execution tracking.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="sprintName">
-              Sprint Name <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="sprintName"
-              placeholder="e.g., Sprint 24 - User Authentication"
-              value={sprintName}
-              onChange={(e) => setSprintName(e.target.value)}
-              required
-            />
-          </div>
+      
 
           <div className="space-y-2">
             <Label htmlFor="revisionNumber">
-              Title Revision Number <span className="text-red-500">*</span>
+              Title <span className="text-red-500">*</span>
             </Label>
             <Input
               id="revisionNumber"
-              placeholder="e.g., v1.0, v2.1-hotfix"
+              placeholder="e.g., Smoke Testing v1.0"
               value={titleRevisionNumber}
               onChange={(e) => setTitleRevisionNumber(e.target.value)}
               required
@@ -125,21 +145,73 @@ export function ChecklistCreationModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="executor">
-              Test Executor <span className="text-red-500">*</span>
+            <Label htmlFor="sprintName">
+              Sprint Name <span className="text-red-500">*</span>
             </Label>
-            <Select value={executorId} onValueChange={setExecutorId} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Select executor" />
-              </SelectTrigger>
-              <SelectContent>
-                {usersWithAccess?.map((user) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.name} ({user.email})
-                  </SelectItem>
+            <Input
+              id="sprintName"
+              placeholder="e.g., Sprint Ares"
+              value={sprintName}
+              onChange={(e) => setSprintName(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="space-y-3">
+            <Label>
+              Test Executors <span className="text-red-500">*</span> 
+              {executorIds.length === 0 && (
+                <p className="text-xs text-red-500">
+                  Please select at least one test executor
+                </p>
+              )}
+            </Label>
+            
+            {/* Selected Executors Display */}
+            {selectedUsers.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2 p-2 border rounded-md bg-gray-50">
+                {selectedUsers.map((user) => (
+                  <div
+                    key={user?.id}
+                    className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-sm"
+                  >
+                    <span>{user?.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveExecutor(user?.id || "")}
+                      className="hover:bg-blue-200 rounded-full p-0.5"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
                 ))}
-              </SelectContent>
-            </Select>
+              </div>
+            )}
+
+            {/* Executor Selection Dropdown */}
+            <select
+              className="w-full px-3 py-2 border rounded-md"
+              value=""
+              onChange={(e) => {
+                if (e.target.value) {
+                  handleAddExecutor(e.target.value);
+                  e.target.value = ""; // Reset selection
+                }
+              }}
+              disabled={availableUsers.length === 0}
+            >
+              <option value="">
+                {availableUsers.length === 0 
+                  ? "All users selected" 
+                  : "Select an executor to add..."}
+              </option>
+              {availableUsers.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.name} ({user.email})
+                </option>
+              ))}
+            </select>
+
           </div>
 
           <div className="space-y-2">
@@ -160,7 +232,7 @@ export function ChecklistCreationModal({
             <Label htmlFor="description">Description (Optional)</Label>
             <Textarea
               id="description"
-              placeholder="Sprint goals, testing notes, etc."
+              placeholder="Bugcake Production v1.8.2"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}

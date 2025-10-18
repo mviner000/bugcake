@@ -324,11 +324,11 @@ export function BaseTable<T extends BaseTestCase>({
     setIsChecklistModalOpen(true);
   };
 
-  // ✅ NEW: Checklist submission handler (supports both test case types)
+  // ✅ UPDATED: Checklist submission handler (supports multiple executors)
   const handleChecklistSubmit = async (data: {
     sprintName: string;
     titleRevisionNumber: string;
-    testExecutorAssigneeId: string;
+    testExecutorAssigneeIds: string[]; // ✅ Changed from single ID to array
     goalDateToFinish: number;
     description?: string;
   }) => {
@@ -341,8 +341,11 @@ export function BaseTable<T extends BaseTestCase>({
       const result = await createChecklistMutation({
         sheetId,
         selectedTestCaseIds: Array.from(selectedRows),
-        ...data,
-        testExecutorAssigneeId: data.testExecutorAssigneeId as Id<"users">,
+        sprintName: data.sprintName,
+        titleRevisionNumber: data.titleRevisionNumber,
+        testExecutorAssigneeIds: data.testExecutorAssigneeIds.map(id => id as Id<"users">), // ✅ Map array
+        goalDateToFinish: data.goalDateToFinish,
+        description: data.description,
       });
 
       toast.success(result.message || "Checklist created successfully!", {
@@ -456,6 +459,7 @@ export function BaseTable<T extends BaseTestCase>({
         onSubmit={handleChecklistSubmit}
         selectedCount={selectedRows.size}
         sheetId={sheetId}
+        testCaseType={testCaseType} // ✅ NEW: Pass test case type
       />
 
       {/* Top Bar Buttons - Only show when items are selected */}

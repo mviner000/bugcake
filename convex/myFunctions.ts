@@ -3056,7 +3056,7 @@ export const createChecklistFromSheetFunctionality = mutation({
     selectedTestCaseIds: v.array(v.string()),
     sprintName: v.string(),
     titleRevisionNumber: v.string(),
-    testExecutorAssigneeId: v.id("users"),
+    testExecutorAssigneeIds: v.array(v.id("users")), // ✅ Changed to array
     goalDateToFinish: v.number(),
     description: v.optional(v.string()),
   },
@@ -3078,7 +3078,6 @@ export const createChecklistFromSheetFunctionality = mutation({
       })
     );
 
-    // Filter out null values and check for non-approved cases
     const validTestCases = testCases.filter((tc): tc is Doc<"functionalityTestCases"> => tc !== null);
     
     if (validTestCases.length === 0) {
@@ -3097,15 +3096,19 @@ export const createChecklistFromSheetFunctionality = mutation({
 
     const now = Date.now();
 
+    // ✅ UPDATED: Use first executor as primary, rest as additional
+    const [primaryExecutor, ...additionalExecutors] = args.testExecutorAssigneeIds;
+
     // Create the checklist
     const checklistId = await ctx.db.insert("checklists", {
       sheetId: args.sheetId,
       sprintName: args.sprintName,
       titleRevisionNumber: args.titleRevisionNumber,
-      testCaseType: "functionality", // ✅ ADD THIS
+      testCaseType: "functionality",
       status: "Open",
       progress: 0,
-      testExecutorAssigneeId: args.testExecutorAssigneeId,
+      testExecutorAssigneeId: primaryExecutor, // Primary executor
+      additionalAssignees: additionalExecutors.length > 0 ? additionalExecutors : undefined, // ✅ Additional executors
       goalDateToFinish: args.goalDateToFinish,
       description: args.description,
       createdBy: userId,
@@ -3120,7 +3123,6 @@ export const createChecklistFromSheetFunctionality = mutation({
     for (const testCase of validTestCases) {
       const createdByUser = await ctx.db.get(testCase.createdBy);
       
-      // Get module name (store name, not ID for immunity)
       let moduleName = "No Module";
       if (testCase.module) {
         const module = await ctx.db.get(testCase.module);
@@ -3132,7 +3134,6 @@ export const createChecklistFromSheetFunctionality = mutation({
         originalTestCaseId: testCase._id,
         testCaseType: "functionality",
         
-        // Snapshot data (immutable)
         title: testCase.title,
         module: moduleName,
         subModule: testCase.subModule,
@@ -3146,7 +3147,6 @@ export const createChecklistFromSheetFunctionality = mutation({
         originalCreatedAt: testCase.createdAt,
         jiraUserStory: testCase.jiraUserStory,
         
-        // Initial execution state
         executionStatus: "Not Run",
         sequenceNumber: sequenceNumber++,
         
@@ -3158,7 +3158,7 @@ export const createChecklistFromSheetFunctionality = mutation({
     return { 
       checklistId, 
       itemCount: validTestCases.length,
-      message: `Successfully created checklist with ${validTestCases.length} test case(s)` 
+      message: `Successfully created checklist with ${validTestCases.length} test case(s) assigned to ${args.testExecutorAssigneeIds.length} executor(s)` 
     };
   },
 });
@@ -3169,7 +3169,7 @@ export const createChecklistFromSheetAltText = mutation({
     selectedTestCaseIds: v.array(v.string()),
     sprintName: v.string(),
     titleRevisionNumber: v.string(),
-    testExecutorAssigneeId: v.id("users"),
+    testExecutorAssigneeIds: v.array(v.id("users")), // ✅ Changed to array
     goalDateToFinish: v.number(),
     description: v.optional(v.string()),
   },
@@ -3179,7 +3179,6 @@ export const createChecklistFromSheetAltText = mutation({
       throw new Error("Authentication required to create a checklist.");
     }
 
-    // Validate: All selected test cases must be "Approved"
     const testCases: (Doc<"altTextAriaLabelTestCases"> | null)[] = await Promise.all(
       args.selectedTestCaseIds.map(async (id) => {
         const normalizedId = ctx.db.normalizeId("altTextAriaLabelTestCases", id);
@@ -3191,7 +3190,6 @@ export const createChecklistFromSheetAltText = mutation({
       })
     );
 
-    // Filter out null values and check for non-approved cases
     const validTestCases = testCases.filter((tc): tc is Doc<"altTextAriaLabelTestCases"> => tc !== null);
     
     if (validTestCases.length === 0) {
@@ -3210,15 +3208,18 @@ export const createChecklistFromSheetAltText = mutation({
 
     const now = Date.now();
 
-    // Create the checklist
+    // ✅ UPDATED: Use first executor as primary, rest as additional
+    const [primaryExecutor, ...additionalExecutors] = args.testExecutorAssigneeIds;
+
     const checklistId = await ctx.db.insert("checklists", {
       sheetId: args.sheetId,
       sprintName: args.sprintName,
       titleRevisionNumber: args.titleRevisionNumber,
-      testCaseType: "altTextAriaLabel", // ✅ ADD THIS
+      testCaseType: "altTextAriaLabel",
       status: "Open",
       progress: 0,
-      testExecutorAssigneeId: args.testExecutorAssigneeId,
+      testExecutorAssigneeId: primaryExecutor, // Primary executor
+      additionalAssignees: additionalExecutors.length > 0 ? additionalExecutors : undefined, // ✅ Additional executors
       goalDateToFinish: args.goalDateToFinish,
       description: args.description,
       createdBy: userId,
@@ -3228,12 +3229,10 @@ export const createChecklistFromSheetAltText = mutation({
       includedWorkflowStatuses: ["Approved"],
     });
 
-    // Create immutable copies as checklistItems
     let sequenceNumber = 1;
     for (const testCase of validTestCases) {
       const createdByUser = await ctx.db.get(testCase.createdBy);
       
-      // Get module name (store name, not ID for immunity)
       let moduleName = "No Module";
       if (testCase.module) {
         const module = await ctx.db.get(testCase.module);
@@ -3245,15 +3244,13 @@ export const createChecklistFromSheetAltText = mutation({
         originalTestCaseId: testCase._id,
         testCaseType: "altTextAriaLabel",
         
-        // Snapshot data (immutable) - Alt Text specific fields
-        title: testCase.altTextAriaLabel, // Use altTextAriaLabel as title
+        title: testCase.altTextAriaLabel,
         module: moduleName,
         subModule: testCase.subModule,
         
-        // Store alt-text specific data in appropriate fields
-        level: "High", // Default for alt text
-        scenario: "Happy Path", // Default for alt text
-        preConditions: testCase.remarks, // Store remarks as preconditions
+        level: "High",
+        scenario: "Happy Path",
+        preConditions: testCase.remarks,
         steps: `Persona: ${testCase.persona}\nPage/Section: ${testCase.pageSection}\nAlt Text/Aria Label: ${testCase.altTextAriaLabel}`,
         expectedResults: `SE Implementation: ${testCase.seImplementation}\n${testCase.wireframeLink ? `Wireframe: ${testCase.wireframeLink}` : ''}`,
         
@@ -3261,7 +3258,6 @@ export const createChecklistFromSheetAltText = mutation({
         originalCreatedAt: testCase.createdAt,
         jiraUserStory: testCase.jiraUserStory,
         
-        // Initial execution state
         executionStatus: "Not Run",
         sequenceNumber: sequenceNumber++,
         
@@ -3273,7 +3269,7 @@ export const createChecklistFromSheetAltText = mutation({
     return { 
       checklistId, 
       itemCount: validTestCases.length,
-      message: `Successfully created checklist with ${validTestCases.length} alt text/aria label test case(s)` 
+      message: `Successfully created checklist with ${validTestCases.length} alt text/aria label test case(s) assigned to ${args.testExecutorAssigneeIds.length} executor(s)` 
     };
   },
 });
