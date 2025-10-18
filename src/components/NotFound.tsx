@@ -9,7 +9,7 @@ export function NotFound() {
       <div className="flex items-center gap-12 max-w-4xl mx-auto">
         {/* Bee illustration with 404 speech bubble */}
         <div className="relative">
-          <img src="/404-bee.svg" alt="Lost bee with 404 speech bubble" className="w-80 h-auto" />
+          <img src="/404-bee.png" alt="Lost bee with 404 speech bubble" className="w-80 h-auto" />
         </div>
 
         {/* Text and button section */}

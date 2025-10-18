@@ -9,6 +9,7 @@ import { api } from "../convex/_generated/api";
 
 // Import your components
 import { DetailPage } from "./components/sheet/detail-page";
+import { ChecklistDetailPage } from "./components/checklist/ChecklistDetailPage"; // ✅ NEW: Checklist detail page
 import { Header } from "./components/navbar/Header";
 import { Dashboard } from "./components/dashboard";
 import { ProfilePage } from "./components/profile/ProfilePage";
@@ -59,6 +60,7 @@ function AuthenticatedApp() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/sheet/:sheetId" element={<DetailPage />} />
+          <Route path="/checklist/:checklistId" element={<ChecklistDetailPage />} /> {/* ✅ NEW: Checklist detail route */}
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/rbac" element={<RBACPage />} />
           <Route path="/create-template" element={<MultiStepFormPage />} />

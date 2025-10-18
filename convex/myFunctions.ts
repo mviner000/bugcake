@@ -3314,3 +3314,111 @@ export const listChecklists = query({
     return checklistsWithDetails;
   },
 });
+
+// Get a single checklist by ID with enhanced details
+export const getChecklistById = query({
+  args: {
+    checklistId: v.id("checklists"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    
+    const checklist = await ctx.db.get(args.checklistId);
+    if (!checklist) {
+      return null;
+    }
+
+    // Get sheet information
+    const sheet = await ctx.db.get(checklist.sheetId);
+    
+    // Get creator information
+    const creator = await ctx.db.get(checklist.createdBy);
+    
+    // Get executor information
+    const executor = await ctx.db.get(checklist.testExecutorAssigneeId);
+    
+    const normalizedUserId = userId
+      ? ctx.db.normalizeId("users", userId)
+      : null;
+
+    const isOwnedByMe =
+      normalizedUserId !== null && normalizedUserId === checklist.createdBy;
+
+    return {
+      ...checklist,
+      sheetName: sheet?.name || "Unknown Sheet",
+      creatorName: creator?.email || "Unknown User",
+      executorName: executor?.email || "Unknown Executor",
+      isOwnedByMe,
+    };
+  },
+});
+
+// Get all checklist items for a specific checklist
+export const getChecklistItems = query({
+  args: {
+    checklistId: v.id("checklists"),
+  },
+  handler: async (ctx, args) => {
+    const items = await ctx.db
+      .query("checklistItems")
+      .withIndex("by_checklist", (q) => q.eq("checklistId", args.checklistId))
+      .order("asc")
+      .collect();
+
+    // Sort by sequence number to maintain order
+    return items.sort((a, b) => a.sequenceNumber - b.sequenceNumber);
+  },
+});
+
+// Update checklist item execution status
+export const updateChecklistItemStatus = mutation({
+  args: {
+    itemId: v.id("checklistItems"),
+    executionStatus: v.union(
+      v.literal("Not Run"),
+      v.literal("Passed"),
+      v.literal("Failed"),
+      v.literal("Blocked"),
+      v.literal("Skipped")
+    ),
+    actualResults: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("User must be authenticated");
+    }
+
+    const now = Date.now();
+
+    await ctx.db.patch(args.itemId, {
+      executionStatus: args.executionStatus,
+      actualResults: args.actualResults,
+      executedBy: userId,
+      executedAt: now,
+      updatedAt: now,
+    });
+
+    // Update parent checklist progress
+    const item = await ctx.db.get(args.itemId);
+    if (item) {
+      const allItems = await ctx.db
+        .query("checklistItems")
+        .withIndex("by_checklist", (q) => q.eq("checklistId", item.checklistId))
+        .collect();
+
+      const completedItems = allItems.filter(
+        (i) => i.executionStatus === "Passed" || i.executionStatus === "Failed"
+      ).length;
+      const progress = Math.round((completedItems / allItems.length) * 100);
+
+      await ctx.db.patch(item.checklistId, {
+        progress,
+        updatedAt: now,
+      });
+    }
+
+    return { success: true };
+  },
+});
