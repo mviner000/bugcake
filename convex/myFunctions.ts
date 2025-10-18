@@ -3273,3 +3273,44 @@ export const createChecklistFromSheetAltText = mutation({
     };
   },
 });
+
+export const listChecklists = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    
+    // Fetch all checklists
+    const checklists = await ctx.db.query("checklists").order("desc").collect();
+
+    // Enhance checklists with related data
+    const checklistsWithDetails = await Promise.all(
+      checklists.map(async (checklist) => {
+        // Get sheet information
+        const sheet = await ctx.db.get(checklist.sheetId);
+        
+        // Get creator information
+        const creator = await ctx.db.get(checklist.createdBy);
+        
+        // Get executor information
+        const executor = await ctx.db.get(checklist.testExecutorAssigneeId);
+        
+        const normalizedUserId = userId
+          ? ctx.db.normalizeId("users", userId)
+          : null;
+
+        const isOwnedByMe =
+          normalizedUserId !== null && normalizedUserId === checklist.createdBy;
+
+        return {
+          ...checklist,
+          sheetName: sheet?.name || "Unknown Sheet",
+          creatorName: creator?.email || "Unknown User",
+          executorName: executor?.email || "Unknown Executor",
+          isOwnedByMe,
+        };
+      })
+    );
+
+    return checklistsWithDetails;
+  },
+});

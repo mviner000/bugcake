@@ -1,4 +1,6 @@
-import React from "react"; // Needed for useState
+// src/index.tsx
+
+import React from "react";
 import {
   MoreVertical as MoreVert,
   LucideView as GridView,
@@ -7,7 +9,6 @@ import {
   UsersIcon,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-// Use both useQuery and useMutation
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import {
@@ -21,10 +22,8 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@/components/ui/tabs"; // 👈 New Shadcn Tabs import
+} from "@/components/ui/tabs";
 import { CreateNewSheetModal } from "./CreateNewSheetModal";
-
-// ✅ Import your new icon components
 import {
   AccessibilityIcon,
   CompatibilityIcon,
@@ -34,7 +33,6 @@ import {
   UsabilityIcon,
 } from "@/components/icons";
 
-// Define a type for the data returned by listSheets for better type safety
 type Sheet = {
   _id: string;
   _creationTime: number;
@@ -48,102 +46,54 @@ type Sheet = {
   isPublic?: boolean;
   requestable?: boolean;
   testCaseType?: "functionality" | "altTextAriaLabel";
-  // Properties that might be joined/added in the Convex query
   ownerName: string;
   isOwnedByMe: boolean;
   hasPermissions: boolean;
   permissions?: { status: string; userEmail: string; level: string }[];
 };
 
-// Define a type for the new dummy Checklist data
 type Checklist = {
   _id: string;
   _creationTime: number;
-  name: string;
-  type: string; // 'checklist'
-  owner: string;
-  last_opened_at: number;
-  created_at: number;
-  updated_at: number;
-  shared: boolean;
-  templateType: "usability" | "accessibility" | "security"; // New field for checklist
-  ownerName: string;
-  isOwnedByMe: boolean;
-  hasPermissions: boolean;
-  permissions?: { status: string; userEmail: string; level: string }[];
+  sheetId: string;
+  sprintName: string;
+  titleRevisionNumber: string;
+  testCaseType: "functionality" | "altTextAriaLabel";
+  status: string;
+  progress: number;
+  testExecutorAssigneeId: string;
+  additionalAssignees?: string[];
+  dateStarted?: number;
+  goalDateToFinish: number;
+  dateFinished?: number;
+  createdBy: string;
+  createdAt: number;
+  updatedAt: number;
+  description?: string;
+  sourceTestCaseCount: number;
+  includedWorkflowStatuses: string[];
+  // Enhanced properties from query
+  sheetName?: string;
+  creatorName?: string;
+  executorName?: string;
+  isOwnedByMe?: boolean;
 };
 
-// Define the shape of the form data for the mutation
 interface NewSheetFormData {
   name: string;
   type: "sheet" | "doc" | "pdf" | "folder" | "other";
   testCaseType: "functionality" | "altTextAriaLabel";
-  modules: string[]; // ✅ UPDATED: Array of module names
+  modules: string[];
 }
-
-// Dummy data for recent checklists
-const DUMMY_CHECKLISTS: Checklist[] = [
-  {
-    _id: "chk1",
-    _creationTime: Date.now() - 5 * 60 * 1000, // 5 minutes ago (Today)
-    name: "Homepage Redesign Check",
-    type: "checklist",
-    owner: "user1",
-    last_opened_at: Date.now() - 5 * 60 * 1000,
-    created_at: Date.now() - 12 * 60 * 1000,
-    updated_at: Date.now() - 5 * 60 * 1000,
-    shared: true,
-    templateType: "usability",
-    ownerName: "Alice QA",
-    isOwnedByMe: false,
-    hasPermissions: true,
-    permissions: [{ status: "accepted", userEmail: "bob@example.com", level: "viewer" }],
-  },
-  {
-    _id: "chk2",
-    _creationTime: Date.now() - 3 * 24 * 60 * 60 * 1000, // 3 days ago (Previous 30 days)
-    name: "WCAG 2.1 Compliance Audit",
-    type: "checklist",
-    owner: "user2",
-    last_opened_at: Date.now() - 3 * 24 * 60 * 60 * 1000,
-    created_at: Date.now() - 5 * 24 * 60 * 60 * 1000,
-    updated_at: Date.now() - 3 * 24 * 60 * 60 * 1000,
-    shared: false,
-    templateType: "accessibility",
-    ownerName: "me",
-    isOwnedByMe: true,
-    hasPermissions: false,
-  },
-  {
-    _id: "chk3",
-    _creationTime: Date.now() - 40 * 24 * 60 * 60 * 1000, // 40 days ago (Earlier)
-    name: "API Security Review Checklist v1",
-    type: "checklist",
-    owner: "user3",
-    last_opened_at: Date.now() - 40 * 24 * 60 * 60 * 1000,
-    created_at: Date.now() - 50 * 24 * 60 * 60 * 1000,
-    updated_at: Date.now() - 40 * 24 * 60 * 60 * 1000,
-    shared: true,
-    templateType: "security",
-    ownerName: "Charlie Dev",
-    isOwnedByMe: false,
-    hasPermissions: true,
-    permissions: [{ status: "accepted", userEmail: "dave@example.com", level: "editor" }],
-  },
-];
-
 
 export function Dashboard() {
   const sheets = useQuery(api.myFunctions.listSheets) as Sheet[] | undefined;
+  const checklists = useQuery(api.myFunctions.listChecklists) as Checklist[] | undefined;
   const navigate = useNavigate();
-
-  // State to control the modal
   const [isModalOpen, setIsModalOpen] = React.useState(false);
-
-  // Get the Convex mutation to create a new sheet with multiple modules
   const createSheet = useMutation(api.myFunctions.createSheetWithModules);
 
-  if (sheets === undefined) {
+  if (sheets === undefined || checklists === undefined) {
     return (
       <div className="bg-gray-50 min-h-screen font-sans p-6 text-center">
         <div className="flex items-center justify-center min-h-screen">
@@ -153,7 +103,6 @@ export function Dashboard() {
     );
   }
 
-  // Helper function to format date
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
     const now = new Date();
@@ -179,13 +128,11 @@ export function Dashboard() {
     }
   };
 
-  const handleFileClick = (sheetId: string, type: "sheet" | "checklist") => {
-    // Assuming sheets navigate to /sheet/:id, and checklists navigate to /checklist/:id
-    const path = type === "sheet" ? `/sheet/${sheetId}` : `/checklist/${sheetId}`;
+  const handleFileClick = (id: string, type: "sheet" | "checklist") => {
+    const path = type === "sheet" ? `/sheet/${id}` : `/checklist/${id}`;
     void navigate(path);
   };
 
-  // Function to handle the form submission from the modal
   const handleCreateSheet = async (data: NewSheetFormData) => {
     try {
       const newSheetId = await createSheet({
@@ -193,7 +140,7 @@ export function Dashboard() {
         type: data.type,
         testCaseType: data.testCaseType,
         shared: false,
-        modules: data.modules, // ✅ Now passing array of module names
+        modules: data.modules,
       });
       void navigate(`/sheet/${newSheetId}`);
     } catch (error) {
@@ -201,7 +148,6 @@ export function Dashboard() {
     }
   };
 
-  // 👈 New render function for Checklists
   const renderChecklistList = (
     checklistList: Checklist[] | undefined,
     isFirstSection = false,
@@ -227,59 +173,48 @@ export function Dashboard() {
             </div>
           </div>
         )}
-        {checklistList.map((file, index) => (
+        {checklistList.map((checklist, index) => (
           <div
-            key={file._id}
+            key={checklist._id}
             className={`p-4 hover:bg-gray-50 cursor-pointer ${
               index < checklistList.length - 1 ? "border-b border-gray-100" : ""
             }`}
-            onClick={() => handleFileClick(file._id, "checklist")} // 👈 Pass type
+            onClick={() => handleFileClick(checklist._id, "checklist")}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center"> {/* 👈 Changed color for distinction */}
+                <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
                   <div className="w-4 h-4 bg-white rounded-sm"></div>
                 </div>
-                <span className="text-sm text-gray-800">{file.name}</span>
-                {file.hasPermissions && (
+                <span className="text-sm text-gray-800">
+                  {checklist.sprintName} - {checklist.titleRevisionNumber}
+                </span>
+                {checklist.sheetName && (
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <UsersIcon className="w-4 h-4 text-gray-400 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      {file.permissions && file.permissions.length > 0 ? (
-                        <div>
-                          <p className="font-bold mb-1">Shared with:</p>
-                          {file.permissions
-                            .filter((p) => p.status === "pending")
-                            .map((p, pIndex) => (
-                              <div
-                                key={pIndex}
-                                className="flex items-center space-x-2"
-                              >
-                                <span>{p.userEmail}</span>
-                                <span className="text-muted-foreground capitalize">
-                                  ({p.level})
-                                </span>
-                              </div>
-                            ))}
-                        </div>
-                      ) : (
-                        <p className="font-bold">No one has access yet.</p>
-                      )}
+                      <div>
+                        <p className="font-bold mb-1">Checklist Details:</p>
+                        <p>Sheet: {checklist.sheetName}</p>
+                        <p>Status: {checklist.status}</p>
+                        <p>Progress: {checklist.progress}%</p>
+                        <p>Test Cases: {checklist.sourceTestCaseCount}</p>
+                      </div>
                     </TooltipContent>
                   </Tooltip>
                 )}
               </div>
               <div className="flex items-center space-x-8">
                 <span className="text-sm text-gray-600">
-                  {file.isOwnedByMe ? "me" : file.ownerName}
+                  {checklist.isOwnedByMe ? "me" : checklist.creatorName || "Unknown"}
                 </span>
                 <span className="text-sm text-gray-600">
-                  {formatDate(file.last_opened_at || file._creationTime)}
+                  {formatDate(checklist.updatedAt || checklist._creationTime)}
                 </span>
                 <span className="text-sm text-gray-600 capitalize">
-                  {file.templateType} {/* 👈 Using templateType */}
+                  {checklist.testCaseType}
                 </span>
                 <MoreVert className="w-4 h-4 text-gray-400 cursor-pointer" />
               </div>
@@ -290,8 +225,6 @@ export function Dashboard() {
     );
   };
 
-
-  // Original render function for Sheets
   const renderSheetList = (
     sheetList: Sheet[] | undefined,
     isFirstSection = false,
@@ -323,7 +256,7 @@ export function Dashboard() {
             className={`p-4 hover:bg-gray-50 cursor-pointer ${
               index < sheetList.length - 1 ? "border-b border-gray-100" : ""
             }`}
-            onClick={() => handleFileClick(file._id, "sheet")} // 👈 Pass type
+            onClick={() => handleFileClick(file._id, "sheet")}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
@@ -403,43 +336,40 @@ export function Dashboard() {
     return sheetDate < thirtyDaysAgo;
   });
 
-  // 👈 Filter DUMMY_CHECKLISTS by time periods
-  const checklistToday = DUMMY_CHECKLISTS?.filter((checklist) => {
+  // Filter checklists by time periods
+  const checklistToday = checklists?.filter((checklist) => {
     const now = new Date();
-    const checklistDate = new Date(checklist.last_opened_at || checklist._creationTime);
+    const checklistDate = new Date(checklist.updatedAt || checklist._creationTime);
     return now.toDateString() === checklistDate.toDateString();
   });
 
-  const checklistPrevious30Days = DUMMY_CHECKLISTS?.filter((checklist) => {
+  const checklistPrevious30Days = checklists?.filter((checklist) => {
     const now = new Date();
-    const checklistDate = new Date(checklist.last_opened_at || checklist._creationTime);
+    const checklistDate = new Date(checklist.updatedAt || checklist._creationTime);
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     return (
       checklistDate < new Date(now.toDateString()) && checklistDate >= thirtyDaysAgo
     );
   });
 
-  const checklistEarlier = DUMMY_CHECKLISTS?.filter((checklist) => {
+  const checklistEarlier = checklists?.filter((checklist) => {
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const checklistDate = new Date(checklist.last_opened_at || checklist._creationTime);
+    const checklistDate = new Date(checklist.updatedAt || checklist._creationTime);
     return checklistDate < thirtyDaysAgo;
   });
 
   return (
     <TooltipProvider>
-      {/* The new modal component */}
       <CreateNewSheetModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleCreateSheet}
       />
 
-      {/* single create button */}
       <Link to="/create-template" className="block md:hidden">
         <div className="flex flex-col items-center p-4 bg-white rounded-lg border border-gray-200 cursor-pointer hover:shadow-md transition-shadow">
           <div className="w-16 h-16 mb-3 flex items-center justify-center">
-            {/* ✅ REPLACEMENT */}
             <CreateNewIcon />
           </div>
           <span className="text-sm text-gray-700 text-center">
@@ -449,9 +379,7 @@ export function Dashboard() {
       </Link>
 
       <div className="bg-gray-50 min-h-screen font-sans">
-        {/* Main Content */}
         <main className="p-6">
-          {/* Template Gallery Large Device*/}
           <section className="mb-8 hidden md:block">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-normal text-gray-800">
@@ -471,7 +399,6 @@ export function Dashboard() {
                 onClick={() => setIsModalOpen(true)}
               >
                 <div className="w-16 h-16 mb-3 flex items-center justify-center">
-                  {/* ✅ REPLACEMENT */}
                   <CreateNewIcon />
                 </div>
                 <span className="text-sm text-gray-700 text-center">
@@ -481,7 +408,6 @@ export function Dashboard() {
 
               <div className="flex flex-col items-center p-4 bg-white rounded-lg border border-gray-200 cursor-pointer hover:shadow-md transition-shadow">
                 <div className="w-16 h-16 mb-3 flex items-center justify-center">
-                  {/* ✅ REPLACEMENT */}
                   <FunctionalityIcon />
                 </div>
                 <span className="text-sm text-gray-700 text-center">
@@ -491,7 +417,6 @@ export function Dashboard() {
 
               <div className="flex flex-col items-center p-4 bg-white rounded-lg border border-gray-200 cursor-pointer hover:shadow-md transition-shadow">
                 <div className="w-16 h-16 mb-3 flex items-center justify-center">
-                  {/* ✅ REPLACEMENT */}
                   <UsabilityIcon />
                 </div>
                 <span className="text-sm text-gray-700 text-center">
@@ -501,7 +426,6 @@ export function Dashboard() {
 
               <div className="flex flex-col items-center p-4 bg-white rounded-lg border border-gray-200 cursor-pointer hover:shadow-md transition-shadow">
                 <div className="w-16 h-16 mb-3 flex items-center justify-center">
-                  {/* ✅ REPLACEMENT */}
                   <ResponsiveIcon />
                 </div>
                 <span className="text-sm text-gray-700 text-center">
@@ -511,7 +435,6 @@ export function Dashboard() {
 
               <div className="flex flex-col items-center p-4 bg-white rounded-lg border border-gray-200 cursor-pointer hover:shadow-md transition-shadow">
                 <div className="w-16 h-16 mb-3 flex items-center justify-center">
-                  {/* ✅ REPLACEMENT */}
                   <CompatibilityIcon />
                 </div>
                 <span className="text-sm text-gray-700 text-center">
@@ -521,7 +444,6 @@ export function Dashboard() {
 
               <div className="flex flex-col items-center p-4 bg-white rounded-lg border border-gray-200 cursor-pointer hover:shadow-md transition-shadow">
                 <div className="w-16 h-16 mb-3 flex items-center justify-center">
-                  {/* ✅ REPLACEMENT */}
                   <AccessibilityIcon />
                 </div>
                 <span className="text-sm text-gray-700 text-center">
@@ -531,15 +453,13 @@ export function Dashboard() {
             </div>
           </section>
 
-          {/* Recent Sheets/Checklists Section with Tabs */}
           <section>
-            <Tabs defaultValue="sheets" className="w-full"> {/* 👈 Shadcn Tabs */}
+            <Tabs defaultValue="sheets" className="w-full">
               <TabsList className="grid w-[400px] grid-cols-2 mb-6">
                 <TabsTrigger value="sheets">Recent Sheets</TabsTrigger>
                 <TabsTrigger value="checklists">Recent Checklists</TabsTrigger>
               </TabsList>
               
-              {/* Sheets Tab Content */}
               <TabsContent value="sheets">
                 {!sheets || sheets.length === 0 ? (
                   <div className="text-center py-12">
@@ -580,9 +500,8 @@ export function Dashboard() {
                 )}
               </TabsContent>
 
-              {/* Checklist Tab Content */}
               <TabsContent value="checklists">
-                {DUMMY_CHECKLISTS.length === 0 ? (
+                {!checklists || checklists.length === 0 ? (
                   <div className="text-center py-12">
                     <div className="text-gray-500 mb-4">No checklists found</div>
                     <div className="text-sm text-gray-400">
