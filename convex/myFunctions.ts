@@ -3422,3 +3422,76 @@ export const updateChecklistItemStatus = mutation({
     return { success: true };
   },
 });
+
+/**
+ * Fetches the execution status history for a specific checklist item
+ * Returns a timeline of all status changes with user and timestamp info
+ */
+export const getChecklistItemStatusHistory = query({
+  args: {
+    itemId: v.id("checklistItems"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Authentication required");
+    }
+
+    // Get the checklist item
+    const item = await ctx.db.get(args.itemId);
+    if (!item) {
+      throw new Error("Checklist item not found");
+    }
+
+    // Get the checklist to verify access
+    const checklist = await ctx.db.get(item.checklistId);
+    if (!checklist) {
+      throw new Error("Parent checklist not found");
+    }
+
+    // Build a timeline of status changes
+    const timeline: {
+      status: string;
+      timestamp: number;
+      userName: string;
+      userEmail: string;
+      actualResults?: string;
+      isCreation?: boolean;
+    }[] = [];
+
+    // Add the creation event
+    const creator = await ctx.db.get(checklist.createdBy);
+    timeline.push({
+      status: "Not Run",
+      timestamp: item.createdAt,
+      userName: creator?.name || creator?.email || "Unknown",
+      userEmail: creator?.email || "N/A",
+      isCreation: true,
+    });
+
+    // Add execution events if the item has been executed
+    if (item.executedAt && item.executedBy) {
+      const executor = await ctx.db.get(item.executedBy);
+      timeline.push({
+        status: item.executionStatus,
+        timestamp: item.executedAt,
+        userName: executor?.name || executor?.email || "Unknown",
+        userEmail: executor?.email || "N/A",
+        actualResults: item.actualResults,
+      });
+    }
+
+    // Sort by timestamp (oldest first)
+    timeline.sort((a, b) => a.timestamp - b.timestamp);
+
+    return {
+      item: {
+        id: item._id,
+        title: item.title,
+        currentStatus: item.executionStatus,
+        module: item.module,
+      },
+      timeline,
+    };
+  },
+});
