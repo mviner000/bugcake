@@ -4,15 +4,9 @@ import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useNavigate, useParams } from "react-router-dom";
-import { X, Share2, MoreHorizontal, AlertTriangle } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { Doc, Id } from "../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ChecklistDetailsTab } from "./ChecklistDetailsTab";
 import { ChecklistHistoryTab } from "./ChecklistHistoryTab";
+import { ChecklistHeader } from "./ChecklistHeader";
 
 type ChecklistItem = Doc<"checklistItems"> & {
   sequenceNumber: number;
@@ -230,49 +225,17 @@ export function ChecklistDetailPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={onBack}
-                className="p-2 hover:bg-gray-100 rounded-md transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-              <div>
-                <h1 className="text-xl font-semibold text-gray-900">
-                  {checklist.sprintName} - {checklist.titleRevisionNumber}
-                </h1>
-                <p className="text-sm text-gray-500">
-                  Created {formatDate(checklist.createdAt)}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm">
-                <Share2 className="w-4 h-4 mr-2" />
-                Share
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <MoreHorizontal className="w-4 h-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem>Edit Checklist</DropdownMenuItem>
-                  <DropdownMenuItem>Export</DropdownMenuItem>
-                  <DropdownMenuItem className="text-red-600">
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </div>
-      </header>
+      {/* Header Component */}
+      <ChecklistHeader
+        sprintName={checklist.sprintName}
+        titleRevisionNumber={checklist.titleRevisionNumber}
+        createdAt={checklist.createdAt}
+        onBack={onBack}
+        formatDate={formatDate}
+        currentUserRole="qa_lead" // or get from auth context
+        checklistOwner={checklist.createdBy}
+        members={[]} // Fetch from backend later
+      />
 
       <div className="flex h-[calc(100vh-80px)]">
         {/* Sidebar - List of Test Cases */}
