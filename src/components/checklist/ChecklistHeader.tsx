@@ -46,7 +46,6 @@ export function ChecklistHeader({
   createdAt,
   onBack,
   formatDate,
-  currentUserRole = "viewer",
   checklistOwnerEmail = "owner@example.com",
   checklistOwnerId,
   checklistId,
@@ -63,7 +62,7 @@ export function ChecklistHeader({
     checklistId ? { checklistId: checklistId as Id<"checklists"> } : "skip"
   );
 
-  // Get current user to identify owner
+  // Get current user to identify owner and determine actual role
   const currentUser = useQuery(api.myFunctions.getMyProfile);
 
   // Backend Integration: Mutations
@@ -71,8 +70,31 @@ export function ChecklistHeader({
   const removeMember = useMutation(api.myFunctions.removeChecklistMember);
   const updateMemberRole = useMutation(api.myFunctions.updateChecklistMemberRole);
 
-  // Check if current user can manage members (owner or qa_lead)
-  const canManageMembers = ["super_admin", "qa_lead", "owner"].includes(currentUserRole);
+  // ✅ ROBUST: Determine the actual current user's role
+  const getActualUserRole = (): "owner" | "qa_lead" | "qa_tester" | "viewer" => {
+    if (!currentUser) return "viewer";
+
+    // Check if current user is the checklist owner
+    if (currentUser._id === checklistOwnerId) {
+      return "owner";
+    }
+
+    // Check if user is in members list and get their role
+    if (members && Array.isArray(members)) {
+      const memberRecord = members.find(m => m.userId === currentUser._id);
+      if (memberRecord) {
+        return memberRecord.role as "owner" | "qa_lead" | "qa_tester" | "viewer";
+      }
+    }
+
+    // Default to viewer
+    return "viewer";
+  };
+
+  const actualUserRole = getActualUserRole();
+
+  // ✅ ROBUST: Only owners and qa_leads can manage members
+  const canManageMembers = actualUserRole === "owner" || actualUserRole === "qa_lead";
 
   // Handle add member with backend call
   const handleAddMember = async () => {
@@ -347,9 +369,8 @@ export function ChecklistHeader({
                     </div>
                   </div>
                   
-                  {/* Conditional rendering based on user role */}
+                  {/* ✅ FIXED: Show management controls ONLY for owners and qa_leads */}
                   {canManageMembers ? (
-                    // Show action buttons for owners and qa_leads
                     <div className="flex items-center gap-2">
                       <Select
                         value={member.role}
@@ -372,7 +393,6 @@ export function ChecklistHeader({
                       </button>
                     </div>
                   ) : (
-                    // Show role label only for testers and viewers
                     <div className="text-sm text-gray-600">
                       {formatRoleDisplay(member.role)}
                     </div>
