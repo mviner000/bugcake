@@ -551,18 +551,20 @@ export default defineSchema({
   * This allows multiple users to view and work on checklists together
   */
   checklistMembers: defineTable({
-    checklistId: v.id("checklists"),
-    userId: v.id("users"),
-    role: v.union(
-      v.literal("editor"),  // Can execute tests and update statuses
-      v.literal("viewer")   // Can only view the checklist
-    ),
-    addedBy: v.id("users"), // Who added this member
-    addedAt: v.number(),
-  })
-    .index("by_checklist", ["checklistId"])
-    .index("by_user", ["userId"])
-    .index("by_checklist_and_user", ["checklistId", "userId"]),
-
+  checklistId: v.id("checklists"),
+  userId: v.id("users"),
+  role: v.union(
+    v.literal("owner"),      // Full control over the checklist
+    v.literal("qa_lead"),    // Can manage QA testers and oversee testing progress
+    v.literal("qa_tester"),  // Can execute tests and update statuses
+    v.literal("viewer")      // Can only view the checklist
+  ),
+  addedBy: v.id("users"), // Who added this member
+  addedAt: v.number(),
+})
+  .index("by_checklist", ["checklistId"])
+  .index("by_user", ["userId"])
+  .index("by_checklist_and_user", ["checklistId", "userId"]),
+  
 });
 

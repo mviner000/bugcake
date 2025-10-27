@@ -1,5 +1,4 @@
 // src/components/checklist/ChecklistHeader.tsx
-
 import { useState, useEffect } from "react";
 import { Share2, MoreHorizontal, X, UserPlus, Link, Mail, Check, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -52,7 +51,7 @@ export function ChecklistHeader({
 }: ChecklistHeaderProps) {
   const [showMembersDialog, setShowMembersDialog] = useState(false);
   const [newMemberEmail, setNewMemberEmail] = useState("");
-  const [newMemberRole, setNewMemberRole] = useState<"editor" | "viewer">("viewer");
+  const [newMemberRole, setNewMemberRole] = useState<"qa_tester" | "qa_lead" | "viewer">("viewer");
   const [activeTab, setActiveTab] = useState<"all" | "requests">("all");
   const [isCopied, setIsCopied] = useState(false);
 
@@ -112,7 +111,10 @@ export function ChecklistHeader({
   };
 
   // Handle update member role with backend call
-  const handleUpdateMemberRole = async (memberId: string, newRole: "editor" | "viewer") => {
+  const handleUpdateMemberRole = async (
+    memberId: string,
+    newRole: "qa_tester" | "qa_lead" | "viewer"
+  ) => {
     try {
       await updateMemberRole({
         checklistId: checklistId as Id<"checklists">,
@@ -227,7 +229,8 @@ export function ChecklistHeader({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="viewer">Viewer</SelectItem>
-                  <SelectItem value="editor">Editor</SelectItem>
+                  <SelectItem value="qa_tester">QA Tester</SelectItem>
+                  <SelectItem value="qa_lead">QA Lead</SelectItem>
                 </SelectContent>
               </Select>
               <Button onClick={handleAddMember} disabled={!newMemberEmail.trim()}>
@@ -324,7 +327,8 @@ export function ChecklistHeader({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="viewer">Viewer</SelectItem>
-                        <SelectItem value="editor">Editor</SelectItem>
+                        <SelectItem value="qa_tester">QA Tester</SelectItem>
+                        <SelectItem value="qa_lead">QA Lead</SelectItem>
                       </SelectContent>
                     </Select>
                     <button

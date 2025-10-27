@@ -3495,30 +3495,6 @@ export const getChecklistItemStatusHistory = query({
     };
   },
 });
-
-// Add these mutations to your convex/myFunctions.ts file
-
-/**
- * Table for managing checklist members/collaborators
- * This allows multiple users to view and work on checklists together
- */
-// First, add this table definition to your convex/schema.ts:
-/*
-  checklistMembers: defineTable({
-    checklistId: v.id("checklists"),
-    userId: v.id("users"),
-    role: v.union(
-      v.literal("editor"),  // Can execute tests and update statuses
-      v.literal("viewer")   // Can only view the checklist
-    ),
-    addedBy: v.id("users"), // Who added this member
-    addedAt: v.number(),
-  })
-    .index("by_checklist", ["checklistId"])
-    .index("by_user", ["userId"])
-    .index("by_checklist_and_user", ["checklistId", "userId"]),
-*/
-
 // ============================================
 // CHECKLIST MEMBER MANAGEMENT MUTATIONS
 // ============================================
@@ -3530,7 +3506,12 @@ export const addChecklistMember = mutation({
   args: {
     checklistId: v.id("checklists"),
     memberEmail: v.string(),
-    role: v.union(v.literal("editor"), v.literal("viewer")),
+    role: v.union(
+      v.literal("owner"),
+      v.literal("qa_lead"),
+      v.literal("qa_tester"),
+      v.literal("viewer")
+    ),
   },
   handler: async (ctx, args) => {
     // 1. Authentication check
@@ -3545,10 +3526,16 @@ export const addChecklistMember = mutation({
       throw new Error("Checklist not found.");
     }
 
-    // 3. Authorization: Only checklist creator can add members
-    // (You can expand this to include qa_lead role if needed)
-    if (checklist.createdBy !== currentUserId) {
-      throw new Error("Only the checklist creator can add members.");
+    // 3. Authorization: Only owner or qa_lead can add members
+    const currentMember = await ctx.db
+      .query("checklistMembers")
+      .withIndex("by_checklist_and_user", (q) =>
+        q.eq("checklistId", args.checklistId).eq("userId", currentUserId)
+      )
+      .unique();
+
+    if (!currentMember || !["owner", "qa_lead"].includes(currentMember.role)) {
+      throw new Error("Only the checklist owner or QA lead can add members.");
     }
 
     // 4. Find the user by email
@@ -3573,7 +3560,7 @@ export const addChecklistMember = mutation({
       throw new Error("User is already a member of this checklist.");
     }
 
-    // 6. Prevent adding the creator as a member
+    // 6. Prevent adding the checklist owner again
     if (targetUser._id === checklist.createdBy) {
       throw new Error("Cannot add the checklist owner as a member.");
     }
@@ -3606,7 +3593,7 @@ export const addChecklistMember = mutation({
 export const removeChecklistMember = mutation({
   args: {
     checklistId: v.id("checklists"),
-    memberId: v.string(), // This is the checklistMembers document ID
+    memberId: v.string(), // checklistMembers document ID
   },
   handler: async (ctx, args) => {
     // 1. Authentication check
@@ -3615,18 +3602,25 @@ export const removeChecklistMember = mutation({
       throw new Error("Authentication required.");
     }
 
-    // 2. Verify the checklist exists
+    // 2. Verify checklist exists
     const checklist = await ctx.db.get(args.checklistId);
     if (!checklist) {
       throw new Error("Checklist not found.");
     }
 
-    // 3. Authorization: Only checklist creator can remove members
-    if (checklist.createdBy !== currentUserId) {
-      throw new Error("Only the checklist creator can remove members.");
+    // 3. Authorization: Only owner or qa_lead can remove members
+    const currentMember = await ctx.db
+      .query("checklistMembers")
+      .withIndex("by_checklist_and_user", (q) =>
+        q.eq("checklistId", args.checklistId).eq("userId", currentUserId)
+      )
+      .unique();
+
+    if (!currentMember || !["owner", "qa_lead"].includes(currentMember.role)) {
+      throw new Error("Only the checklist owner or QA lead can remove members.");
     }
 
-    // 4. Normalize and get the member record
+    // 4. Normalize and validate the member record
     const memberRecordId = ctx.db.normalizeId("checklistMembers", args.memberId);
     if (!memberRecordId) {
       throw new Error("Invalid member ID.");
@@ -3635,6 +3629,11 @@ export const removeChecklistMember = mutation({
     const memberRecord = await ctx.db.get(memberRecordId);
     if (!memberRecord || memberRecord.checklistId !== args.checklistId) {
       throw new Error("Member not found in this checklist.");
+    }
+
+    // Prevent removing the owner
+    if (memberRecord.role === "owner") {
+      throw new Error("Cannot remove the checklist owner.");
     }
 
     // 5. Delete the member
@@ -3650,8 +3649,13 @@ export const removeChecklistMember = mutation({
 export const updateChecklistMemberRole = mutation({
   args: {
     checklistId: v.id("checklists"),
-    memberId: v.string(), // This is the checklistMembers document ID
-    newRole: v.union(v.literal("editor"), v.literal("viewer")),
+    memberId: v.string(),
+    newRole: v.union(
+      v.literal("owner"),
+      v.literal("qa_lead"),
+      v.literal("qa_tester"),
+      v.literal("viewer")
+    ),
   },
   handler: async (ctx, args) => {
     // 1. Authentication check
@@ -3660,15 +3664,22 @@ export const updateChecklistMemberRole = mutation({
       throw new Error("Authentication required.");
     }
 
-    // 2. Verify the checklist exists
+    // 2. Verify checklist exists
     const checklist = await ctx.db.get(args.checklistId);
     if (!checklist) {
       throw new Error("Checklist not found.");
     }
 
-    // 3. Authorization: Only checklist creator can update roles
-    if (checklist.createdBy !== currentUserId) {
-      throw new Error("Only the checklist creator can update member roles.");
+    // 3. Authorization: Only owner can promote/demote members
+    const currentMember = await ctx.db
+      .query("checklistMembers")
+      .withIndex("by_checklist_and_user", (q) =>
+        q.eq("checklistId", args.checklistId).eq("userId", currentUserId)
+      )
+      .unique();
+
+    if (!currentMember || currentMember.role !== "owner") {
+      throw new Error("Only the checklist owner can update member roles.");
     }
 
     // 4. Normalize and get the member record
@@ -3682,10 +3693,13 @@ export const updateChecklistMemberRole = mutation({
       throw new Error("Member not found in this checklist.");
     }
 
-    // 5. Update the role
-    await ctx.db.patch(memberRecordId, {
-      role: args.newRole,
-    });
+    // Prevent changing owner role
+    if (memberRecord.role === "owner") {
+      throw new Error("Cannot modify the checklist owner role.");
+    }
+
+    // 5. Update role
+    await ctx.db.patch(memberRecordId, { role: args.newRole });
 
     return { success: true, newRole: args.newRole };
   },
@@ -3705,7 +3719,7 @@ export const getChecklistMembers = query({
       return [];
     }
 
-    // 2. Verify the checklist exists
+    // 2. Verify checklist exists
     const checklist = await ctx.db.get(args.checklistId);
     if (!checklist) {
       return [];
