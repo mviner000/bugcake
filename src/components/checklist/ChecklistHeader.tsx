@@ -1,7 +1,7 @@
 // src/components/checklist/ChecklistHeader.tsx
 
 import { useState } from "react";
-import { Share2, MoreHorizontal, X, UserPlus, Users } from "lucide-react";
+import { Share2, MoreHorizontal, X, UserPlus, Link, Mail, Check, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,8 +12,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -56,6 +54,8 @@ export function ChecklistHeader({
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const [newMemberRole, setNewMemberRole] = useState<"editor" | "viewer">("viewer");
   const [localMembers, setLocalMembers] = useState(members);
+  const [activeTab, setActiveTab] = useState<"all" | "requests">("all");
+  const [isCopied, setIsCopied] = useState(false)
 
   // Check if current user can manage members
   const canManageMembers = ["super_admin", "qa_lead", "owner"].includes(currentUserRole);
@@ -88,6 +88,13 @@ export function ChecklistHeader({
       localMembers.map((m) => (m.id === memberId ? { ...m, role: newRole } : m))
     );
   };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      setIsCopied(true)
+      setTimeout(() => setIsCopied(false), 2000)
+    })
+  }
 
   return (
     <>
@@ -146,138 +153,174 @@ export function ChecklistHeader({
 
       {/* Members Management Dialog */}
       <Dialog open={showMembersDialog} onOpenChange={setShowMembersDialog}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              Manage Checklist Members
-            </DialogTitle>
-            <DialogDescription>
-              Add team members and assign permissions. Editors can update test case statuses,
-              while viewers can only view the checklist.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-6 mt-4">
-            {/* Add New Member Section */}
-            <div className="border rounded-lg p-4 bg-gray-50">
-              <h3 className="text-sm font-medium text-gray-900 mb-3">Add New Member</h3>
-              <div className="flex gap-2">
-                <Input
-                  type="email"
-                  placeholder="Enter email address"
-                  value={newMemberEmail}
-                  onChange={(e) => setNewMemberEmail(e.target.value)}
-                  className="flex-1"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleAddMember();
-                  }}
-                />
-                <Select value={newMemberRole} onValueChange={(v: any) => setNewMemberRole(v)}>
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="viewer">Viewer</SelectItem>
-                    <SelectItem value="editor">Editor</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button onClick={handleAddMember} disabled={!newMemberEmail.trim()}>
-                  Add
-                </Button>
-              </div>
-            </div>
-
-            {/* Owner Section */}
+        <DialogContent className="max-w-lg p-0">
+          {/* Header */}
+          <div className="flex items-center justify-between p-5 border-b">
             <div>
-              <h3 className="text-sm font-medium text-gray-900 mb-3">Owner</h3>
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium text-sm">
-                    {checklistOwner.charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{checklistOwner}</p>
-                    <p className="text-xs text-gray-500">Full access to checklist</p>
-                  </div>
-                </div>
-                <span className="text-xs font-medium text-blue-700 bg-blue-100 px-2 py-1 rounded">
-                  Owner
-                </span>
-              </div>
-            </div>
-
-            {/* Members List Section */}
-            <div>
-              <h3 className="text-sm font-medium text-gray-900 mb-3">
-                Members ({localMembers.length})
-              </h3>
-              {localMembers.length === 0 ? (
-                <div className="text-center py-8 text-gray-500 text-sm border rounded-lg">
-                  No members added yet. Add members to collaborate on this checklist.
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {localMembers.map((member) => (
-                    <div
-                      key={member.id}
-                      className="flex items-center justify-between p-3 bg-white rounded-lg border hover:shadow-sm transition-shadow"
-                    >
-                      <div className="flex items-center gap-3 flex-1">
-                        <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-white font-medium text-sm">
-                          {member.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">
-                            {member.email}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Added {formatDate(member.addedAt)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Select
-                          value={member.role}
-                          onValueChange={(v: any) => handleUpdateMemberRole(member.id, v)}
-                        >
-                          <SelectTrigger className="w-28 h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="viewer">Viewer</SelectItem>
-                            <SelectItem value="editor">Editor</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveMember(member.id)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          Remove
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Permission Info */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="text-sm font-medium text-blue-900 mb-2">Permission Levels</h4>
-              <ul className="space-y-1 text-xs text-blue-800">
-                <li>• <strong>Editor:</strong> Can update test case statuses and view all details</li>
-                <li>• <strong>Viewer:</strong> Can only view checklist and test case details</li>
-                <li>• <strong>Owner:</strong> Full access including member management and deletion</li>
-              </ul>
+              <DialogTitle className="text-lg font-semibold">
+                Share "{sprintName}"
+              </DialogTitle>
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
-            <Button variant="outline" onClick={() => setShowMembersDialog(false)}>
-              Close
+          {/* Owner Badge */}
+          <div className="px-5 pt-3">
+            <span className="inline-block bg-black text-white text-xs font-medium px-3 py-1 rounded-full">
+              Owner
+            </span>
+          </div>
+
+          {/* Add Member Input */}
+          <div className="px-5 pt-3">
+            <div className="flex gap-2">
+              <Input
+                type="email"
+                placeholder="Add people by email"
+                value={newMemberEmail}
+                onChange={(e) => setNewMemberEmail(e.target.value)}
+                className="flex-1"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAddMember();
+                }}
+              />
+              <Select value={newMemberRole} onValueChange={(v: any) => setNewMemberRole(v)}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="viewer">QA Lead</SelectItem>
+                  <SelectItem value="editor">QA Tester</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button onClick={handleAddMember} disabled={!newMemberEmail.trim()}>
+                Add
+              </Button>
+            </div>
+          </div>
+
+          {/* People with access header */}
+          <div className="px-5 pt-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold">People with access</h3>
+              <div className="flex items-center gap-3">
+                <button className="text-gray-600 hover:text-gray-800">
+                  <Link className="w-5 h-5" />
+                </button>
+                <button className="text-gray-600 hover:text-gray-800">
+                  <Mail className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="grid grid-cols-2 border rounded-lg overflow-hidden">
+              <button
+                onClick={() => setActiveTab("all")}
+                className={`py-2 text-sm font-medium ${
+                  activeTab === "all"
+                    ? "bg-white border-b-2 border-black"
+                    : "bg-gray-50 text-gray-600"
+                }`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setActiveTab("requests")}
+                className={`py-2 text-sm font-medium ${
+                  activeTab === "requests"
+                    ? "bg-white border-b-2 border-black"
+                    : "bg-gray-50 text-gray-600"
+                }`}
+              >
+                Requests
+              </button>
+            </div>
+          </div>
+
+          {/* Members List */}
+          <div className="px-5 py-3 max-h-96 overflow-y-auto">
+            {/* Owner */}
+            <div className="flex items-center justify-between py-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 font-medium">
+                  A
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{checklistOwner.split("@")[0]} (you)</p>
+                  <p className="text-xs text-gray-500">{checklistOwner}</p>
+                </div>
+              </div>
+              <div className="text-sm text-gray-600">Owner</div>
+            </div>
+
+            {/* Members */}
+            {localMembers.map((member) => (
+              <div key={member.id} className="flex items-center justify-between py-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 font-medium">
+                    A
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{member.name}</p>
+                    <p className="text-xs text-gray-500">{member.email}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={member.role}
+                    onValueChange={(v: any) => handleUpdateMemberRole(member.id, v)}
+                  >
+                    <SelectTrigger className="w-32 h-9 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="viewer">QA Lead</SelectItem>
+                      <SelectItem value="editor">QA Tester</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <button
+                    onClick={() => handleRemoveMember(member.id)}
+                    className="text-gray-600 hover:text-gray-800"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* General access */}
+          <div className="px-5 py-3 border-t">
+            <h3 className="text-sm font-semibold mb-3">General access</h3>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
+                  </svg>
+                </div>
+                <span className="text-sm font-medium">Restricted</span>
+              </div>
+              <button className="text-gray-600 hover:text-gray-800">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="px-5 py-4 border-t flex items-center justify-between">
+            <Button variant="outline" onClick={handleCopyLink} disabled={isCopied}>
+              {isCopied ? (
+                <Check className="h-4 w-4 mr-2 text-green-600" />
+              ) : (
+                <Copy className="h-4 w-4 mr-2" />
+              )}
+              {isCopied ? "Copied!" : "Copy link"}
+            </Button>
+            <Button onClick={() => setShowMembersDialog(false)}>
+              Done
             </Button>
           </div>
         </DialogContent>
