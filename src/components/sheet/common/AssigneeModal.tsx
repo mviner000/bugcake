@@ -11,6 +11,7 @@ import { OverlayScrollbarsComponent } from "overlayscrollbars-react"
 import "overlayscrollbars/overlayscrollbars.css"
 import { AssigneeRoleDisplay } from "./AssigneeRoleDisplay"
 import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 // 💡 NEW CONVEX IMPORTS
 import { useQuery, useMutation } from "convex/react"
@@ -62,6 +63,7 @@ export function AssigneeModal({
   const declineRequestMutation = useMutation(api.myFunctions.declineModuleAccessRequest)
 
   const [searchValue, setSearchValue] = useState("")
+  const [selectedRole, setSelectedRole] = useState<"viewer" | "qa_lead" | "qa_tester">("qa_tester")
   const [isAddingUser, setIsAddingUser] = useState(false)
   const [expandedRequestId, setExpandedRequestId] = useState<Id<"moduleAccessRequests"> | null>(null)
   const [processingRequests, setProcessingRequests] = useState<Set<Id<"moduleAccessRequests">>>(new Set())
@@ -79,7 +81,7 @@ export function AssigneeModal({
       
       setSearchValue("")
       setIsAddingUser(false)
-      alert("User added successfully! (Please implement the backend mutation.)")
+      alert(`User added successfully as ${selectedRole}! (Please implement the backend mutation.)`)
     }, 500)
   }
 
@@ -87,7 +89,7 @@ export function AssigneeModal({
     const user = (usersWithAccess as User[]).find((u) => u.id === userId)
     if (!user) return
 
-    if (!confirm(`Are you sure you want to remove user: "${user.name}" to ${moduleName}`)) {
+    if (!confirm(`Are you sure you want to remove user: "${user.name}" from ${moduleName}`)) {
         return
 
     }
@@ -178,20 +180,33 @@ export function AssigneeModal({
         </DialogHeader>
 
         <div className="px-6 pb-6 space-y-6">
-          {/* Search Input */}
+          {/* Search Input with Role Selector */}
           <div className="flex gap-2">
             <Input
               placeholder="Add people by email"
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
-              className="h-12"
+              className="h-9 flex-1"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   handleAddUser()
                 }
               }}
             />
-            <Button onClick={handleAddUser} disabled={isAddingUser || !searchValue.trim()} className="h-12">
+            
+            {/* Role Selector Dropdown */}
+            <Select value={selectedRole} onValueChange={(value: "viewer" | "qa_lead" | "qa_tester") => setSelectedRole(value)}>
+              <SelectTrigger className="h-9 w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="viewer">Viewer</SelectItem>
+                <SelectItem value="qa_tester">QA Tester</SelectItem>
+                <SelectItem value="qa_lead">QA Lead</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button onClick={handleAddUser} disabled={isAddingUser || !searchValue.trim()} className="h-9">
               {isAddingUser ? "Adding..." : "Add"}
             </Button>
           </div>

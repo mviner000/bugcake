@@ -40,6 +40,7 @@ export function ShareModal({
   const declineRequest = useMutation(api.myFunctions.declineAccessRequest)
 
   const [searchValue, setSearchValue] = useState("")
+  const [selectedRole, setSelectedRole] = useState<"viewer" | "qa_lead" | "qa_tester">("viewer")
   const [isCopied, setIsCopied] = useState(false)
   const [isAddingUser, setIsAddingUser] = useState(false)
   const [expandedRequestId, setExpandedRequestId] = useState<string | null>(null)
@@ -86,10 +87,10 @@ export function ShareModal({
       await addUserAccess({
         sheetId,
         userEmail: searchValue.trim(),
-        role: "viewer",
+        role: selectedRole,
       })
       setSearchValue("")
-      alert("User added successfully!")
+      alert(`User added successfully as ${selectedRole}!`)
     } catch (error: any) {
       alert(error.message || "Failed to add user")
     } finally {
@@ -242,23 +243,36 @@ export function ShareModal({
 
 
         <div className="px-6 pb-6 space-y-6">
-          {/* Search Input */}
+          {/* Search Input with Role Selector */}
           <div className="flex gap-2">
             <Input
               placeholder="Add people by email"
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
-              className="h-12"
+              className="h-9 flex-1"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   handleAddUser()
                 }
               }}
             />
+            
+            {/* Role Selector Dropdown */}
+            <Select value={selectedRole} onValueChange={(value: "viewer" | "qa_lead" | "qa_tester") => setSelectedRole(value)}>
+              <SelectTrigger className="w-[140px] h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="viewer">Viewer</SelectItem>
+                <SelectItem value="qa_tester">QA Tester</SelectItem>
+                <SelectItem value="qa_lead">QA Lead</SelectItem>
+              </SelectContent>
+            </Select>
+
             <Button 
               onClick={handleAddUser} 
               disabled={isAddingUser || !searchValue.trim()}
-              className="h-12"
+              className="h-9"
             >
               {isAddingUser ? "Adding..." : "Add"}
             </Button>
