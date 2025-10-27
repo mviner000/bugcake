@@ -25,13 +25,11 @@ interface StatusHistoryData {
 
 interface ChecklistHistoryTabProps {
   statusHistory: StatusHistoryData | undefined;
-  getStatusColor: (status: string) => string;
   formatDateTime: (timestamp: number) => string;
 }
 
 export function ChecklistHistoryTab({
   statusHistory,
-  getStatusColor,
   formatDateTime,
 }: ChecklistHistoryTabProps) {
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
@@ -82,7 +80,7 @@ export function ChecklistHistoryTab({
     }
   };
 
-  const getRoleLabel = (userName: string, isCreation: boolean) => {
+  const getRoleLabel = (isCreation: boolean) => {
     // You can customize this based on your user roles
     // For now, we'll use a simple heuristic
     if (isCreation) return "Creator";
@@ -165,7 +163,7 @@ export function ChecklistHistoryTab({
                           {event.userName}
                         </span>
                         <span className="text-xs text-gray-500">
-                          · {getRoleLabel(event.userName, event.isCreation || false)}
+                          · {getRoleLabel(event.isCreation || false)}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">

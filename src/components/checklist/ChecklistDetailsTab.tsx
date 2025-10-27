@@ -9,10 +9,9 @@ type ChecklistItem = Doc<"checklistItems"> & {
 
 interface ChecklistDetailsTabProps {
   selectedItem: ChecklistItem;
-  formatDate: (timestamp: number) => string;
 }
 
-export function ChecklistDetailsTab({ selectedItem, formatDate }: ChecklistDetailsTabProps) {
+export function ChecklistDetailsTab({ selectedItem }: ChecklistDetailsTabProps) {
   return (
     <>
       {/* Module Hierarchy */}

@@ -20,6 +20,8 @@ import {
 import { ChecklistDetailsTab } from "./ChecklistDetailsTab";
 import { ChecklistHistoryTab } from "./ChecklistHistoryTab";
 import { ChecklistHeader } from "./ChecklistHeader";
+import { ChecklistSidebar } from "./ChecklistSidebar";
+import { DocumentIcon } from "../icons/DocumentIcon";
 
 type ChecklistItem = Doc<"checklistItems"> & {
   sequenceNumber: number;
@@ -239,105 +241,14 @@ export function ChecklistDetailPage() {
 
       <div className="flex h-[calc(100vh-80px)]">
         {/* Sidebar - List of Test Cases */}
-        <div className="w-80 bg-white border-r border-gray-200 overflow-y-auto">
-          <div className="p-4 border-b border-gray-200">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <h2 className="font-semibold text-gray-900">
-                  {checklist.testCaseType === "functionality"
-                    ? "Functionality Test Cases"
-                    : "Alt Text Test Cases"}
-                </h2>
-                <p className="text-sm text-gray-500 mt-1">
-                  {checklistItems.length} test cases
-                </p>
-              </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-blue-600">
-                  {progress.percentage}%
-                </div>
-                <div className="text-xs text-gray-500">
-                  {progress.completed}/{progress.total}
-                </div>
-              </div>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${progress.percentage}%` }}
-              ></div>
-            </div>
-            
-            {/* Status Breakdown */}
-            <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-              {progress.passed > 0 && (
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                  <span className="text-gray-600">{progress.passed} Passed</span>
-                </div>
-              )}
-              {progress.failed > 0 && (
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                  <span className="text-gray-600">{progress.failed} Failed</span>
-                </div>
-              )}
-              {progress.blocked > 0 && (
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
-                  <span className="text-gray-600">{progress.blocked} Blocked</span>
-                </div>
-              )}
-              {progress.skipped > 0 && (
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                  <span className="text-gray-600">{progress.skipped} Skipped</span>
-                </div>
-              )}
-              {progress.notRun > 0 && (
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-gray-400"></div>
-                  <span className="text-gray-600">{progress.notRun} Not Run</span>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="divide-y divide-gray-100">
-            {checklistItems.map((item) => (
-              <div
-                key={item._id}
-                onClick={() => setSelectedItemId(item._id)}
-                className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
-                  selectedItemId === item._id ? "bg-blue-50 border-l-4 border-blue-600" : ""
-                }`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 mb-1">
-                      TC_{item.sequenceNumber.toString().padStart(3, "0")}
-                    </p>
-                    <p className="text-sm text-gray-600 truncate mb-2">
-                      {item.title}
-                    </p>
-                    <p className="text-xs text-gray-500">{item.module}</p>
-                  </div>
-                </div>
-                <div className="mt-2 flex items-center justify-between">
-                  <span
-                    className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${getStatusColor(
-                      item.executionStatus
-                    )}`}
-                  >
-                    {item.executionStatus}
-                  </span>
-                  <p className="text-xs text-gray-400">
-                    {item.originalCreatedBy.split('@')[0]}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <ChecklistSidebar
+          testCaseType={checklist.testCaseType}
+          checklistItems={checklistItems}
+          selectedItemId={selectedItemId}
+          onItemSelect={setSelectedItemId}
+          progress={progress}
+          getStatusColor={getStatusColor}
+        />
 
         {/* Main Content - Test Case Details */}
         <div className="flex-1 overflow-y-auto">
@@ -440,12 +351,10 @@ export function ChecklistDetailPage() {
                 {activeTab === "details" ? (
                   <ChecklistDetailsTab 
                     selectedItem={selectedItem}
-                    formatDate={formatDate}
                   />
                 ) : (
                   <ChecklistHistoryTab
                     statusHistory={statusHistory}
-                    getStatusColor={getStatusColor}
                     formatDateTime={formatDateTime}
                   />
                 )}
@@ -454,19 +363,7 @@ export function ChecklistDetailPage() {
           ) : (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <svg
-                  className="mx-auto h-12 w-12 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
+                <DocumentIcon className="mx-auto h-12 w-12 text-gray-400" />
                 <p className="mt-4 text-lg text-gray-500">
                   Select a test case from the sidebar to view details
                 </p>
