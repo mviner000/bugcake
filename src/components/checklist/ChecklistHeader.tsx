@@ -1,5 +1,5 @@
 // src/components/checklist/ChecklistHeader.tsx
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Share2, MoreHorizontal, X, UserPlus, Link, Mail, Check, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +25,8 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { toast } from "sonner";
+import { ChecklistRoleDisplay } from "./ChecklistRoleDisplay";
+import { ChecklistUserRoleBadge } from "./ChecklistUserRoleBadge";
 
 interface ChecklistHeaderProps {
   sprintName: string;
@@ -160,9 +162,15 @@ export function ChecklistHeader({
                 <X className="w-5 h-5" />
               </button>
               <div>
-                <h1 className="text-xl font-semibold text-gray-900">
-                  {sprintName} - {titleRevisionNumber}
-                </h1>
+                <div className="flex items-center">
+                  <h1 className="text-xl font-semibold text-gray-900">
+                    {sprintName} - {titleRevisionNumber}
+                  </h1>
+                  <ChecklistUserRoleBadge 
+                    checklistId={checklistId}
+                    checklistOwnerId={checklistOwnerId}
+                  />
+                </div>
                 <p className="text-sm text-gray-500">
                   Created {formatDate(createdAt)}
                 </p>
@@ -207,18 +215,24 @@ export function ChecklistHeader({
         <DialogContent className="max-w-lg p-0">
           {/* Header */}
           <div className="flex items-center justify-between p-5 border-b">
-            <div>
+            <div className="flex items-center gap-2">
               <DialogTitle className="text-lg font-semibold">
                 Share "{sprintName}"
               </DialogTitle>
+              <ChecklistUserRoleBadge 
+                checklistId={checklistId}
+                checklistOwnerId={checklistOwnerId}
+              />
             </div>
           </div>
 
           {/* Owner Badge */}
           <div className="px-5 pt-3">
-            <span className="inline-block bg-black text-white text-xs font-medium px-3 py-1 rounded-full">
-              Owner
-            </span>
+            <ChecklistRoleDisplay
+              members={members} 
+              includeOwner={true}
+              ownerEmail={checklistOwnerEmail}
+            />
           </div>
 
           {/* Add Member Input - Only show if user can manage members */}
