@@ -544,5 +544,25 @@ export default defineSchema({
     .index("by_executionStatus", ["executionStatus"])
     .index("by_checklist_and_status", ["checklistId", "executionStatus"])
     .index("by_originalTestCase", ["originalTestCaseId"]), // For traceability
+
+
+  /**
+  * Table for managing checklist members/collaborators
+  * This allows multiple users to view and work on checklists together
+  */
+  checklistMembers: defineTable({
+    checklistId: v.id("checklists"),
+    userId: v.id("users"),
+    role: v.union(
+      v.literal("editor"),  // Can execute tests and update statuses
+      v.literal("viewer")   // Can only view the checklist
+    ),
+    addedBy: v.id("users"), // Who added this member
+    addedAt: v.number(),
+  })
+    .index("by_checklist", ["checklistId"])
+    .index("by_user", ["userId"])
+    .index("by_checklist_and_user", ["checklistId", "userId"]),
+
 });
 

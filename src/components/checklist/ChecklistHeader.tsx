@@ -1,6 +1,6 @@
 // src/components/checklist/ChecklistHeader.tsx
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Share2, MoreHorizontal, X, UserPlus, Link, Mail, Check, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +22,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { Id } from "../../../convex/_generated/dataModel";
+import { toast } from "sonner";
 
 interface ChecklistHeaderProps {
   sprintName: string;
@@ -30,14 +34,9 @@ interface ChecklistHeaderProps {
   onBack: () => void;
   formatDate: (timestamp: number) => string;
   currentUserRole?: "super_admin" | "qa_lead" | "qa_tester" | "owner";
-  checklistOwner?: string;
-  members?: Array<{
-    id: string;
-    email: string;
-    name: string;
-    role: "editor" | "viewer";
-    addedAt: number;
-  }>;
+  checklistOwnerEmail?: string;
+  checklistOwnerId: string;
+  checklistId: string;
 }
 
 export function ChecklistHeader({
@@ -47,54 +46,93 @@ export function ChecklistHeader({
   onBack,
   formatDate,
   currentUserRole = "qa_tester",
-  checklistOwner = "owner@example.com",
-  members = [],
+  checklistOwnerEmail = "owner@example.com",
+  checklistOwnerId,
+  checklistId,
 }: ChecklistHeaderProps) {
   const [showMembersDialog, setShowMembersDialog] = useState(false);
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const [newMemberRole, setNewMemberRole] = useState<"editor" | "viewer">("viewer");
-  const [localMembers, setLocalMembers] = useState(members);
   const [activeTab, setActiveTab] = useState<"all" | "requests">("all");
-  const [isCopied, setIsCopied] = useState(false)
+  const [isCopied, setIsCopied] = useState(false);
+
+  // Backend Integration: Fetch members from database
+  const members = useQuery(
+    api.myFunctions.getChecklistMembers,
+    checklistId ? { checklistId: checklistId as Id<"checklists"> } : "skip"
+  );
+
+  // Get current user to identify owner
+  const currentUser = useQuery(api.myFunctions.getMyProfile);
+
+  // Backend Integration: Mutations
+  const addMember = useMutation(api.myFunctions.addChecklistMember);
+  const removeMember = useMutation(api.myFunctions.removeChecklistMember);
+  const updateMemberRole = useMutation(api.myFunctions.updateChecklistMemberRole);
 
   // Check if current user can manage members
   const canManageMembers = ["super_admin", "qa_lead", "owner"].includes(currentUserRole);
 
-  const handleAddMember = () => {
-    if (!newMemberEmail.trim()) return;
+  // Handle add member with backend call
+  const handleAddMember = async () => {
+    if (!newMemberEmail.trim()) {
+      toast.error("Please enter an email address.");
+      return;
+    }
 
-    // TODO: Backend API call to add member
-    const newMember = {
-      id: Date.now().toString(),
-      email: newMemberEmail,
-      name: newMemberEmail.split("@")[0],
-      role: newMemberRole,
-      addedAt: Date.now(),
-    };
+    try {
+      const result = await addMember({
+        checklistId: checklistId as Id<"checklists">,
+        memberEmail: newMemberEmail.trim(),
+        role: newMemberRole,
+      });
 
-    setLocalMembers([...localMembers, newMember]);
-    setNewMemberEmail("");
-    setNewMemberRole("viewer");
+      toast.success(`${result.member.name} has been added to the checklist.`);
+
+      // Clear the form
+      setNewMemberEmail("");
+      setNewMemberRole("viewer");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to add member.");
+    }
   };
 
-  const handleRemoveMember = (memberId: string) => {
-    // TODO: Backend API call to remove member
-    setLocalMembers(localMembers.filter((m) => m.id !== memberId));
+  // Handle remove member with backend call
+  const handleRemoveMember = async (memberId: string) => {
+    try {
+      await removeMember({
+        checklistId: checklistId as Id<"checklists">,
+        memberId: memberId,
+      });
+
+      toast.success("Member has been removed from the checklist.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to remove member.");
+    }
   };
 
-  const handleUpdateMemberRole = (memberId: string, newRole: "editor" | "viewer") => {
-    // TODO: Backend API call to update member role
-    setLocalMembers(
-      localMembers.map((m) => (m.id === memberId ? { ...m, role: newRole } : m))
-    );
+  // Handle update member role with backend call
+  const handleUpdateMemberRole = async (memberId: string, newRole: "editor" | "viewer") => {
+    try {
+      await updateMemberRole({
+        checklistId: checklistId as Id<"checklists">,
+        memberId: memberId,
+        newRole: newRole,
+      });
+
+      toast.success(`Member role has been updated to ${newRole}.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update role.");
+    }
   };
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href).then(() => {
-      setIsCopied(true)
-      setTimeout(() => setIsCopied(false), 2000)
-    })
-  }
+      setIsCopied(true);
+      toast.success("Checklist link has been copied to clipboard.");
+      setTimeout(() => setIsCopied(false), 2000);
+    });
+  };
 
   return (
     <>
@@ -128,7 +166,7 @@ export function ChecklistHeader({
                   Manage Members
                 </Button>
               )}
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleCopyLink}>
                 <Share2 className="w-4 h-4 mr-2" />
                 Share
               </Button>
@@ -188,8 +226,8 @@ export function ChecklistHeader({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="viewer">QA Lead</SelectItem>
-                  <SelectItem value="editor">QA Tester</SelectItem>
+                  <SelectItem value="viewer">Viewer</SelectItem>
+                  <SelectItem value="editor">Editor</SelectItem>
                 </SelectContent>
               </Select>
               <Button onClick={handleAddMember} disabled={!newMemberEmail.trim()}>
@@ -203,7 +241,10 @@ export function ChecklistHeader({
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold">People with access</h3>
               <div className="flex items-center gap-3">
-                <button className="text-gray-600 hover:text-gray-800">
+                <button 
+                  className="text-gray-600 hover:text-gray-800"
+                  onClick={handleCopyLink}
+                >
                   <Link className="w-5 h-5" />
                 </button>
                 <button className="text-gray-600 hover:text-gray-800">
@@ -243,50 +284,63 @@ export function ChecklistHeader({
             <div className="flex items-center justify-between py-3">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 font-medium">
-                  A
+                  {checklistOwnerEmail.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <p className="text-sm font-medium">{checklistOwner.split("@")[0]} (you)</p>
-                  <p className="text-xs text-gray-500">{checklistOwner}</p>
+                  <p className="text-sm font-medium">
+                    {checklistOwnerEmail.split("@")[0]}
+                    {currentUser?._id === checklistOwnerId && " (you)"}
+                  </p>
+                  <p className="text-xs text-gray-500">{checklistOwnerEmail}</p>
                 </div>
               </div>
               <div className="text-sm text-gray-600">Owner</div>
             </div>
 
-            {/* Members */}
-            {localMembers.map((member) => (
-              <div key={member.id} className="flex items-center justify-between py-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 font-medium">
-                    A
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">{member.name}</p>
-                    <p className="text-xs text-gray-500">{member.email}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Select
-                    value={member.role}
-                    onValueChange={(v: any) => handleUpdateMemberRole(member.id, v)}
-                  >
-                    <SelectTrigger className="w-32 h-9 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="viewer">QA Lead</SelectItem>
-                      <SelectItem value="editor">QA Tester</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <button
-                    onClick={() => handleRemoveMember(member.id)}
-                    className="text-gray-600 hover:text-gray-800"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
+            {/* Render members from backend */}
+            {members === undefined ? (
+              <div className="text-center py-4 text-sm text-gray-500">
+                Loading members...
               </div>
-            ))}
+            ) : members && members.length > 0 ? (
+              members.map((member) => (
+                <div key={member.id} className="flex items-center justify-between py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 font-medium">
+                      {member.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{member.name}</p>
+                      <p className="text-xs text-gray-500">{member.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={member.role}
+                      onValueChange={(v: any) => handleUpdateMemberRole(member.id, v)}
+                    >
+                      <SelectTrigger className="w-32 h-9 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="viewer">Viewer</SelectItem>
+                        <SelectItem value="editor">Editor</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <button
+                      onClick={() => handleRemoveMember(member.id)}
+                      className="text-gray-600 hover:text-gray-800"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-4 text-sm text-gray-500">
+                No members added yet
+              </div>
+            )}
           </div>
 
           {/* General access */}

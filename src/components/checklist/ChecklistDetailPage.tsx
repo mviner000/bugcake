@@ -235,8 +235,9 @@ export function ChecklistDetailPage() {
         onBack={onBack}
         formatDate={formatDate}
         currentUserRole="qa_lead" // or get from auth context
-        checklistOwner={checklist.createdBy}
-        members={[]} // Fetch from backend later
+        checklistOwnerEmail={checklist.creatorName} // ✅ This is the email from the query
+        checklistOwnerId={checklist.createdBy} // ✅ Pass the ID for comparison
+        checklistId={checklistId!}
       />
 
       <div className="flex h-[calc(100vh-80px)]">

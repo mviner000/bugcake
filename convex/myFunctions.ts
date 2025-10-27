@@ -3495,3 +3495,246 @@ export const getChecklistItemStatusHistory = query({
     };
   },
 });
+
+// Add these mutations to your convex/myFunctions.ts file
+
+/**
+ * Table for managing checklist members/collaborators
+ * This allows multiple users to view and work on checklists together
+ */
+// First, add this table definition to your convex/schema.ts:
+/*
+  checklistMembers: defineTable({
+    checklistId: v.id("checklists"),
+    userId: v.id("users"),
+    role: v.union(
+      v.literal("editor"),  // Can execute tests and update statuses
+      v.literal("viewer")   // Can only view the checklist
+    ),
+    addedBy: v.id("users"), // Who added this member
+    addedAt: v.number(),
+  })
+    .index("by_checklist", ["checklistId"])
+    .index("by_user", ["userId"])
+    .index("by_checklist_and_user", ["checklistId", "userId"]),
+*/
+
+// ============================================
+// CHECKLIST MEMBER MANAGEMENT MUTATIONS
+// ============================================
+
+/**
+ * Adds a new member to a checklist by email
+ */
+export const addChecklistMember = mutation({
+  args: {
+    checklistId: v.id("checklists"),
+    memberEmail: v.string(),
+    role: v.union(v.literal("editor"), v.literal("viewer")),
+  },
+  handler: async (ctx, args) => {
+    // 1. Authentication check
+    const currentUserId = await getAuthUserId(ctx);
+    if (!currentUserId) {
+      throw new Error("Authentication required.");
+    }
+
+    // 2. Verify the checklist exists
+    const checklist = await ctx.db.get(args.checklistId);
+    if (!checklist) {
+      throw new Error("Checklist not found.");
+    }
+
+    // 3. Authorization: Only checklist creator can add members
+    // (You can expand this to include qa_lead role if needed)
+    if (checklist.createdBy !== currentUserId) {
+      throw new Error("Only the checklist creator can add members.");
+    }
+
+    // 4. Find the user by email
+    const targetUser = await ctx.db
+      .query("users")
+      .withIndex("email", (q) => q.eq("email", args.memberEmail.toLowerCase().trim()))
+      .unique();
+
+    if (!targetUser) {
+      throw new Error(`No user found with email: ${args.memberEmail}`);
+    }
+
+    // 5. Check if user is already a member
+    const existingMember = await ctx.db
+      .query("checklistMembers")
+      .withIndex("by_checklist_and_user", (q) =>
+        q.eq("checklistId", args.checklistId).eq("userId", targetUser._id)
+      )
+      .unique();
+
+    if (existingMember) {
+      throw new Error("User is already a member of this checklist.");
+    }
+
+    // 6. Prevent adding the creator as a member
+    if (targetUser._id === checklist.createdBy) {
+      throw new Error("Cannot add the checklist owner as a member.");
+    }
+
+    // 7. Add the member
+    const memberId = await ctx.db.insert("checklistMembers", {
+      checklistId: args.checklistId,
+      userId: targetUser._id,
+      role: args.role,
+      addedBy: currentUserId,
+      addedAt: Date.now(),
+    });
+
+    return {
+      success: true,
+      member: {
+        id: memberId,
+        email: targetUser.email,
+        name: targetUser.name || targetUser.email?.split("@")[0] || "Unknown",
+        role: args.role,
+        addedAt: Date.now(),
+      },
+    };
+  },
+});
+
+/**
+ * Removes a member from a checklist
+ */
+export const removeChecklistMember = mutation({
+  args: {
+    checklistId: v.id("checklists"),
+    memberId: v.string(), // This is the checklistMembers document ID
+  },
+  handler: async (ctx, args) => {
+    // 1. Authentication check
+    const currentUserId = await getAuthUserId(ctx);
+    if (!currentUserId) {
+      throw new Error("Authentication required.");
+    }
+
+    // 2. Verify the checklist exists
+    const checklist = await ctx.db.get(args.checklistId);
+    if (!checklist) {
+      throw new Error("Checklist not found.");
+    }
+
+    // 3. Authorization: Only checklist creator can remove members
+    if (checklist.createdBy !== currentUserId) {
+      throw new Error("Only the checklist creator can remove members.");
+    }
+
+    // 4. Normalize and get the member record
+    const memberRecordId = ctx.db.normalizeId("checklistMembers", args.memberId);
+    if (!memberRecordId) {
+      throw new Error("Invalid member ID.");
+    }
+
+    const memberRecord = await ctx.db.get(memberRecordId);
+    if (!memberRecord || memberRecord.checklistId !== args.checklistId) {
+      throw new Error("Member not found in this checklist.");
+    }
+
+    // 5. Delete the member
+    await ctx.db.delete(memberRecordId);
+
+    return { success: true };
+  },
+});
+
+/**
+ * Updates a member's role in a checklist
+ */
+export const updateChecklistMemberRole = mutation({
+  args: {
+    checklistId: v.id("checklists"),
+    memberId: v.string(), // This is the checklistMembers document ID
+    newRole: v.union(v.literal("editor"), v.literal("viewer")),
+  },
+  handler: async (ctx, args) => {
+    // 1. Authentication check
+    const currentUserId = await getAuthUserId(ctx);
+    if (!currentUserId) {
+      throw new Error("Authentication required.");
+    }
+
+    // 2. Verify the checklist exists
+    const checklist = await ctx.db.get(args.checklistId);
+    if (!checklist) {
+      throw new Error("Checklist not found.");
+    }
+
+    // 3. Authorization: Only checklist creator can update roles
+    if (checklist.createdBy !== currentUserId) {
+      throw new Error("Only the checklist creator can update member roles.");
+    }
+
+    // 4. Normalize and get the member record
+    const memberRecordId = ctx.db.normalizeId("checklistMembers", args.memberId);
+    if (!memberRecordId) {
+      throw new Error("Invalid member ID.");
+    }
+
+    const memberRecord = await ctx.db.get(memberRecordId);
+    if (!memberRecord || memberRecord.checklistId !== args.checklistId) {
+      throw new Error("Member not found in this checklist.");
+    }
+
+    // 5. Update the role
+    await ctx.db.patch(memberRecordId, {
+      role: args.newRole,
+    });
+
+    return { success: true, newRole: args.newRole };
+  },
+});
+
+/**
+ * Gets all members of a checklist
+ */
+export const getChecklistMembers = query({
+  args: {
+    checklistId: v.id("checklists"),
+  },
+  handler: async (ctx, args) => {
+    // 1. Authentication check
+    const currentUserId = await getAuthUserId(ctx);
+    if (!currentUserId) {
+      return [];
+    }
+
+    // 2. Verify the checklist exists
+    const checklist = await ctx.db.get(args.checklistId);
+    if (!checklist) {
+      return [];
+    }
+
+    // 3. Get all members
+    const memberRecords = await ctx.db
+      .query("checklistMembers")
+      .withIndex("by_checklist", (q) => q.eq("checklistId", args.checklistId))
+      .collect();
+
+    // 4. Enhance with user details
+    const members = await Promise.all(
+      memberRecords.map(async (record) => {
+        const user = await ctx.db.get(record.userId);
+        const addedByUser = await ctx.db.get(record.addedBy);
+
+        return {
+          id: record._id,
+          userId: record.userId,
+          email: user?.email || "N/A",
+          name: user?.name || user?.email?.split("@")[0] || "Unknown",
+          role: record.role,
+          addedAt: record.addedAt,
+          addedBy: addedByUser?.email || "Unknown",
+        };
+      })
+    );
+
+    return members;
+  },
+});
