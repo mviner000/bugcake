@@ -3496,7 +3496,7 @@ export const getChecklistItemStatusHistory = query({
   },
 });
 // ============================================
-// CHECKLIST MEMBER MANAGEMENT MUTATIONS
+// CHECKLIST MEMBER MANAGEMENT MUTATIONS (FIXED)
 // ============================================
 
 /**
@@ -3526,7 +3526,9 @@ export const addChecklistMember = mutation({
       throw new Error("Checklist not found.");
     }
 
-    // 3. Authorization: Only owner or qa_lead can add members
+    // 3. Authorization: Check if user is the checklist owner OR a qa_lead
+    const isOwner = checklist.createdBy === currentUserId;
+    
     const currentMember = await ctx.db
       .query("checklistMembers")
       .withIndex("by_checklist_and_user", (q) =>
@@ -3534,7 +3536,9 @@ export const addChecklistMember = mutation({
       )
       .unique();
 
-    if (!currentMember || !["owner", "qa_lead"].includes(currentMember.role)) {
+    const isQALead = currentMember?.role === "qa_lead";
+
+    if (!isOwner && !isQALead) {
       throw new Error("Only the checklist owner or QA lead can add members.");
     }
 
@@ -3608,7 +3612,9 @@ export const removeChecklistMember = mutation({
       throw new Error("Checklist not found.");
     }
 
-    // 3. Authorization: Only owner or qa_lead can remove members
+    // 3. Authorization: Check if user is the checklist owner OR a qa_lead
+    const isOwner = checklist.createdBy === currentUserId;
+    
     const currentMember = await ctx.db
       .query("checklistMembers")
       .withIndex("by_checklist_and_user", (q) =>
@@ -3616,7 +3622,9 @@ export const removeChecklistMember = mutation({
       )
       .unique();
 
-    if (!currentMember || !["owner", "qa_lead"].includes(currentMember.role)) {
+    const isQALead = currentMember?.role === "qa_lead";
+
+    if (!isOwner && !isQALead) {
       throw new Error("Only the checklist owner or QA lead can remove members.");
     }
 
@@ -3670,7 +3678,10 @@ export const updateChecklistMemberRole = mutation({
       throw new Error("Checklist not found.");
     }
 
-    // 3. Authorization: Only owner can promote/demote members
+    // 3. Authorization: Check if user is the checklist owner OR a qa_lead
+    const isOwner = checklist.createdBy === currentUserId;
+    
+    // Also check if they're a qa_lead member
     const currentMember = await ctx.db
       .query("checklistMembers")
       .withIndex("by_checklist_and_user", (q) =>
@@ -3678,8 +3689,10 @@ export const updateChecklistMemberRole = mutation({
       )
       .unique();
 
-    if (!currentMember || currentMember.role !== "owner") {
-      throw new Error("Only the checklist owner can update member roles.");
+    const isQALead = currentMember?.role === "qa_lead";
+
+    if (!isOwner && !isQALead) {
+      throw new Error("Only the checklist owner or QA lead can update member roles.");
     }
 
     // 4. Normalize and get the member record

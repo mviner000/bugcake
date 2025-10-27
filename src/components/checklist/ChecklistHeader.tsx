@@ -32,7 +32,7 @@ interface ChecklistHeaderProps {
   createdAt: number;
   onBack: () => void;
   formatDate: (timestamp: number) => string;
-  currentUserRole?: "super_admin" | "qa_lead" | "qa_tester" | "owner";
+  currentUserRole?: "super_admin" | "qa_lead" | "qa_tester" | "owner" | "viewer";
   checklistOwnerEmail?: string;
   checklistOwnerId: string;
   checklistId: string;
@@ -44,7 +44,7 @@ export function ChecklistHeader({
   createdAt,
   onBack,
   formatDate,
-  currentUserRole = "qa_tester",
+  currentUserRole = "viewer",
   checklistOwnerEmail = "owner@example.com",
   checklistOwnerId,
   checklistId,
@@ -69,7 +69,7 @@ export function ChecklistHeader({
   const removeMember = useMutation(api.myFunctions.removeChecklistMember);
   const updateMemberRole = useMutation(api.myFunctions.updateChecklistMemberRole);
 
-  // Check if current user can manage members
+  // Check if current user can manage members (owner or qa_lead)
   const canManageMembers = ["super_admin", "qa_lead", "owner"].includes(currentUserRole);
 
   // Handle add member with backend call
@@ -134,6 +134,17 @@ export function ChecklistHeader({
       toast.success("Checklist link has been copied to clipboard.");
       setTimeout(() => setIsCopied(false), 2000);
     });
+  };
+
+  // Helper function to format role display
+  const formatRoleDisplay = (role: string) => {
+    const roleMap: Record<string, string> = {
+      owner: "Owner",
+      qa_lead: "QA Lead",
+      qa_tester: "QA Tester",
+      viewer: "Viewer",
+    };
+    return roleMap[role] || role;
   };
 
   return (
@@ -210,34 +221,36 @@ export function ChecklistHeader({
             </span>
           </div>
 
-          {/* Add Member Input */}
-          <div className="px-5 pt-3">
-            <div className="flex gap-2">
-              <Input
-                type="email"
-                placeholder="Add people by email"
-                value={newMemberEmail}
-                onChange={(e) => setNewMemberEmail(e.target.value)}
-                className="flex-1"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleAddMember();
-                }}
-              />
-              <Select value={newMemberRole} onValueChange={(v: any) => setNewMemberRole(v)}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="viewer">Viewer</SelectItem>
-                  <SelectItem value="qa_tester">QA Tester</SelectItem>
-                  <SelectItem value="qa_lead">QA Lead</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button onClick={handleAddMember} disabled={!newMemberEmail.trim()}>
-                Add
-              </Button>
+          {/* Add Member Input - Only show if user can manage members */}
+          {canManageMembers && (
+            <div className="px-5 pt-3">
+              <div className="flex gap-2">
+                <Input
+                  type="email"
+                  placeholder="Add people by email"
+                  value={newMemberEmail}
+                  onChange={(e) => setNewMemberEmail(e.target.value)}
+                  className="flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleAddMember();
+                  }}
+                />
+                <Select value={newMemberRole} onValueChange={(v: any) => setNewMemberRole(v)}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="viewer">Viewer</SelectItem>
+                    <SelectItem value="qa_tester">QA Tester</SelectItem>
+                    <SelectItem value="qa_lead">QA Lead</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button onClick={handleAddMember} disabled={!newMemberEmail.trim()}>
+                  Add
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* People with access header */}
           <div className="px-5 pt-4">
@@ -256,29 +269,31 @@ export function ChecklistHeader({
               </div>
             </div>
 
-            {/* Tabs */}
-            <div className="grid grid-cols-2 border rounded-lg overflow-hidden">
-              <button
-                onClick={() => setActiveTab("all")}
-                className={`py-2 text-sm font-medium ${
-                  activeTab === "all"
-                    ? "bg-white border-b-2 border-black"
-                    : "bg-gray-50 text-gray-600"
-                }`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setActiveTab("requests")}
-                className={`py-2 text-sm font-medium ${
-                  activeTab === "requests"
-                    ? "bg-white border-b-2 border-black"
-                    : "bg-gray-50 text-gray-600"
-                }`}
-              >
-                Requests
-              </button>
-            </div>
+            {/* Tabs - Only show if user can manage members */}
+            {canManageMembers && (
+              <div className="grid grid-cols-2 border rounded-lg overflow-hidden mb-3">
+                <button
+                  onClick={() => setActiveTab("all")}
+                  className={`py-2 text-sm font-medium ${
+                    activeTab === "all"
+                      ? "bg-white border-b-2 border-black"
+                      : "bg-gray-50 text-gray-600"
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setActiveTab("requests")}
+                  className={`py-2 text-sm font-medium ${
+                    activeTab === "requests"
+                      ? "bg-white border-b-2 border-black"
+                      : "bg-gray-50 text-gray-600"
+                  }`}
+                >
+                  Requests
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Members List */}
@@ -317,27 +332,37 @@ export function ChecklistHeader({
                       <p className="text-xs text-gray-500">{member.email}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Select
-                      value={member.role}
-                      onValueChange={(v: any) => handleUpdateMemberRole(member.id, v)}
-                    >
-                      <SelectTrigger className="w-32 h-9 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="viewer">Viewer</SelectItem>
-                        <SelectItem value="qa_tester">QA Tester</SelectItem>
-                        <SelectItem value="qa_lead">QA Lead</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <button
-                      onClick={() => handleRemoveMember(member.id)}
-                      className="text-gray-600 hover:text-gray-800"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
+                  
+                  {/* Conditional rendering based on user role */}
+                  {canManageMembers ? (
+                    // Show action buttons for owners and qa_leads
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={member.role}
+                        onValueChange={(v: any) => handleUpdateMemberRole(member.id, v)}
+                      >
+                        <SelectTrigger className="w-32 h-9 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="viewer">Viewer</SelectItem>
+                          <SelectItem value="qa_tester">QA Tester</SelectItem>
+                          <SelectItem value="qa_lead">QA Lead</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <button
+                        onClick={() => handleRemoveMember(member.id)}
+                        className="text-gray-600 hover:text-gray-800"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  ) : (
+                    // Show role label only for testers and viewers
+                    <div className="text-sm text-gray-600">
+                      {formatRoleDisplay(member.role)}
+                    </div>
+                  )}
                 </div>
               ))
             ) : (
@@ -359,11 +384,13 @@ export function ChecklistHeader({
                 </div>
                 <span className="text-sm font-medium">Restricted</span>
               </div>
-              <button className="text-gray-600 hover:text-gray-800">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
+              {canManageMembers && (
+                <button className="text-gray-600 hover:text-gray-800">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
 
