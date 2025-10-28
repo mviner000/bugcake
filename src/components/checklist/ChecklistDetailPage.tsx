@@ -252,7 +252,7 @@ export function ChecklistDetailPage() {
 // --- JSX Render ---
 // ----------------------------------------------------------------------
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Confirmation Alert Dialog */}
       <AlertDialog open={pendingStatusChange !== null} onOpenChange={(open) => !open && cancelStatusChange()}>
         <AlertDialogContent>

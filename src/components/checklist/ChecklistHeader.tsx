@@ -50,7 +50,7 @@ export function ChecklistHeader({
 
   return (
     <>
-      <header className="bg-white border-b border-gray-200">
+      <header className="sticky top-[65px] bg-white border-b border-gray-200 z-40">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
