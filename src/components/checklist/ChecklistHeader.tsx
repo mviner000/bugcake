@@ -50,7 +50,7 @@ export function ChecklistHeader({
 
   return (
     <>
-      <header className="sticky top-[65px] bg-white border-b border-gray-200 z-40">
+      <header className="sticky top-[65px] bg-white border-b z-40">
         <div className="px-4 md:px-6 py-3 md:py-4">
           <div className="flex items-center justify-between gap-2">
             {/* Left section - Back button and title */}

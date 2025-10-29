@@ -1,4 +1,4 @@
-// components/header.tsx or wherever your Header component is located
+// components/navbar/header.tsx
 
 import { useConvexAuth } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
@@ -38,7 +38,7 @@ export function Header() {
   // we can show a skeleton or loading state.
   if (isLoading || (isAuthenticated && userProfile === undefined)) {
     return (
-      <header className="sticky top-0 z-10 bg-background border-b border-border">
+      <header className="sticky top-0 z-999 bg-background border-b border-border">
         <div className="flex h-16 items-center justify-between px-4">
           <Link
             to="/"
@@ -53,7 +53,7 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-10 bg-background border-b border-border">
+    <header className="sticky top-0 z-999 bg-background border-b border-border">
       <div className="flex h-16 items-center justify-between px-4">
         <Link
           to="/"

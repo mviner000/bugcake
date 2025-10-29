@@ -267,7 +267,7 @@ export function ChecklistDetailPage() {
   const progress = calculateProgress();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-[calc(100vh-45px)] bg-gray-50">
       {/* Confirmation Alert Dialog */}
       <AlertDialog open={pendingStatusChange !== null} onOpenChange={(open) => !open && cancelStatusChange()}>
         <AlertDialogContent>
@@ -293,8 +293,8 @@ export function ChecklistDetailPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Header Component - Responsive for mobile */}
-      <div className={`${showDetailOnMobile ? 'hidden' : 'block'} md:block`}>
+      {/* Header Component - Fixed with proper z-index stacking */}
+      <div className={`${showDetailOnMobile ? 'hidden' : 'block'} md:block sticky top-[64px] z-30 bg-white`}>
         <ChecklistHeader
           sprintName={checklist.sprintName}
           titleRevisionNumber={checklist.titleRevisionNumber}
@@ -308,8 +308,8 @@ export function ChecklistDetailPage() {
         />
       </div>
 
-      {/* Module Filter Component - Hidden on mobile when detail is shown */}
-      <div className={`${showDetailOnMobile ? 'hidden' : 'block'} md:block`}>
+      {/* Module Filter Component - Fixed with proper z-index and positioning */}
+      <div className={`${showDetailOnMobile ? 'hidden' : 'block'} md:block sticky top-[145px] z-20 bg-white`}>
         <ChecklistModuleFilter
           modules={uniqueModules}
           selectedModule={selectedModule}
@@ -319,7 +319,7 @@ export function ChecklistDetailPage() {
         />
       </div>
 
-      <div className="flex h-[calc(100vh-80px)]">
+      <div className="flex h-[calc(100vh-190px)]">
         {/* Sidebar - Full width on mobile, fixed width on desktop */}
         <div className={`${showDetailOnMobile ? 'hidden' : 'w-full'} md:block md:w-80 md:flex-shrink-0`}>
           <ChecklistSidebar
