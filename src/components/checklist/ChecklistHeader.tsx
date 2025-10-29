@@ -51,18 +51,19 @@ export function ChecklistHeader({
   return (
     <>
       <header className="sticky top-[65px] bg-white border-b border-gray-200 z-40">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+        <div className="px-4 md:px-6 py-3 md:py-4">
+          <div className="flex items-center justify-between gap-2">
+            {/* Left section - Back button and title */}
+            <div className="flex items-center space-x-2 md:space-x-4 min-w-0 flex-1">
               <button
                 onClick={onBack}
-                className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+                className="p-2 hover:bg-gray-100 rounded-md transition-colors flex-shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
-              <div>
-                <div className="flex items-center">
-                  <h1 className="text-xl font-semibold text-gray-900">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center flex-wrap gap-1">
+                  <h1 className="text-base md:text-xl font-semibold text-gray-900 truncate">
                     {sprintName} - {titleRevisionNumber}
                   </h1>
                   <ChecklistUserRoleBadge 
@@ -70,26 +71,39 @@ export function ChecklistHeader({
                     checklistOwnerId={checklistOwnerId}
                   />
                 </div>
-                <p className="text-sm text-gray-500">
+                <p className="text-xs md:text-sm text-gray-500">
                   Created {formatDate(createdAt)}
                 </p>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
+
+            {/* Right section - Action buttons */}
+            <div className="flex items-center space-x-1 md:space-x-2 flex-shrink-0">
+              {/* Manage Members - Hidden on mobile, shown on desktop */}
               {canManageMembers && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setShowMembersDialog(true)}
+                  className="hidden md:flex"
                 >
                   <UserPlus className="w-4 h-4 mr-2" />
                   Manage Members
                 </Button>
               )}
-              <Button variant="outline" size="sm" onClick={handleCopyLink}>
-                <Share2 className="w-4 h-4 mr-2" />
-                Share
+
+              {/* Share button */}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleCopyLink}
+                className="hidden sm:flex"
+              >
+                <Share2 className="w-4 h-4 md:mr-2" />
+                <span className="hidden md:inline">Share</span>
               </Button>
+
+              {/* More options dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm">
@@ -97,6 +111,24 @@ export function ChecklistHeader({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  {/* Mobile-only: Manage Members */}
+                  {canManageMembers && (
+                    <DropdownMenuItem 
+                      className="md:hidden"
+                      onClick={() => setShowMembersDialog(true)}
+                    >
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Manage Members
+                    </DropdownMenuItem>
+                  )}
+                  {/* Mobile-only: Share */}
+                  <DropdownMenuItem 
+                    className="sm:hidden"
+                    onClick={handleCopyLink}
+                  >
+                    <Share2 className="w-4 h-4 mr-2" />
+                    Share
+                  </DropdownMenuItem>
                   <DropdownMenuItem>Edit Checklist</DropdownMenuItem>
                   <DropdownMenuItem>Export</DropdownMenuItem>
                   <DropdownMenuItem className="text-red-600">

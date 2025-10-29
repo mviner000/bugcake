@@ -1,8 +1,10 @@
+// src/components/checklist/ChecklistDetailPage.tsx
+
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useNavigate, useParams } from "react-router-dom";
-import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { Doc, Id } from "../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +21,7 @@ import { ChecklistDetailsTab } from "./ChecklistDetailsTab";
 import { ChecklistHistoryTab } from "./ChecklistHistoryTab";
 import { ChecklistHeader } from "./ChecklistHeader";
 import { ChecklistSidebar } from "./ChecklistSidebar";
+import { ChecklistModuleFilter } from "./ChecklistModuleFilter";
 import { DocumentIcon } from "../icons/DocumentIcon";
 
 // --- Type Definitions ---
@@ -32,132 +35,9 @@ type Checklist = Doc<"checklists"> & {
   executorName?: string;
 };
 
-// Define the roles used throughout the application
 type UserRole = "owner" | "qa_lead" | "qa_tester" | "viewer";
 
 type TabType = "details" | "history";
-
-// ============================================
-// MODULE FILTER COMPONENT
-// ============================================
-interface ModuleFilterProps {
-  modules: string[];
-  selectedModule: string | null;
-  onModuleSelect: (module: string | null) => void;
-  totalCount: number;
-  filteredCount: number;
-}
-
-function ChecklistModuleFilter({ 
-  modules, 
-  selectedModule, 
-  onModuleSelect,
-  totalCount,
-  filteredCount
-}: ModuleFilterProps) {
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-
-  // Check scroll position to show/hide arrows
-  const updateScrollButtons = () => {
-    const container = document.getElementById('module-filter-container');
-    if (container) {
-      setCanScrollLeft(container.scrollLeft > 0);
-      setCanScrollRight(
-        container.scrollLeft < container.scrollWidth - container.clientWidth - 1
-      );
-    }
-  };
-
-  const scroll = (direction: 'left' | 'right') => {
-    const container = document.getElementById('module-filter-container');
-    if (container) {
-      const scrollAmount = 200;
-      container.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth'
-      });
-    }
-  };
-
-  return (
-    <div className="relative bg-white border-b border-gray-200">
-      <div className="flex items-center px-6 py-3">
-        {/* Left scroll button */}
-        {canScrollLeft && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => scroll('left')}
-            className="absolute left-2 z-10 h-8 w-8 rounded-full bg-white shadow-md hover:bg-gray-50"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-        )}
-
-        {/* Filter buttons container */}
-        <div 
-          id="module-filter-container"
-          className="flex items-center gap-2 overflow-x-auto scrollbar-hide"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          onScroll={updateScrollButtons}
-        >
-          {/* All button */}
-          <Button
-            variant={selectedModule === null ? "default" : "outline"}
-            size="sm"
-            onClick={() => onModuleSelect(null)}
-            className="flex-shrink-0 rounded-full"
-          >
-            All ({totalCount})
-          </Button>
-
-          {/* Module buttons */}
-          {modules.map((module) => (
-            <Button
-              key={module}
-              variant={selectedModule === module ? "default" : "outline"}
-              size="sm"
-              onClick={() => onModuleSelect(module)}
-              className="flex-shrink-0 rounded-full"
-            >
-              {module}
-            </Button>
-          ))}
-        </div>
-
-        {/* Right scroll button */}
-        {canScrollRight && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => scroll('right')}
-            className="absolute right-2 z-10 h-8 w-8 rounded-full bg-white shadow-md hover:bg-gray-50"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
-
-      {/* Active filter indicator */}
-      {selectedModule && (
-        <div className="px-6 pb-2 flex items-center justify-between text-xs">
-          <span className="text-gray-600">
-            Showing <span className="font-semibold">{filteredCount}</span> test cases for: <span className="font-semibold">{selectedModule}</span>
-          </span>
-          <Button
-            variant="link"
-            size="sm"
-            onClick={() => onModuleSelect(null)}
-            className="h-auto p-0 text-xs"
-          >
-            Clear filter
-          </Button>
-        </div>
-      )}
-    </div>
-  );
-}
 
 // --- Main Component ---
 export function ChecklistDetailPage() {
@@ -170,8 +50,11 @@ export function ChecklistDetailPage() {
     newStatus: string;
   } | null>(null);
   
-  // ✅ NEW: State for module filter
+  // State for module filter
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
+
+  // State for mobile view management
+  const [showDetailOnMobile, setShowDetailOnMobile] = useState(false);
 
   const updateItemStatus = useMutation(api.myFunctions.updateChecklistItemStatus);
 
@@ -190,7 +73,7 @@ export function ChecklistDetailPage() {
     checklistId ? { checklistId: checklistId as Id<"checklists"> } : "skip"
   ) as ChecklistItem[] | undefined;
 
-  // 4. Fetch checklist members (required for robust role determination)
+  // 4. Fetch checklist members
   const members = useQuery(
     api.myFunctions.getChecklistMembers,
     checklistId ? { checklistId: checklistId as Id<"checklists"> } : "skip"
@@ -202,22 +85,18 @@ export function ChecklistDetailPage() {
     selectedItemId ? { itemId: selectedItemId as Id<"checklistItems"> } : "skip"
   );
   
-  // ✅ NEW: Extract unique modules from checklist items
+  // Extract unique modules from checklist items
   const uniqueModules = useMemo(() => {
     if (!checklistItems) return [];
     const modules = new Set(checklistItems.map(item => item.module));
     return Array.from(modules).filter(Boolean).sort();
   }, [checklistItems]);
 
-  // ✅ NEW: Filter items based on selected module
+  // Filter items based on selected module
   const filteredItems = useMemo(() => {
     if (!selectedModule || !checklistItems) return checklistItems;
     return checklistItems.filter(item => item.module === selectedModule);
   }, [checklistItems, selectedModule]);
-
-// ----------------------------------------------------------------------
-// ✅ ROBUST: Role Determination Logic
-// ----------------------------------------------------------------------
 
   /**
    * Determines the current user's role for this specific checklist.
@@ -225,12 +104,10 @@ export function ChecklistDetailPage() {
   const getActualUserRole = (): UserRole | undefined => {
     if (!currentUser || !checklistData) return undefined;
 
-    // Check if current user is the checklist owner
     if (currentUser._id === checklistData.createdBy) {
       return "owner";
     }
 
-    // Check if user is in members list and get their role
     if (members && Array.isArray(members)) {
       const memberRecord = members.find(m => m.userId === currentUser._id);
       if (memberRecord) {
@@ -238,18 +115,24 @@ export function ChecklistDetailPage() {
       }
     }
 
-    // Default to viewer if not the owner and not an explicit member
     return "viewer";
   };
 
   const actualUserRole = getActualUserRole();
 
-// ----------------------------------------------------------------------
-// --- Utility Functions ---
-// ----------------------------------------------------------------------
-
   const onBack = () => {
     navigate("/");
+  };
+
+  // Mobile-specific handler for item selection
+  const handleItemSelect = (itemId: string) => {
+    setSelectedItemId(itemId);
+    setShowDetailOnMobile(true);
+  };
+
+  // Mobile-specific handler for back to list
+  const handleBackToList = () => {
+    setShowDetailOnMobile(false);
   };
 
   const initiateStatusChange = (itemId: string, newStatus: string) => {
@@ -274,7 +157,6 @@ export function ChecklistDetailPage() {
     setPendingStatusChange(null);
   };
 
-  // Calculate progress - ✅ UPDATED to use filteredItems
   const calculateProgress = () => {
     const items = filteredItems || [];
     if (items.length === 0) {
@@ -355,9 +237,6 @@ export function ChecklistDetailPage() {
     return colors[status] || "";
   };
 
-// ----------------------------------------------------------------------
-// --- Loading and Not Found Checks
-// ----------------------------------------------------------------------
   if (checklistData === undefined || checklistItems === undefined || currentUser === undefined || members === undefined) {
     return <div className="p-4 text-center">Loading checklist...</div>;
   }
@@ -387,9 +266,6 @@ export function ChecklistDetailPage() {
     : null;
   const progress = calculateProgress();
 
-// ----------------------------------------------------------------------
-// --- JSX Render ---
-// ----------------------------------------------------------------------
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Confirmation Alert Dialog */}
@@ -417,48 +293,65 @@ export function ChecklistDetailPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Header Component */}
-      <ChecklistHeader
-        sprintName={checklist.sprintName}
-        titleRevisionNumber={checklist.titleRevisionNumber}
-        createdAt={checklist.createdAt}
-        onBack={onBack}
-        formatDate={formatDate}
-        currentUserRole={actualUserRole}
-        checklistOwnerEmail={checklist.creatorName || "unknown@owner.com"}
-        checklistOwnerId={checklist.createdBy}
-        checklistId={checklistId!}
-      />
+      {/* Header Component - Responsive for mobile */}
+      <div className={`${showDetailOnMobile ? 'hidden' : 'block'} md:block`}>
+        <ChecklistHeader
+          sprintName={checklist.sprintName}
+          titleRevisionNumber={checklist.titleRevisionNumber}
+          createdAt={checklist.createdAt}
+          onBack={onBack}
+          formatDate={formatDate}
+          currentUserRole={actualUserRole}
+          checklistOwnerEmail={checklist.creatorName || "unknown@owner.com"}
+          checklistOwnerId={checklist.createdBy}
+          checklistId={checklistId!}
+        />
+      </div>
 
-      {/* ✅ NEW: Module Filter Component */}
-      <ChecklistModuleFilter
-        modules={uniqueModules}
-        selectedModule={selectedModule}
-        onModuleSelect={setSelectedModule}
-        totalCount={checklistItems?.length || 0}
-        filteredCount={filteredItems?.length || 0}
-      />
+      {/* Module Filter Component - Hidden on mobile when detail is shown */}
+      <div className={`${showDetailOnMobile ? 'hidden' : 'block'} md:block`}>
+        <ChecklistModuleFilter
+          modules={uniqueModules}
+          selectedModule={selectedModule}
+          onModuleSelect={setSelectedModule}
+          totalCount={checklistItems?.length || 0}
+          filteredCount={filteredItems?.length || 0}
+        />
+      </div>
 
       <div className="flex h-[calc(100vh-80px)]">
-        {/* Sidebar - List of Test Cases - ✅ UPDATED to use filteredItems */}
-        <ChecklistSidebar
-          testCaseType={checklist.testCaseType}
-          checklistItems={filteredItems || []}
-          selectedItemId={selectedItemId}
-          onItemSelect={setSelectedItemId}
-          progress={progress}
-          getStatusColor={getStatusColor}
-        />
+        {/* Sidebar - Full width on mobile, fixed width on desktop */}
+        <div className={`${showDetailOnMobile ? 'hidden' : 'w-full'} md:block md:w-80 md:flex-shrink-0`}>
+          <ChecklistSidebar
+            testCaseType={checklist.testCaseType}
+            checklistItems={filteredItems || []}
+            selectedItemId={selectedItemId}
+            onItemSelect={handleItemSelect}
+            progress={progress}
+            getStatusColor={getStatusColor}
+          />
+        </div>
 
-        {/* Main Content - Test Case Details */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Main Content - Full width on mobile when shown, flex on desktop */}
+        <div className={`${showDetailOnMobile ? 'w-full' : 'hidden'} md:block md:flex-1 overflow-y-auto`}>
           {selectedItem ? (
-            <div className="p-6">
-              <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="p-4 md:p-6">
+              {/* Mobile back button */}
+              <button
+                onClick={handleBackToList}
+                className="md:hidden mb-4 flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to list
+              </button>
+
+              <div className="bg-white rounded-lg border border-gray-200 p-4 md:p-6">
                 {/* Header Section */}
-                <div className="flex items-start justify-between mb-6">
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-6 gap-4">
                   <div>
-                    <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+                    <h2 className="text-xl md:text-2xl font-semibold text-gray-900 mb-2">
                       {selectedItem.title}
                     </h2>
                     <p className="text-sm text-gray-500">
@@ -467,12 +360,12 @@ export function ChecklistDetailPage() {
                   </div>
 
                   {/* Button Group for Status Change */}
-                  <div className="inline-flex rounded-md shadow-sm" role="group">
+                  <div className="flex flex-wrap gap-2 md:inline-flex md:rounded-md md:shadow-sm" role="group">
                     <Button
                       variant={selectedItem.executionStatus === "Passed" ? "default" : "outline"}
                       size="sm"
                       onClick={() => initiateStatusChange(selectedItem._id, "Passed")}
-                      className={`rounded-r-none border-r-0 ${
+                      className={`md:rounded-r-none md:border-r-0 ${
                         selectedItem.executionStatus === "Passed" ? getStatusButtonColor("Passed") : ""
                       }`}
                     >
@@ -482,7 +375,7 @@ export function ChecklistDetailPage() {
                       variant={selectedItem.executionStatus === "Failed" ? "default" : "outline"}
                       size="sm"
                       onClick={() => initiateStatusChange(selectedItem._id, "Failed")}
-                      className={`rounded-none border-r-0 ${
+                      className={`md:rounded-none md:border-r-0 ${
                         selectedItem.executionStatus === "Failed" ? getStatusButtonColor("Failed") : ""
                       }`}
                     >
@@ -492,7 +385,7 @@ export function ChecklistDetailPage() {
                       variant={selectedItem.executionStatus === "Blocked" ? "default" : "outline"}
                       size="sm"
                       onClick={() => initiateStatusChange(selectedItem._id, "Blocked")}
-                      className={`rounded-none border-r-0 ${
+                      className={`md:rounded-none md:border-r-0 ${
                         selectedItem.executionStatus === "Blocked" ? getStatusButtonColor("Blocked") : ""
                       }`}
                     >
@@ -502,7 +395,7 @@ export function ChecklistDetailPage() {
                       variant={selectedItem.executionStatus === "Not Run" ? "default" : "outline"}
                       size="sm"
                       onClick={() => initiateStatusChange(selectedItem._id, "Not Run")}
-                      className={`rounded-none border-r-0 ${
+                      className={`md:rounded-none md:border-r-0 ${
                         selectedItem.executionStatus === "Not Run" ? getStatusButtonColor("Not Run") : ""
                       }`}
                     >
@@ -512,7 +405,7 @@ export function ChecklistDetailPage() {
                       variant={selectedItem.executionStatus === "Skipped" ? "default" : "outline"}
                       size="sm"
                       onClick={() => initiateStatusChange(selectedItem._id, "Skipped")}
-                      className={`rounded-l-none ${
+                      className={`md:rounded-l-none ${
                         selectedItem.executionStatus === "Skipped" ? getStatusButtonColor("Skipped") : ""
                       }`}
                     >
@@ -523,10 +416,10 @@ export function ChecklistDetailPage() {
 
                 {/* Tabs */}
                 <div className="border-b border-gray-200 mb-6">
-                  <nav className="-mb-px flex space-x-8">
+                  <nav className="-mb-px flex space-x-4 md:space-x-8 overflow-x-auto">
                     <button
                       onClick={() => setActiveTab("details")}
-                      className={`border-b-2 py-2 px-1 text-sm font-medium transition-colors ${
+                      className={`border-b-2 py-2 px-1 text-sm font-medium transition-colors whitespace-nowrap ${
                         activeTab === "details"
                           ? "border-blue-600 text-blue-600"
                           : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -536,7 +429,7 @@ export function ChecklistDetailPage() {
                     </button>
                     <button
                       onClick={() => setActiveTab("history")}
-                      className={`border-b-2 py-2 px-1 text-sm font-medium transition-colors ${
+                      className={`border-b-2 py-2 px-1 text-sm font-medium transition-colors whitespace-nowrap ${
                         activeTab === "history"
                           ? "border-blue-600 text-blue-600"
                           : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -561,7 +454,7 @@ export function ChecklistDetailPage() {
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-full">
+            <div className="hidden md:flex items-center justify-center h-full">
               <div className="text-center">
                 <DocumentIcon className="mx-auto h-12 w-12 text-gray-400" />
                 <p className="mt-4 text-lg text-gray-500">
