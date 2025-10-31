@@ -1,7 +1,7 @@
 // src/components/checklist/ChecklistHeader.tsx
 
 import { useState } from "react";
-import { Share2, MoreHorizontal, X, UserPlus } from "lucide-react";
+import { MoreHorizontal, X, UserPlus, Share } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -9,7 +9,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { toast } from "sonner";
 import { ChecklistUserRoleBadge } from "./ChecklistUserRoleBadge";
 import { ChecklistMembersDialog } from "./ChecklistMembersDialog";
 
@@ -43,12 +42,6 @@ export function ChecklistHeader({
 
   const canManageMembers = currentUserRole === "owner" || currentUserRole === "qa_lead";
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href).then(() => {
-      toast.success("Checklist link has been copied to clipboard.");
-    });
-  };
-
   return (
     <>
       <header className="sticky top-[65px] bg-white border-b z-40">
@@ -80,29 +73,17 @@ export function ChecklistHeader({
 
             {/* Right section - Action buttons */}
             <div className="flex items-center space-x-1 md:space-x-2 flex-shrink-0">
-              {/* Manage Members - Hidden on mobile, shown on desktop */}
+              {/* Share - Hidden on mobile, shown on desktop */}
               {canManageMembers && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowMembersDialog(true)}
-                  className="hidden md:flex"
+                <Button 
+                  onClick={() => setShowMembersDialog(true)} 
+                  size="sm" 
+                  className="bg-blue-700 text-white hover:bg-blue-70 px-2 sm:px-3 whitespace-nowrap flex-shrink-0"
                 >
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Manage Members
+                  <Share className="w-4 h-4" />
+                  <span className="hidden sm:inline sm:ml-2">Share</span>
                 </Button>
               )}
-
-              {/* Share button */}
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleCopyLink}
-                className="hidden sm:flex"
-              >
-                <Share2 className="w-4 h-4 md:mr-2" />
-                <span className="hidden md:inline">Share</span>
-              </Button>
 
               {/* More options dropdown */}
               <DropdownMenu>
@@ -112,24 +93,18 @@ export function ChecklistHeader({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  {/* Mobile-only: Manage Members */}
+                  {/* Mobile-only: Share */}
                   {canManageMembers && (
                     <DropdownMenuItem 
                       className="md:hidden"
                       onClick={() => setShowMembersDialog(true)}
                     >
                       <UserPlus className="w-4 h-4 mr-2" />
-                      Manage Members
+                      Share
                     </DropdownMenuItem>
                   )}
                   {/* Mobile-only: Share */}
-                  <DropdownMenuItem 
-                    className="sm:hidden"
-                    onClick={handleCopyLink}
-                  >
-                    <Share2 className="w-4 h-4 mr-2" />
-                    Share
-                  </DropdownMenuItem>
+                 
                   <DropdownMenuItem>Edit Checklist</DropdownMenuItem>
                   <DropdownMenuItem>Export</DropdownMenuItem>
                   <DropdownMenuItem className="text-red-600">

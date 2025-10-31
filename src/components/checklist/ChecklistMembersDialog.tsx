@@ -1,7 +1,6 @@
-// src/components/checklist/ChecklistMembersDialog.tsx
+// update the general access here src/components/checklist/ChecklistMembersDialog.tsx
 
-import { useState } from "react";
-import { Link, Mail, X, Check, Copy, User, ChevronDown, ChevronUp } from "lucide-react";
+import { useState } from "react";import { Link, Mail, X, Check, Copy, User, ChevronDown, ChevronUp, Lock, Globe } from "lucide-react"; // UPDATED: Added Lock and Globe
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,7 +19,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { toast } from "sonner";
-// import { ChecklistRoleDisplay } from "./ChecklistRoleDisplay";
+import { ChecklistRoleDisplay } from "./ChecklistRoleDisplay";
 import { ChecklistUserRoleBadge } from "./ChecklistUserRoleBadge";
 
 type UserRole = "qa_lead" | "qa_tester" | "owner" | "viewer" | "guest" | undefined;
@@ -54,6 +53,9 @@ export function ChecklistMembersDialog({
   
   // ✅ State to track expanded request details
   const [expandedRequests, setExpandedRequests] = useState<Record<string, boolean>>({});
+  
+  // State for general access dropdown
+  const [generalAccess, setGeneralAccess] = useState<"restricted" | "anyone_with_link" | "public">("restricted");
 
   // Fetch members from database
   const members = useQuery(
@@ -220,35 +222,42 @@ export function ChecklistMembersDialog({
     if (hours < 24) return `${hours}h ago`;
     return `${Math.floor(hours / 24)}d ago`;
   };
+  
+  // NEW HELPER FUNCTION for General Access label
+  const getAccessLevelLabel = (level: "restricted" | "anyone_with_link" | "public"): string => {
+    switch (level) {
+      case "restricted":
+        return "Restricted";
+      case "anyone_with_link":
+        return "Anyone with the link";
+      case "public":
+        return "Public";
+      default:
+        return "Restricted";
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-lg p-0">
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b">
-          <div className="flex items-center gap-2">
-            <DialogTitle className="text-lg font-semibold">
-              Share "{sprintName}"
-            </DialogTitle>
-            <ChecklistUserRoleBadge 
-              checklistId={checklistId}
-              checklistOwnerId={checklistOwnerId}
-            />
+        <div className="flex items-center justify-between px-5 pt-5">
+          <div className="flex flex-col gap-1">
+              <DialogTitle className="text-lg font-semibold">
+                Share "{sprintName}"
+              </DialogTitle>
+            <div>
+              <ChecklistUserRoleBadge 
+                checklistId={checklistId}
+                checklistOwnerId={checklistOwnerId}
+              />
+            </div>
           </div>
         </div>
 
-        {/* Owner Badge */}
-        {/* <div className="px-5 pt-3">
-          <ChecklistRoleDisplay
-            members={members} 
-            includeOwner={true}
-            ownerEmail={checklistOwnerEmail}
-          />
-        </div> */}
-
         {/* Add Member Input - Only show if user can manage members */}
         {canManageMembers && (
-          <div className="px-5 pt-3">
+          <div className="px-5">
             <div className="flex gap-2">
               <Input
                 type="email"
@@ -296,7 +305,7 @@ export function ChecklistMembersDialog({
 
           {/* Tabs - Only show if user can manage members */}
           {canManageMembers && (
-            <div className="grid grid-cols-2 border rounded-lg overflow-hidden mb-3">
+            <div className="grid grid-cols-2 border rounded-lg overflow-hidden">
               <button
                 onClick={() => setActiveTab("all")}
                 className={`py-2 text-sm font-medium ${
@@ -325,6 +334,14 @@ export function ChecklistMembersDialog({
               </button>
             </div>
           )}
+        </div>
+
+        <div className="px-5">
+          <ChecklistRoleDisplay
+            members={members} 
+            includeOwner={true}
+            ownerEmail={checklistOwnerEmail}
+          />
         </div>
 
         {/* Members List / Requests List */}
@@ -459,7 +476,7 @@ export function ChecklistMembersDialog({
                           <div>
                             <p className="text-xs text-gray-600 mb-1 font-medium">Requested Role</p>
                             <p className="text-sm font-medium uppercase tracking-wide">
-                              {request.requestedRole.replace('_', '_')}
+                              {request.requestedRole.replace('_', ' ')}
                             </p>
                           </div>
 
@@ -529,26 +546,60 @@ export function ChecklistMembersDialog({
           )}
         </div>
 
-        {/* General access */}
+        {/* General access section - UPDATED STYLING */}
         <div className="px-5 py-3 border-t">
-          <h3 className="text-sm font-semibold mb-3">General access</h3>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
-                </svg>
+          <h3 className="text-sm font-medium mb-3">General access</h3> 
+          
+          <Select 
+            value={generalAccess} 
+            onValueChange={(value) => setGeneralAccess(value as "restricted" | "anyone_with_link" | "public")}
+            disabled={!canManageMembers}
+          >
+            <SelectTrigger className="w-full h-11"> {/* UPDATED: h-auto py-3 to h-11 */}
+              <div className="flex items-center gap-3">
+                {/* UPDATED: Removed gray-200 background div and used Lucide icons directly */}
+                {generalAccess === "restricted" && <Lock className="h-4 w-4 flex-shrink-0" />}
+                {generalAccess === "anyone_with_link" && <Link className="h-4 w-4 flex-shrink-0" />}
+                {generalAccess === "public" && <Globe className="h-4 w-4 flex-shrink-0" />}
+                <span className="text-sm">{getAccessLevelLabel(generalAccess)}</span> {/* UPDATED: Use new helper function */}
               </div>
-              <span className="text-sm font-medium">Restricted</span>
-            </div>
-            {canManageMembers && (
-              <button className="text-gray-600 hover:text-gray-800">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-            )}
-          </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="restricted">
+                <div className="flex items-start gap-3 py-1"> {/* UPDATED: items-center py-2 to items-start py-1 */}
+                  <Lock className="h-4 w-4 mt-0.5 flex-shrink-0" /> {/* UPDATED: Custom SVG to Lucide Lock, added mt-0.5 */}
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Restricted</p>
+                    <p className="text-xs text-muted-foreground"> {/* UPDATED: text-gray-500 to text-muted-foreground */}
+                      Only people with access can open with the link
+                    </p>
+                  </div>
+                </div>
+              </SelectItem>
+              <SelectItem value="anyone_with_link">
+                <div className="flex items-start gap-3 py-1">
+                  <Link className="h-4 w-4 mt-0.5 flex-shrink-0" /> {/* UPDATED: Custom SVG to Lucide Link, added mt-0.5 */}
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Anyone with the link</p>
+                    <p className="text-xs text-muted-foreground">
+                      Anyone with the link can access
+                    </p>
+                  </div>
+                </div>
+              </SelectItem>
+              <SelectItem value="public">
+                <div className="flex items-start gap-3 py-1">
+                  <Globe className="h-4 w-4 mt-0.5 flex-shrink-0" /> {/* UPDATED: Custom SVG to Lucide Globe, added mt-0.5 */}
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Public</p>
+                    <p className="text-xs text-muted-foreground">
+                      Anyone on the internet can find and access
+                    </p>
+                  </div>
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Footer */}
