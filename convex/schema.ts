@@ -566,5 +566,45 @@ export default defineSchema({
   .index("by_user", ["userId"])
   .index("by_checklist_and_user", ["checklistId", "userId"]),
   
+
+  bugs: defineTable({
+    // --- Links to the Source ---
+    checklistItemId: v.id("checklistItems"), // The specific checklist item that failed
+    checklistId: v.id("checklists"),       // The checklist/sprint this bug was found in
+    sheetId: v.id("sheets"),              // The sheet this bug belongs to
+    originalTestCaseId: v.string(),       // The original test case ID for traceability [cite: 41]
+
+    // --- Bug Details (Pre-filled from test case) ---
+    title: v.string(),                    // Pre-filled from checklistItem.title [cite: 41]
+    stepsToReproduce: v.string(),         // Pre-filled from checklistItem.steps [cite: 41]
+    expectedResults: v.string(),          // Pre-filled from checklistItem.expectedResults [cite: 41]
+    actualResults: v.string(),            // The "actual results" entered by the QA tester
+
+    // --- Bug Tracking ---
+    status: v.union(
+      v.literal("New"),
+      v.literal("Assigned"),
+      v.literal("In Progress"),
+      v.literal("Fixed"),
+      v.literal("Ready for Retest"),
+      v.literal("Closed"),
+      v.literal("Reopened")
+    ),
+    priority: v.optional(v.union(
+      v.literal("High"), v.literal("Medium"), v.literal("Low")
+    )),
+    
+    // --- Assignment & Metadata ---
+    reportedBy: v.id("users"),            // The QA tester who ran the test
+    assignedTo: v.optional(v.id("users")),// The Software Engineer assigned to fix it
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    
+  })
+    // --- Indexes for fast querying ---
+    .index("by_checklistItem", ["checklistItemId"])
+    .index("by_assignedTo", ["assignedTo"])
+    .index("by_status", ["status"])
+    .index("by_sheet", ["sheetId"]),
 });
 

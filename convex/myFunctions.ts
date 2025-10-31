@@ -3392,6 +3392,7 @@ export const updateChecklistItemStatus = mutation({
 
     const now = Date.now();
 
+    // 1. Update the checklist item's status
     await ctx.db.patch(args.itemId, {
       executionStatus: args.executionStatus,
       actualResults: args.actualResults,
@@ -3400,24 +3401,88 @@ export const updateChecklistItemStatus = mutation({
       updatedAt: now,
     });
 
-    // Update parent checklist progress
     const item = await ctx.db.get(args.itemId);
-    if (item) {
-      const allItems = await ctx.db
-        .query("checklistItems")
-        .withIndex("by_checklist", (q) => q.eq("checklistId", item.checklistId))
-        .collect();
-
-      const completedItems = allItems.filter(
-        (i) => i.executionStatus === "Passed" || i.executionStatus === "Failed"
-      ).length;
-      const progress = Math.round((completedItems / allItems.length) * 100);
-
-      await ctx.db.patch(item.checklistId, {
-        progress,
-        updatedAt: now,
-      });
+    if (!item) {
+      throw new Error("Item not found");
     }
+
+    // ======================================================
+    // ✅ START: NEW BUG TRACKING LOGIC
+    // ======================================================
+
+    const checklist = await ctx.db.get(item.checklistId);
+    if (!checklist) {
+      throw new Error("Checklist not found");
+    }
+
+    // Find any existing bug for this item
+    const existingBug = await ctx.db
+      .query("bugs")
+      .withIndex("by_checklistItem", (q) => q.eq("checklistItemId", args.itemId))
+      .first();
+
+    if (args.executionStatus === "Failed") {
+      // 1. A test case FAILED
+      const bugActualResults = args.actualResults ?? item.actualResults ?? "No details provided.";
+
+      if (existingBug) {
+        // 1a. It failed AGAIN. Reopen the bug.
+        await ctx.db.patch(existingBug._id, {
+          status: "Reopened",
+          actualResults: bugActualResults,
+          updatedAt: now,
+        });
+      } else {
+        // 1b. It failed for the first time. Create a NEW bug.
+        const newBugId = await ctx.db.insert("bugs", {
+          checklistItemId: args.itemId,
+          checklistId: item.checklistId,
+          sheetId: checklist.sheetId,
+          originalTestCaseId: item.originalTestCaseId,
+          title: item.title,
+          stepsToReproduce: item.steps,
+          expectedResults: item.expectedResults,
+          actualResults: bugActualResults,
+          status: "New",
+          reportedBy: userId,
+          createdAt: now,
+          updatedAt: now,
+        });
+
+        // Optional: Link bug ID back to the item's `defectsFound` array
+        const currentDefects = item.defectsFound || [];
+        currentDefects.push(newBugId.toString());
+        await ctx.db.patch(item._id, { defectsFound: currentDefects });
+      }
+
+    } else if (args.executionStatus === "Passed") {
+      // 2. A test case PASSED
+      if (existingBug && existingBug.status !== "Closed") {
+        // 2a. It passed validation! Close the bug.
+        await ctx.db.patch(existingBug._id, {
+          status: "Closed",
+          updatedAt: now,
+        });
+      }
+    }
+    // ======================================================
+    // 🔚 END: NEW BUG TRACKING LOGIC
+    // ======================================================
+
+    // 3. Update parent checklist progress (this logic is unchanged)
+    const allItems = await ctx.db
+      .query("checklistItems")
+      .withIndex("by_checklist", (q) => q.eq("checklistId", item.checklistId))
+      .collect();
+    const completedItems = allItems.filter(
+      (i) => i.executionStatus === "Passed" || i.executionStatus === "Failed"
+    ).length;
+    const progress = Math.round((completedItems / allItems.length) * 100);
+
+    await ctx.db.patch(item.checklistId, {
+      progress,
+      updatedAt: now,
+    });
 
     return { success: true };
   },
