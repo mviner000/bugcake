@@ -606,5 +606,24 @@ export default defineSchema({
     .index("by_assignedTo", ["assignedTo"])
     .index("by_status", ["status"])
     .index("by_sheet", ["sheetId"]),
+
+  checklistAccessRequests: defineTable({
+  checklistId: v.id("checklists"),
+  requesterId: v.id("users"),
+  requestedRole: v.union(
+    v.literal("qa_lead"),
+    v.literal("qa_tester"),
+    v.literal("viewer")
+  ),
+  status: v.union(
+    v.literal("pending"),
+    v.literal("approved"),
+    v.literal("declined")
+  ),
+  message: v.optional(v.string()),
+  requestedAt: v.number(),
+})
+  .index("by_checklist", ["checklistId"])
+  .index("by_checklist_and_requester", ["checklistId", "requesterId"]),
 });
 

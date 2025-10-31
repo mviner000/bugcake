@@ -3830,3 +3830,316 @@ export const getChecklistMembers = query({
     return members;
   },
 });
+
+
+/**
+ * Creates a new checklist access request.
+ * Guest users can request access to become a viewer, qa_tester, or qa_lead.
+ */
+export const requestChecklistAccess = mutation({
+  args: {
+    checklistId: v.string(),
+    accessLevel: v.union(
+      v.literal("qa_lead"),
+      v.literal("qa_tester"),
+      v.literal("viewer"),
+    ),
+    message: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // 1. Authentication check
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("You must be signed in to request access.");
+    }
+
+    // 2. Normalize the checklist ID
+    const normalizedChecklistId = ctx.db.normalizeId("checklists", args.checklistId);
+    if (!normalizedChecklistId) {
+      throw new Error("Invalid checklist ID.");
+    }
+
+    // 3. Verify the checklist exists
+    const checklist = await ctx.db.get(normalizedChecklistId);
+    if (!checklist) {
+      throw new Error("Checklist not found.");
+    }
+
+    // 4. Check if user is already the owner
+    if (checklist.createdBy === userId) {
+      throw new Error("You are the owner of this checklist.");
+    }
+
+    // 5. Check if user already has a member record (approved access)
+    const existingMember = await ctx.db
+      .query("checklistMembers")
+      .withIndex("by_checklist_and_user", (q) =>
+        q.eq("checklistId", normalizedChecklistId).eq("userId", userId)
+      )
+      .unique();
+
+    if (existingMember) {
+      throw new Error("You already have access to this checklist.");
+    }
+
+    // 6. Check if user already has a pending request
+    const existingRequest = await ctx.db
+      .query("checklistAccessRequests")
+      .withIndex("by_checklist_and_requester", (q) =>
+        q.eq("checklistId", normalizedChecklistId).eq("requesterId", userId)
+      )
+      .filter((q) => q.eq(q.field("status"), "pending"))
+      .unique();
+
+    if (existingRequest) {
+      throw new Error("You already have a pending access request for this checklist.");
+    }
+
+    // 7. Check if there's a previously declined request
+    const declinedRequest = await ctx.db
+      .query("checklistAccessRequests")
+      .withIndex("by_checklist_and_requester", (q) =>
+        q.eq("checklistId", normalizedChecklistId).eq("requesterId", userId)
+      )
+      .filter((q) => q.eq(q.field("status"), "declined"))
+      .order("desc")
+      .first();
+
+    if (declinedRequest) {
+      // Allow re-requesting if previously declined
+      await ctx.db.patch(declinedRequest._id, {
+        requestedRole: args.accessLevel,
+        status: "pending",
+        message: args.message,
+        requestedAt: Date.now(),
+      });
+      
+      return { 
+        success: true, 
+        message: "Your access request has been resubmitted." 
+      };
+    }
+
+    // 8. Create new access request
+    await ctx.db.insert("checklistAccessRequests", {
+      checklistId: normalizedChecklistId,
+      requesterId: userId,
+      requestedRole: args.accessLevel,
+      status: "pending",
+      message: args.message,
+      requestedAt: Date.now(),
+    });
+
+    return { 
+      success: true, 
+      message: "Access request submitted successfully. The checklist owner will be notified." 
+    };
+  },
+});
+
+/**
+ * Gets all pending access requests for a checklist.
+ * Only the owner and qa_lead members can view these.
+ */
+export const getPendingChecklistAccessRequests = query({
+  args: {
+    checklistId: v.id("checklists"),
+  },
+  handler: async (ctx, args) => {
+    // 1. Authentication check
+    const currentUserId = await getAuthUserId(ctx);
+    if (!currentUserId) {
+      return [];
+    }
+
+    // 2. Verify checklist exists
+    const checklist = await ctx.db.get(args.checklistId);
+    if (!checklist) {
+      return [];
+    }
+
+    // 3. Authorization: Check if user is owner or qa_lead
+    const isOwner = checklist.createdBy === currentUserId;
+    
+    const currentMember = await ctx.db
+      .query("checklistMembers")
+      .withIndex("by_checklist_and_user", (q) =>
+        q.eq("checklistId", args.checklistId).eq("userId", currentUserId)
+      )
+      .unique();
+
+    const isQALead = currentMember?.role === "qa_lead";
+
+    if (!isOwner && !isQALead) {
+      return [];
+    }
+
+    // 4. Fetch pending requests
+    const pendingRequests = await ctx.db
+      .query("checklistAccessRequests")
+      .withIndex("by_checklist", (q) => q.eq("checklistId", args.checklistId))
+      .filter((q) => q.eq(q.field("status"), "pending"))
+      .collect();
+
+    // 5. Enhance with user details
+    const requestsWithDetails = await Promise.all(
+      pendingRequests.map(async (request) => {
+        const user = await ctx.db.get(request.requesterId);
+
+        return {
+          id: request._id,
+          requesterId: request.requesterId,
+          name: user?.name || user?.email?.split("@")[0] || "Unknown User",
+          email: user?.email || "N/A",
+          avatarUrl: user?.image || null,
+          requestedAt: request.requestedAt,
+          requestMessage: request.message || "No message provided",
+          requestedRole: request.requestedRole,
+        };
+      })
+    );
+
+    // Sort by most recent first
+    requestsWithDetails.sort((a, b) => b.requestedAt - a.requestedAt);
+
+    return requestsWithDetails;
+  },
+});
+
+/**
+ * Approves a checklist access request.
+ * Adds the user as a member with the requested (or modified) role.
+ */
+export const approveChecklistAccessRequest = mutation({
+  args: {
+    requestId: v.id("checklistAccessRequests"),
+    finalRole: v.union(
+      v.literal("qa_lead"),
+      v.literal("qa_tester"),
+      v.literal("viewer")
+    ),
+  },
+  handler: async (ctx, args) => {
+    // 1. Authentication check
+    const currentUserId = await getAuthUserId(ctx);
+    if (!currentUserId) {
+      throw new Error("Authentication required.");
+    }
+
+    // 2. Get the request
+    const request = await ctx.db.get(args.requestId);
+    if (!request) {
+      throw new Error("Access request not found.");
+    }
+
+    // 3. Verify checklist exists
+    const checklist = await ctx.db.get(request.checklistId);
+    if (!checklist) {
+      throw new Error("Checklist not found.");
+    }
+
+    // 4. Authorization: Check if user is owner or qa_lead
+    const isOwner = checklist.createdBy === currentUserId;
+    
+    const currentMember = await ctx.db
+      .query("checklistMembers")
+      .withIndex("by_checklist_and_user", (q) =>
+        q.eq("checklistId", request.checklistId).eq("userId", currentUserId)
+      )
+      .unique();
+
+    const isQALead = currentMember?.role === "qa_lead";
+
+    if (!isOwner && !isQALead) {
+      throw new Error("Only the checklist owner or QA lead can approve access requests.");
+    }
+
+    // 5. Update request status
+    await ctx.db.patch(args.requestId, {
+      status: "approved",
+    });
+
+    // 6. Add user as a member (check for existing membership first)
+    const existingMember = await ctx.db
+      .query("checklistMembers")
+      .withIndex("by_checklist_and_user", (q) =>
+        q.eq("checklistId", request.checklistId).eq("userId", request.requesterId)
+      )
+      .unique();
+
+    if (existingMember) {
+      // Update existing role
+      await ctx.db.patch(existingMember._id, {
+        role: args.finalRole,
+      });
+    } else {
+      // Insert new member
+      await ctx.db.insert("checklistMembers", {
+        checklistId: request.checklistId,
+        userId: request.requesterId,
+        role: args.finalRole,
+        addedBy: currentUserId,
+        addedAt: Date.now(),
+      });
+    }
+
+    return { 
+      success: true, 
+      message: "Access request approved successfully." 
+    };
+  },
+});
+
+/**
+ * Declines a checklist access request.
+ */
+export const declineChecklistAccessRequest = mutation({
+  args: {
+    requestId: v.id("checklistAccessRequests"),
+  },
+  handler: async (ctx, args) => {
+    // 1. Authentication check
+    const currentUserId = await getAuthUserId(ctx);
+    if (!currentUserId) {
+      throw new Error("Authentication required.");
+    }
+
+    // 2. Get the request
+    const request = await ctx.db.get(args.requestId);
+    if (!request) {
+      throw new Error("Access request not found.");
+    }
+
+    // 3. Verify checklist exists
+    const checklist = await ctx.db.get(request.checklistId);
+    if (!checklist) {
+      throw new Error("Checklist not found.");
+    }
+
+    // 4. Authorization: Check if user is owner or qa_lead
+    const isOwner = checklist.createdBy === currentUserId;
+    
+    const currentMember = await ctx.db
+      .query("checklistMembers")
+      .withIndex("by_checklist_and_user", (q) =>
+        q.eq("checklistId", request.checklistId).eq("userId", currentUserId)
+      )
+      .unique();
+
+    const isQALead = currentMember?.role === "qa_lead";
+
+    if (!isOwner && !isQALead) {
+      throw new Error("Only the checklist owner or QA lead can decline access requests.");
+    }
+
+    // 5. Update request status
+    await ctx.db.patch(args.requestId, {
+      status: "declined",
+    });
+
+    return { 
+      success: true, 
+      message: "Access request declined." 
+    };
+  },
+});

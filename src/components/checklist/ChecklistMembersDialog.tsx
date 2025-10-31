@@ -23,7 +23,7 @@ import { toast } from "sonner";
 import { ChecklistRoleDisplay } from "./ChecklistRoleDisplay";
 import { ChecklistUserRoleBadge } from "./ChecklistUserRoleBadge";
 
-type UserRole = "qa_lead" | "qa_tester" | "owner" | "viewer" | undefined;
+type UserRole = "qa_lead" | "qa_tester" | "owner" | "viewer" | "guest" | undefined;
 
 interface ChecklistMembersDialogProps {
   isOpen: boolean;

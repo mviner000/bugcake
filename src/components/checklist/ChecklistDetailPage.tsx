@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Navigate } from "react-router-dom";
 import { AlertTriangle } from "lucide-react";
 import { Doc, Id } from "../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,6 @@ import { ChecklistHeader } from "./ChecklistHeader";
 import { ChecklistSidebar } from "./ChecklistSidebar";
 import { ChecklistModuleFilter } from "./ChecklistModuleFilter";
 import { DocumentIcon } from "../icons/DocumentIcon";
-// --- NEW --- (Add imports for the new form fields in the dialog)
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -37,7 +36,7 @@ type Checklist = Doc<"checklists"> & {
   executorName?: string;
 };
 
-type UserRole = "owner" | "qa_lead" | "qa_tester" | "viewer";
+type UserRole = "owner" | "qa_lead" | "qa_tester" | "viewer" | "guest";
 
 type TabType = "details" | "history";
 
@@ -51,21 +50,21 @@ export function ChecklistDetailPage() {
     itemId: string;
     newStatus: string;
   } | null>(null);
-  // --- NEW --- (State to hold the "Actual Results" from the dialog)
   const [actualResults, setActualResults] = useState<string>("");
-  // State for module filter
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
-  // State for mobile view management
   const [showDetailOnMobile, setShowDetailOnMobile] = useState(false);
 
   const updateItemStatus = useMutation(api.myFunctions.updateChecklistItemStatus);
+  
   // 1. Fetch current user profile
   const currentUser = useQuery(api.myFunctions.getMyProfile);
+  
   // 2. Fetch checklist data
   const checklistData = useQuery(
     api.myFunctions.getChecklistById,
     checklistId ? { checklistId: checklistId as Id<"checklists"> } : "skip"
   );
+  
   // 3. Fetch checklist items
   const checklistItems = useQuery(
     api.myFunctions.getChecklistItems,
@@ -83,26 +82,32 @@ export function ChecklistDetailPage() {
     api.myFunctions.getChecklistItemStatusHistory,
     selectedItemId ? { itemId: selectedItemId as Id<"checklistItems"> } : "skip"
   );
+  
   // Extract unique modules from checklist items
   const uniqueModules = useMemo(() => {
     if (!checklistItems) return [];
     const modules = new Set(checklistItems.map(item => item.module));
     return Array.from(modules).filter(Boolean).sort();
   }, [checklistItems]);
+  
   // Filter items based on selected module
   const filteredItems = useMemo(() => {
     if (!selectedModule || !checklistItems) return checklistItems;
     return checklistItems.filter(item => item.module === selectedModule);
   }, [checklistItems, selectedModule]);
+  
   /**
    * Determines the current user's role for this specific checklist.
    */
   const getActualUserRole = (): UserRole | undefined => {
     if (!currentUser || !checklistData) return undefined;
+    
+    // Check if user is the owner
     if (currentUser._id === checklistData.createdBy) {
       return "owner";
     }
 
+    // Check if user is in the members list
     if (members && Array.isArray(members)) {
       const memberRecord = members.find(m => m.userId === currentUser._id);
       if (memberRecord) {
@@ -110,51 +115,62 @@ export function ChecklistDetailPage() {
       }
     }
 
-    return "viewer";
+    // User is not owner and not in members list = guest
+    return "guest";
   };
 
   const actualUserRole = getActualUserRole();
+
+  // ✅ NEW: Redirect guest users to access request page
+  if (
+    currentUser !== undefined && 
+    checklistData !== undefined && 
+    members !== undefined && 
+    actualUserRole === "guest"
+  ) {
+    return <Navigate to={`/checklist/${checklistId}/request-access`} replace />;
+  }
+  
   const onBack = () => {
     navigate("/");
   };
+  
   // Mobile-specific handler for item selection
   const handleItemSelect = (itemId: string) => {
     setSelectedItemId(itemId);
     setShowDetailOnMobile(true);
   };
+  
   // Mobile-specific handler for back to list
   const handleBackToList = () => {
     setShowDetailOnMobile(false);
   };
+  
   const initiateStatusChange = (itemId: string, newStatus: string) => {
     setPendingStatusChange({ itemId, newStatus });
-    // --- NEW --- (Reset the text area every time the dialog opens)
     setActualResults("");
   };
+  
   const confirmStatusChange = async () => {
     if (!pendingStatusChange) return;
     try {
       await updateItemStatus({
         itemId: pendingStatusChange.itemId as Id<"checklistItems">,
         executionStatus: pendingStatusChange.newStatus as any,
-        // --- MODIFIED ---
-        // We now pass the actualResults. It will be an empty string
-        // for "Passed", "Blocked" etc., but will be filled for "Failed".
-        // The backend logic (from my proposal) will only use it if status is "Failed".
         actualResults: actualResults,
       });
       setPendingStatusChange(null);
-      // --- NEW --- (Clear the state after successful submission)
       setActualResults("");
     } catch (error) {
       console.error("Failed to update status:", error);
     }
   };
+  
   const cancelStatusChange = () => {
     setPendingStatusChange(null);
-    // --- NEW --- (Clear the state on cancel)
     setActualResults("");
   };
+  
   const calculateProgress = () => {
     const items = filteredItems || [];
     if (items.length === 0) {
@@ -179,11 +195,13 @@ export function ChecklistDetailPage() {
       else if (status === "Not Run") acc.notRun++;
       return acc;
     }, { passed: 0, failed: 0, blocked: 0, skipped: 0, notRun: 0 });
+    
     const completed = items.filter(
       (item) => item.executionStatus !== "Not Run"
     ).length;
     const total = items.length;
     const percentage = Math.round((completed / total) * 100);
+    
     return { 
       completed, 
       total, 
@@ -261,6 +279,7 @@ export function ChecklistDetailPage() {
     ? checklistItems.find((item) => item._id === selectedItemId)
     : null;
   const progress = calculateProgress();
+  
   return (
     <div className="min-h-[calc(100vh-45px)] bg-gray-50">
       {/* Confirmation Alert Dialog */}
@@ -279,7 +298,6 @@ export function ChecklistDetailPage() {
               ? This action will be recorded in the test execution history.
             </AlertDialogDescription>
 
-            {/* --- NEW: Conditionally show the Actual Results text area --- */}
             {pendingStatusChange?.newStatus === "Failed" && (
               <div className="pt-4 space-y-2">
                 <Label htmlFor="actual-results" className="font-semibold text-gray-800">
@@ -294,16 +312,12 @@ export function ChecklistDetailPage() {
                 />
               </div>
             )}
-            {/* --- END: New Section --- */}
 
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={cancelStatusChange}>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={confirmStatusChange}
-              // --- MODIFIED ---
-              // Disable the button if it's a "Failed" status
-              // and the user hasn't typed anything in "Actual Results".
               disabled={pendingStatusChange?.newStatus === "Failed" && !actualResults.trim()}
             >
               Confirm Change

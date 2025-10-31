@@ -23,7 +23,7 @@ export function ChecklistUserRoleBadge({
   );
 
   // Determine the current user's role
-  const getUserRole = (): "owner" | "qa_lead" | "qa_tester" | "viewer" | null => {
+  const getUserRole = (): "owner" | "qa_lead" | "qa_tester" | "viewer" | "guest" | null => {
     if (!currentUser) return null;
 
     // Check if user is the owner
@@ -41,8 +41,8 @@ export function ChecklistUserRoleBadge({
       }
     }
 
-    // Default to viewer if they have access but no explicit role
-    return "viewer";
+    // If not owner and not in members list, they're a guest
+    return "guest";
   };
 
   const currentRole = getUserRole();
@@ -54,7 +54,7 @@ export function ChecklistUserRoleBadge({
 
   // Role styling configuration
   const roleConfig: Record<
-    "owner" | "qa_lead" | "qa_tester" | "viewer",
+    "owner" | "qa_lead" | "qa_tester" | "viewer" | "guest",
     { label: string; bgColor: string; textColor: string }
   > = {
     owner: {
@@ -76,6 +76,11 @@ export function ChecklistUserRoleBadge({
       label: "Viewer",
       bgColor: "bg-gray-100",
       textColor: "text-gray-800",
+    },
+    guest: {
+      label: "Guest",
+      bgColor: "bg-orange-100",
+      textColor: "text-orange-800",
     },
   };
 

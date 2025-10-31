@@ -13,7 +13,8 @@ import { toast } from "sonner";
 import { ChecklistUserRoleBadge } from "./ChecklistUserRoleBadge";
 import { ChecklistMembersDialog } from "./ChecklistMembersDialog";
 
-type UserRole = "qa_lead" | "qa_tester" | "owner" | "viewer" | undefined;
+// ✅ FIXED: Added "guest" to the UserRole type
+type UserRole = "qa_lead" | "qa_tester" | "owner" | "viewer" | "guest" | undefined;
 
 interface ChecklistHeaderProps {
   sprintName: string;

@@ -9,6 +9,7 @@ import { isAltTextTestCase, isFunctionalityTestCase } from "@/utils/typeGuards";
 import { AltTextAriaLabelTable } from "./alttextarialabel/AltTextAriaLabelTable";
 import { FunctionalityTestCasesTable } from "./functionality/FunctionalityTestCasesTable"; 
 import { Header } from "./Header";
+// ✅ UPDATED: Import from the wrapper component to maintain compatibility
 import { AccessRequest } from "./access-request";
 import { WorkflowStatus } from "@/components/sheet/common/types/testCaseTypes";
 import { Doc, Id } from "convex/_generated/dataModel";
@@ -84,6 +85,7 @@ export function DetailPage() {
 			);
 		}
 		
+		// ✅ This now uses the wrapper component which internally uses the generic AccessRequest
 		return <AccessRequest />; 
 	}
 

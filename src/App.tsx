@@ -20,6 +20,7 @@ import { NotFound } from "./components/NotFound";
 import { RBACPage } from "./components/rbac/rbac-page";
 import { VerificationStatusPage } from "./components/auth/VerificationStatusPage";
 import { MultiStepFormPage } from "./components/multi-step-form-page";
+import ChecklistAccessRequest from "./components/checklist/access-request";
 
 /**
  * Handles routing for users who are not logged in.
@@ -60,7 +61,13 @@ function AuthenticatedApp() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/sheet/:sheetId" element={<DetailPage />} />
-          <Route path="/checklist/:checklistId" element={<ChecklistDetailPage />} /> {/* ✅ NEW: Checklist detail route */}
+          <Route path="/checklist/:checklistId" element={<ChecklistDetailPage />} />
+
+          <Route 
+            path="/checklist/:checklistId/request-access" 
+            element={<ChecklistAccessRequest />} 
+          />
+
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/rbac" element={<RBACPage />} />
           <Route path="/create-template" element={<MultiStepFormPage />} />
