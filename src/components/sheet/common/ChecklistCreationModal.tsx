@@ -28,10 +28,11 @@ interface ChecklistCreationModalProps {
     testExecutorAssigneeIds: string[];
     goalDateToFinish: number;
     description?: string;
+    environment: "development" | "testing" | "production"; // ✅ NEW: Add environment
   }) => Promise<void>;
   selectedCount: number;
   sheetId: Id<"sheets">;
-  testCaseType: "functionality" | "altTextAriaLabel"; // ✅ NEW: Show test case type
+  testCaseType: "functionality" | "altTextAriaLabel";
 }
 
 export function ChecklistCreationModal({
@@ -40,13 +41,14 @@ export function ChecklistCreationModal({
   onSubmit,
   selectedCount,
   sheetId,
-  testCaseType, // ✅ NEW: Receive test case type
+  testCaseType,
 }: ChecklistCreationModalProps) {
   const [sprintName, setSprintName] = useState("");
   const [titleRevisionNumber, setTitleRevisionNumber] = useState("");
   const [executorIds, setExecutorIds] = useState<string[]>([]);
   const [goalDate, setGoalDate] = useState("");
   const [description, setDescription] = useState("");
+  const [environment, setEnvironment] = useState<"development" | "testing" | "production">("testing"); // ✅ NEW: Default to "testing"
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch users with access to this sheet for executor selection
@@ -67,7 +69,7 @@ export function ChecklistCreationModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!sprintName.trim() || !titleRevisionNumber.trim() || executorIds.length === 0 || !goalDate) {
+    if (!sprintName.trim() || !titleRevisionNumber.trim() || executorIds.length === 0 || !goalDate || !environment) {
       alert("Please fill in all required fields and select at least one executor");
       return;
     }
@@ -80,6 +82,7 @@ export function ChecklistCreationModal({
         testExecutorAssigneeIds: executorIds,
         goalDateToFinish: new Date(goalDate).getTime(),
         description: description.trim() || undefined,
+        environment: environment, // ✅ NEW: Pass environment
       });
       
       // Reset form
@@ -88,6 +91,7 @@ export function ChecklistCreationModal({
       setExecutorIds([]);
       setGoalDate("");
       setDescription("");
+      setEnvironment("testing"); // ✅ NEW: Reset to default
     } catch (error) {
       // Error handled by parent
     } finally {
@@ -105,7 +109,7 @@ export function ChecklistCreationModal({
     usersWithAccess?.find(user => user.id === id)
   ).filter(Boolean);
 
-  // ✅ NEW: Format test case type for display
+  // Format test case type for display
   const testCaseTypeLabel = testCaseType === "functionality" 
     ? "Functionality" 
     : "Alt Text / Aria Label";
@@ -129,8 +133,6 @@ export function ChecklistCreationModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-      
-
           <div className="space-y-2">
             <Label htmlFor="revisionNumber">
               Title <span className="text-red-500">*</span>
@@ -157,6 +159,27 @@ export function ChecklistCreationModal({
             />
           </div>
 
+          {/* ✅ NEW: Environment Selector */}
+          <div className="space-y-2">
+            <Label htmlFor="environment">
+              Environment <span className="text-red-500">*</span>
+            </Label>
+            <select
+              id="environment"
+              className="w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-950"
+              value={environment}
+              onChange={(e) => setEnvironment(e.target.value as "development" | "testing" | "production")}
+              required
+            >
+              <option value="development">Development</option>
+              <option value="testing">Testing</option>
+              <option value="production">Production</option>
+            </select>
+            <p className="text-xs text-gray-500">
+              Select the environment where these tests will be executed
+            </p>
+          </div>
+
           <div className="space-y-3">
             <Label>
               Test Executors <span className="text-red-500">*</span> 
@@ -169,17 +192,17 @@ export function ChecklistCreationModal({
             
             {/* Selected Executors Display */}
             {selectedUsers.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-2 p-2 border rounded-md bg-gray-50">
+              <div className="flex flex-wrap gap-2 mb-2 p-2 border rounded-md bg-gray-50 dark:bg-gray-900">
                 {selectedUsers.map((user) => (
                   <div
                     key={user?.id}
-                    className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-sm"
+                    className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-md text-sm"
                   >
                     <span>{user?.name}</span>
                     <button
                       type="button"
                       onClick={() => handleRemoveExecutor(user?.id || "")}
-                      className="hover:bg-blue-200 rounded-full p-0.5"
+                      className="hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -190,7 +213,7 @@ export function ChecklistCreationModal({
 
             {/* Executor Selection Dropdown */}
             <select
-              className="w-full px-3 py-2 border rounded-md"
+              className="w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-950"
               value=""
               onChange={(e) => {
                 if (e.target.value) {
@@ -211,7 +234,6 @@ export function ChecklistCreationModal({
                 </option>
               ))}
             </select>
-
           </div>
 
           <div className="space-y-2">

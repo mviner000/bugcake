@@ -38,7 +38,7 @@ export function Header() {
   // we can show a skeleton or loading state.
   if (isLoading || (isAuthenticated && userProfile === undefined)) {
     return (
-      <header className="sticky top-0 z-999 bg-background border-b border-border">
+      <header className="sticky top-0 z-49 bg-background border-b border-border">
         <div className="flex h-16 items-center justify-between px-4">
           <Link
             to="/"
@@ -53,7 +53,7 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-999 bg-background border-b border-border">
+    <header className="sticky top-0 z-4 bg-background border-b border-border">
       <div className="flex h-16 items-center justify-between px-4">
         <Link
           to="/"

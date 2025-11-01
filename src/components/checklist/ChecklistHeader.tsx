@@ -1,7 +1,7 @@
 // src/components/checklist/ChecklistHeader.tsx
 
 import { useState } from "react";
-import { MoreHorizontal, X, UserPlus, Share } from "lucide-react";
+import { MoreHorizontal, X, UserPlus, Share, Bug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -73,15 +73,26 @@ export function ChecklistHeader({
 
             {/* Right section - Action buttons */}
             <div className="flex items-center space-x-1 md:space-x-2 flex-shrink-0">
+              {/* View Bugs Button */}
+              <Button
+                onClick={() => console.log("View Bugs clicked")} // replace with your handler
+                size="sm"
+                className="bg-amber-600 text-white hover:bg-amber-700 px-2 sm:px-3 whitespace-nowrap flex-shrink-0"
+              >
+                <Bug className="w-4 h-4" />
+
+                <span className="hidden sm:inline">View Bugs</span>
+              </Button>
+
               {/* Share - Hidden on mobile, shown on desktop */}
               {canManageMembers && (
                 <Button 
                   onClick={() => setShowMembersDialog(true)} 
                   size="sm" 
-                  className="bg-blue-700 text-white hover:bg-blue-70 px-2 sm:px-3 whitespace-nowrap flex-shrink-0"
+                  className="bg-blue-700 text-white hover:bg-blue-800 px-2 sm:px-3 whitespace-nowrap flex-shrink-0"
                 >
                   <Share className="w-4 h-4" />
-                  <span className="hidden sm:inline sm:ml-2">Share</span>
+                  <span className="hidden sm:inline">Share</span>
                 </Button>
               )}
 
@@ -103,8 +114,6 @@ export function ChecklistHeader({
                       Share
                     </DropdownMenuItem>
                   )}
-                  {/* Mobile-only: Share */}
-                 
                   <DropdownMenuItem>Edit Checklist</DropdownMenuItem>
                   <DropdownMenuItem>Export</DropdownMenuItem>
                   <DropdownMenuItem className="text-red-600">

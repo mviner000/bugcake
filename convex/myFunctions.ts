@@ -3056,9 +3056,15 @@ export const createChecklistFromSheetFunctionality = mutation({
     selectedTestCaseIds: v.array(v.string()),
     sprintName: v.string(),
     titleRevisionNumber: v.string(),
-    testExecutorAssigneeIds: v.array(v.id("users")), // ✅ Changed to array
+    testExecutorAssigneeIds: v.array(v.id("users")),
     goalDateToFinish: v.number(),
     description: v.optional(v.string()),
+    // ✅ NEW: Environment field (required)
+    environment: v.union(
+      v.literal("development"),
+      v.literal("testing"),
+      v.literal("production")
+    ),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -3096,10 +3102,10 @@ export const createChecklistFromSheetFunctionality = mutation({
 
     const now = Date.now();
 
-    // ✅ UPDATED: Use first executor as primary, rest as additional
+    // Use first executor as primary, rest as additional
     const [primaryExecutor, ...additionalExecutors] = args.testExecutorAssigneeIds;
 
-    // Create the checklist
+    // ✅ UPDATED: Create the checklist with environment field
     const checklistId = await ctx.db.insert("checklists", {
       sheetId: args.sheetId,
       sprintName: args.sprintName,
@@ -3107,10 +3113,11 @@ export const createChecklistFromSheetFunctionality = mutation({
       testCaseType: "functionality",
       status: "Open",
       progress: 0,
-      testExecutorAssigneeId: primaryExecutor, // Primary executor
-      additionalAssignees: additionalExecutors.length > 0 ? additionalExecutors : undefined, // ✅ Additional executors
+      testExecutorAssigneeId: primaryExecutor,
+      additionalAssignees: additionalExecutors.length > 0 ? additionalExecutors : undefined,
       goalDateToFinish: args.goalDateToFinish,
       description: args.description,
+      environment: args.environment, // ✅ NEW: Add environment
       createdBy: userId,
       createdAt: now,
       updatedAt: now,
@@ -3169,9 +3176,15 @@ export const createChecklistFromSheetAltText = mutation({
     selectedTestCaseIds: v.array(v.string()),
     sprintName: v.string(),
     titleRevisionNumber: v.string(),
-    testExecutorAssigneeIds: v.array(v.id("users")), // ✅ Changed to array
+    testExecutorAssigneeIds: v.array(v.id("users")),
     goalDateToFinish: v.number(),
     description: v.optional(v.string()),
+    // ✅ NEW: Environment field (required)
+    environment: v.union(
+      v.literal("development"),
+      v.literal("testing"),
+      v.literal("production")
+    ),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -3208,9 +3221,10 @@ export const createChecklistFromSheetAltText = mutation({
 
     const now = Date.now();
 
-    // ✅ UPDATED: Use first executor as primary, rest as additional
+    // Use first executor as primary, rest as additional
     const [primaryExecutor, ...additionalExecutors] = args.testExecutorAssigneeIds;
 
+    // ✅ UPDATED: Create the checklist with environment field
     const checklistId = await ctx.db.insert("checklists", {
       sheetId: args.sheetId,
       sprintName: args.sprintName,
@@ -3218,10 +3232,11 @@ export const createChecklistFromSheetAltText = mutation({
       testCaseType: "altTextAriaLabel",
       status: "Open",
       progress: 0,
-      testExecutorAssigneeId: primaryExecutor, // Primary executor
-      additionalAssignees: additionalExecutors.length > 0 ? additionalExecutors : undefined, // ✅ Additional executors
+      testExecutorAssigneeId: primaryExecutor,
+      additionalAssignees: additionalExecutors.length > 0 ? additionalExecutors : undefined,
       goalDateToFinish: args.goalDateToFinish,
       description: args.description,
+      environment: args.environment, // ✅ NEW: Add environment
       createdBy: userId,
       createdAt: now,
       updatedAt: now,

@@ -457,6 +457,12 @@ export default defineSchema({
       v.literal("functionality"),
       v.literal("altTextAriaLabel")
     ),
+
+    environment: v.union(
+      v.literal("development"),
+      v.literal("testing"),
+      v.literal("production")
+    ),
     
     // Progress Tracking
     status: checklistStatusEnum,

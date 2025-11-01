@@ -25,6 +25,7 @@ import {
   ColorConfig,
 } from "@/components/sheet/common/types/testCaseTypes";
 import { ChecklistCreationModal } from "./ChecklistCreationModal";
+import { ChecklistCreationLoadingDialog } from "./ChecklistCreationLoadingDialog";
 
 /**
  * Props for the BaseTable component
@@ -203,6 +204,7 @@ export function BaseTable<T extends BaseTestCase>({
   const [activeAddingModuleId, setActiveAddingModuleId] = useState<string | null>(null);
   const [previousWorkflowStatus, setPreviousWorkflowStatus] = useState<WorkflowStatus | null>(null);
   const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
+  const [isCreatingChecklist, setIsCreatingChecklist] = useState(false);
   const tableRef = useRef<HTMLTableElement>(null);
 
   // Group test cases by module
@@ -324,14 +326,24 @@ export function BaseTable<T extends BaseTestCase>({
     setIsChecklistModalOpen(true);
   };
 
-  // ✅ UPDATED: Checklist submission handler (supports multiple executors)
+// ✅ UPDATED: Checklist submission handler (with unclosable loading dialog)
   const handleChecklistSubmit = async (data: {
     sprintName: string;
     titleRevisionNumber: string;
-    testExecutorAssigneeIds: string[]; // ✅ Changed from single ID to array
+    testExecutorAssigneeIds: string[];
     goalDateToFinish: number;
     description?: string;
+    environment: "development" | "testing" | "production";
   }) => {
+    // ✅ STEP 1: Close the modal FIRST (before showing loading dialog)
+    setIsChecklistModalOpen(false);
+    
+    // ✅ STEP 2: Small delay to ensure modal close animation completes
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // ✅ STEP 3: NOW show the loading dialog
+    setIsCreatingChecklist(true);
+
     try {
       // Use the appropriate mutation based on test case type
       const createChecklistMutation = testCaseType === "functionality" 
@@ -343,19 +355,30 @@ export function BaseTable<T extends BaseTestCase>({
         selectedTestCaseIds: Array.from(selectedRows),
         sprintName: data.sprintName,
         titleRevisionNumber: data.titleRevisionNumber,
-        testExecutorAssigneeIds: data.testExecutorAssigneeIds.map(id => id as Id<"users">), // ✅ Map array
+        testExecutorAssigneeIds: data.testExecutorAssigneeIds.map(id => id as Id<"users">),
         goalDateToFinish: data.goalDateToFinish,
         description: data.description,
+        environment: data.environment,
       });
+
+      // ✅ Keep loading dialog visible for visual effect (minimum 1.5 seconds)
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
       toast.success(result.message || "Checklist created successfully!", {
         duration: 3000,
       });
 
-      // Clear selection and close modal
+      // Clear selection
       setSelectedRows(new Set());
-      setIsChecklistModalOpen(false);
+
+      // ✅ Redirect to the newly created checklist after showing success toast
+      setTimeout(() => {
+        window.location.href = `/checklist/${result.checklistId}`;
+      }, 3000);
     } catch (error) {
+      // ✅ NEW: Hide loading dialog on error
+      setIsCreatingChecklist(false);
+      
       const message = error instanceof Error ? error.message : "Failed to create checklist";
       toast.error(message, {
         duration: 4000,
@@ -459,8 +482,10 @@ export function BaseTable<T extends BaseTestCase>({
         onSubmit={handleChecklistSubmit}
         selectedCount={selectedRows.size}
         sheetId={sheetId}
-        testCaseType={testCaseType} // ✅ NEW: Pass test case type
+        testCaseType={testCaseType}
       />
+
+      <ChecklistCreationLoadingDialog isOpen={isCreatingChecklist} />
 
       {/* Top Bar Buttons - Only show when items are selected */}
       {selectedRows.size > 0 && (
