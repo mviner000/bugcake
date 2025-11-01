@@ -20,7 +20,7 @@ import { ChecklistMembersDialogHeader } from "./share-dialog/ChecklistMembersDia
 
 type UserRole = "qa_lead" | "qa_tester" | "owner" | "viewer" | "guest" | undefined;
 
-interface ChecklistMembersDialogProps {
+interface ChecklistShareDialogProps {
   isOpen: boolean;
   onClose: () => void;
   checklistId: string;
@@ -30,7 +30,7 @@ interface ChecklistMembersDialogProps {
   currentUserRole: UserRole;
 }
 
-export function ChecklistMembersDialog({
+export function ChecklistShareDialog({
   isOpen,
   onClose,
   checklistId,
@@ -38,7 +38,7 @@ export function ChecklistMembersDialog({
   checklistOwnerEmail,
   sprintName,
   currentUserRole,
-}: ChecklistMembersDialogProps) {
+}: ChecklistShareDialogProps) {
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const [newMemberRole, setNewMemberRole] = useState<"qa_tester" | "qa_lead" | "viewer">("viewer");
   const [activeTab, setActiveTab] = useState<"all" | "requests">("all");

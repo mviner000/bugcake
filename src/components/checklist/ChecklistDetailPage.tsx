@@ -382,7 +382,7 @@ export function ChecklistDetailPage() {
 
               <div className="bg-white rounded-lg border border-gray-200 p-4 md:p-6">
                 {/* Header Section */}
-                <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-6 gap-4">
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-6">
                   <div>
                     <h2 className="text-xl md:text-2xl font-semibold text-gray-900 mb-2">
                       {selectedItem.title}
@@ -392,13 +392,13 @@ export function ChecklistDetailPage() {
                     </p>
                   </div>
 
-                  {/* Button Group for Status Change */}
-                  <div className="flex flex-wrap gap-2 md:inline-flex md:rounded-md md:shadow-sm" role="group">
+                  {/* Button Group for Status Change - Improved for all devices */}
+                  <div className="flex gap-1 md:gap-2 lg:inline-flex lg:rounded-md lg:shadow-sm lg:flex-shrink-0" role="group">
                     <Button
                       variant={selectedItem.executionStatus === "Passed" ? "default" : "outline"}
                       size="sm"
                       onClick={() => initiateStatusChange(selectedItem._id, "Passed")}
-                      className={`md:rounded-r-none md:border-r-0 ${
+                      className={`flex-1 text-xs md:text-sm lg:flex-initial lg:rounded-r-none lg:border-r-0 ${
                         selectedItem.executionStatus === "Passed" ? getStatusButtonColor("Passed") : ""
                       }`}
                     >
@@ -408,7 +408,7 @@ export function ChecklistDetailPage() {
                       variant={selectedItem.executionStatus === "Failed" ? "default" : "outline"}
                       size="sm"
                       onClick={() => initiateStatusChange(selectedItem._id, "Failed")}
-                      className={`md:rounded-none md:border-r-0 ${
+                      className={`flex-1 text-xs md:text-sm lg:flex-initial lg:rounded-none lg:border-r-0 ${
                         selectedItem.executionStatus === "Failed" ? getStatusButtonColor("Failed") : ""
                       }`}
                     >
@@ -418,7 +418,7 @@ export function ChecklistDetailPage() {
                       variant={selectedItem.executionStatus === "Blocked" ? "default" : "outline"}
                       size="sm"
                       onClick={() => initiateStatusChange(selectedItem._id, "Blocked")}
-                      className={`md:rounded-none md:border-r-0 ${
+                      className={`flex-1 text-xs md:text-sm lg:flex-initial lg:rounded-none lg:border-r-0 ${
                         selectedItem.executionStatus === "Blocked" ? getStatusButtonColor("Blocked") : ""
                       }`}
                     >
@@ -428,7 +428,7 @@ export function ChecklistDetailPage() {
                       variant={selectedItem.executionStatus === "Not Run" ? "default" : "outline"}
                       size="sm"
                       onClick={() => initiateStatusChange(selectedItem._id, "Not Run")}
-                      className={`md:rounded-none md:border-r-0 ${
+                      className={`flex-1 text-xs md:text-sm lg:flex-initial lg:rounded-none lg:border-r-0 ${
                         selectedItem.executionStatus === "Not Run" ? getStatusButtonColor("Not Run") : ""
                       }`}
                     >
@@ -438,7 +438,7 @@ export function ChecklistDetailPage() {
                       variant={selectedItem.executionStatus === "Skipped" ? "default" : "outline"}
                       size="sm"
                       onClick={() => initiateStatusChange(selectedItem._id, "Skipped")}
-                      className={`md:rounded-l-none ${
+                      className={`flex-1 text-xs md:text-sm lg:flex-initial lg:rounded-l-none ${
                         selectedItem.executionStatus === "Skipped" ? getStatusButtonColor("Skipped") : ""
                       }`}
                     >

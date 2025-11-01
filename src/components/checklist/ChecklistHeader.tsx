@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChecklistUserRoleBadge } from "./ChecklistUserRoleBadge";
-import { ChecklistMembersDialog } from "./ChecklistMembersDialog";
+import { ChecklistShareDialog } from "./ChecklistShareDialog";
 
 // ✅ FIXED: Added "guest" to the UserRole type
 type UserRole = "qa_lead" | "qa_tester" | "owner" | "viewer" | "guest" | undefined;
@@ -127,7 +127,7 @@ export function ChecklistHeader({
       </header>
 
       {/* Members Management Dialog */}
-      <ChecklistMembersDialog
+      <ChecklistShareDialog
         isOpen={showMembersDialog}
         onClose={() => setShowMembersDialog(false)}
         checklistId={checklistId}
