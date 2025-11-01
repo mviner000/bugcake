@@ -10,13 +10,13 @@ import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { toast } from "sonner";
 import { ChecklistRoleDisplay } from "./ChecklistRoleDisplay";
-import { ChecklistGeneralAccess } from "./ChecklistGeneralAccess";
-import { ChecklistPeopleAccessHeader } from "./ChecklistPeopleAccessHeader";
-import { ChecklistMembersDialogFooter } from "./ChecklistMembersDialogFooter";
-import { ChecklistMembersList } from "./ChecklistMembersList";
-import { ChecklistRequestsList } from "./ChecklistRequestsList";
-import { ChecklistAddMemberInput } from "./ChecklistAddMemberInput";
-import { ChecklistMembersDialogHeader } from "./ChecklistMembersDialogHeader";
+import { ChecklistGeneralAccess } from "./share-dialog/ChecklistGeneralAccess";
+import { ChecklistPeopleAccessHeader } from "./share-dialog/ChecklistPeopleAccessHeader";
+import { ChecklistMembersDialogFooter } from "./share-dialog/ChecklistMembersDialogFooter";
+import { ChecklistMembersList } from "./share-dialog/ChecklistMembersList";
+import { ChecklistRequestsList } from "./share-dialog/ChecklistRequestsList";
+import { ChecklistAddMemberInput } from "./share-dialog/ChecklistAddMemberInput";
+import { ChecklistMembersDialogHeader } from "./share-dialog/ChecklistMembersDialogHeader";
 
 type UserRole = "qa_lead" | "qa_tester" | "owner" | "viewer" | "guest" | undefined;
 

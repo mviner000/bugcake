@@ -1,5 +1,5 @@
 import { DialogTitle } from "@/components/ui/dialog";
-import { ChecklistUserRoleBadge } from "./ChecklistUserRoleBadge";
+import { ChecklistUserRoleBadge } from "../ChecklistUserRoleBadge";
 
 interface ChecklistMembersDialogHeaderProps {
   sprintName: string;
