@@ -1,4 +1,4 @@
-// components/sheet/AddPeopleSection.tsx
+// components/sheet/share-dialog/AddPeopleSection.tsx
 
 import { useState } from "react"
 import { Input } from "@/components/ui/input"

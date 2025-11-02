@@ -1,4 +1,4 @@
-// src/components/checklist/ChecklistPeopleAccessHeader.tsx
+// src/components/checklist/share-dialog/ChecklistPeopleAccessHeader.tsx
 
 import { Link, Mail } from "lucide-react";
 

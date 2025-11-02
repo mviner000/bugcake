@@ -1,4 +1,4 @@
-// components/sheet/ActionButtonsSection.tsx
+// components/sheet/share-dialog/ActionButtonsSection.tsx
 
 import { useState } from "react"
 import { Copy, Check } from "lucide-react"

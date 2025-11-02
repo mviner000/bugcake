@@ -1,3 +1,5 @@
+// src/components/checklist/share-dialog/ChecklistMembersDialogHeader.tsx
+
 import { DialogTitle } from "@/components/ui/dialog";
 import { ChecklistUserRoleBadge } from "../ChecklistUserRoleBadge";
 

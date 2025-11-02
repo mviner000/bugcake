@@ -1,4 +1,4 @@
-// components/sheet/ShareModalHeader.tsx
+// components/sheet/share-dialog/ShareModalHeader.tsx
 
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { UserRoleDisplay } from "../UserRoleDisplay"

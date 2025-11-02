@@ -1,4 +1,4 @@
-// src/components/checklist/ChecklistMembersDialog.tsx
+// src/components/checklist/ChecklistShareDialog.tsx
 
 import { useState } from "react";
 import {

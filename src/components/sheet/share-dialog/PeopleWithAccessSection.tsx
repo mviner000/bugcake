@@ -1,4 +1,4 @@
-// components/sheet/PeopleWithAccessSection.tsx
+// components/sheet/share-dialog/PeopleWithAccessSection.tsx
 
 import { useState, useEffect } from "react"
 import { Mail, LinkIcon, X, ChevronDown, ChevronUp } from "lucide-react"

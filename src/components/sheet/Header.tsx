@@ -1,4 +1,4 @@
-// for reference only components/sheet/Header.tsx
+// components/sheet/Header.tsx
 
 import { useState } from "react";
 import {
@@ -89,7 +89,7 @@ export function Header({ sheetName, sheetId, sheetType }: HeaderProps & { sheetI
               className="bg-blue-700 text-white hover:bg-blue-70 px-2 sm:px-3 whitespace-nowrap flex-shrink-0"
             >
               <Share className="w-4 h-4" />
-              <span className="hidden sm:inline sm:ml-2">Share</span>
+              <span className="hidden sm:inline">Share</span>
             </Button>
 
             {/* Avatar - Hidden on mobile (shown in top row), visible on sm+ */}

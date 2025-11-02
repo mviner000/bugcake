@@ -1,3 +1,5 @@
+// src/components/checklist/share-dialog/ChecklistMembersList.tsx
+
 import { X } from "lucide-react";
 import {
   Select,
