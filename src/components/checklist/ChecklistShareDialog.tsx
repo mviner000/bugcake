@@ -45,7 +45,12 @@ export function ChecklistShareDialog({
   const [isCopied, setIsCopied] = useState(false);
   const [selectedRequestRoles, setSelectedRequestRoles] = useState<Record<string, "qa_tester" | "qa_lead" | "viewer">>({});
   const [expandedRequests, setExpandedRequests] = useState<Record<string, boolean>>({});
-  const [generalAccess, setGeneralAccess] = useState<"restricted" | "anyone_with_link" | "public">("restricted");
+
+  // Fetch the full checklist document to get its current accessLevel
+  const checklist = useQuery(
+    api.myFunctions.getChecklistById,
+    checklistId ? { checklistId: checklistId as Id<"checklists"> } : "skip"
+  );
 
   // Fetch members from database
   const members = useQuery(
@@ -68,6 +73,9 @@ export function ChecklistShareDialog({
   const updateMemberRole = useMutation(api.myFunctions.updateChecklistMemberRole);
   const approveRequest = useMutation(api.myFunctions.approveChecklistAccessRequest);
   const declineRequest = useMutation(api.myFunctions.declineChecklistAccessRequest);
+  
+  // Add the new mutation
+  const updateAccessLevel = useMutation(api.myFunctions.updateChecklistAccessLevel);
 
   // Determine permissions
   const canManageMembers = currentUserRole === "owner" || currentUserRole === "qa_lead";
@@ -175,6 +183,30 @@ export function ChecklistShareDialog({
     }
   };
 
+  // Add the handler for changing access level
+  const handleAccessLevelChange = async (
+    newLevel: "restricted" | "anyone_with_link" | "public"
+  ) => {
+    try {
+      await updateAccessLevel({
+        checklistId: checklistId as Id<"checklists">,
+        accessLevel: newLevel,
+      });
+
+      // Get a user-friendly label for the success message
+      let levelLabel = "Restricted";
+      if (newLevel === "anyone_with_link") levelLabel = "Anyone with the link";
+      if (newLevel === "public") levelLabel = "Public";
+
+      // Show success toast
+      toast.success(`General access updated to "${levelLabel}"`);
+      
+    } catch (error: any) {
+      // Show error toast
+      toast.error(error.message || "Failed to update access level");
+    }
+  };
+
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href).then(() => {
       setIsCopied(true);
@@ -196,6 +228,9 @@ export function ChecklistShareDialog({
       [requestId]: role,
     });
   };
+
+  // Get the current access level from the fetched checklist data
+  const currentAccessLevel = checklist?.accessLevel || "restricted";
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -261,8 +296,8 @@ export function ChecklistShareDialog({
 
         {/* General access section */}
         <ChecklistGeneralAccess
-          generalAccess={generalAccess}
-          onAccessChange={setGeneralAccess}
+          generalAccess={currentAccessLevel}
+          onAccessChange={handleAccessLevelChange}
           canManageMembers={canManageMembers}
         />
 

@@ -3111,6 +3111,7 @@ export const createChecklistFromSheetFunctionality = mutation({
       sprintName: args.sprintName,
       titleRevisionNumber: args.titleRevisionNumber,
       testCaseType: "functionality",
+      accessLevel: "restricted",
       status: "Open",
       progress: 0,
       testExecutorAssigneeId: primaryExecutor,
@@ -3230,6 +3231,7 @@ export const createChecklistFromSheetAltText = mutation({
       sprintName: args.sprintName,
       titleRevisionNumber: args.titleRevisionNumber,
       testCaseType: "altTextAriaLabel",
+      accessLevel: "restricted",
       status: "Open",
       progress: 0,
       testExecutorAssigneeId: primaryExecutor,
@@ -4156,5 +4158,56 @@ export const declineChecklistAccessRequest = mutation({
       success: true, 
       message: "Access request declined." 
     };
+  },
+});
+
+
+/**
+ * Updates a checklist's general access level
+ */
+export const updateChecklistAccessLevel = mutation({
+  args: {
+    checklistId: v.id("checklists"),
+    accessLevel: v.union(
+      v.literal("restricted"),
+      v.literal("anyone_with_link"),
+      v.literal("public")
+    ),
+  },
+  handler: async (ctx, args) => {
+    // 1. Authentication check
+    const currentUserId = await getAuthUserId(ctx);
+    if (!currentUserId) {
+      throw new Error("Authentication required.");
+    }
+
+    // 2. Verify checklist exists
+    const checklist = await ctx.db.get(args.checklistId);
+    if (!checklist) {
+      throw new Error("Checklist not found.");
+    }
+
+    // 3. Authorization: Check if user is the checklist owner OR a qa_lead
+    const isOwner = checklist.createdBy === currentUserId;
+    
+    const currentMember = await ctx.db
+      .query("checklistMembers")
+      .withIndex("by_checklist_and_user", (q) =>
+        q.eq("checklistId", args.checklistId).eq("userId", currentUserId)
+      )
+      .unique();
+      
+    const isQALead = currentMember?.role === "qa_lead";
+
+    if (!isOwner && !isQALead) {
+      throw new Error("Only the checklist owner or QA lead can change access levels.");
+    }
+
+    // 4. Update the checklist's access level
+    await ctx.db.patch(args.checklistId, {
+      accessLevel: args.accessLevel,
+    });
+
+    return { success: true };
   },
 });

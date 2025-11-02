@@ -472,6 +472,12 @@ export default defineSchema({
     testExecutorAssigneeId: v.id("users"),
     additionalAssignees: v.optional(v.array(v.id("users"))),
     
+    accessLevel: v.union(
+      v.literal("restricted"),      // Only explicitly added members
+      v.literal("anyone_with_link"), // Anyone with the link
+      v.literal("public")            // Fully public
+    ),
+    
     // Timeline
     dateStarted: v.optional(v.number()),
     goalDateToFinish: v.number(),

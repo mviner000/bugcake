@@ -5,6 +5,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { useQuery, useMutation } from "convex/react"
 import { api } from "../../../convex/_generated/api"
 import { Id } from "../../../convex/_generated/dataModel"
+import { toast } from "sonner"
 import { ShareModalHeader } from "./share-dialog/ShareModalHeader"
 import { AddPeopleSection } from "./share-dialog/AddPeopleSection"
 import { GeneralAccessSection } from "./share-dialog/GeneralAccessSection"
@@ -83,8 +84,18 @@ export function ShareModal({
         sheetId: sheetId,
         accessLevel: newLevel
       })
+      
+      // Get a user-friendly label for the success message
+      let levelLabel = "Restricted";
+      if (newLevel === "anyoneWithLink") levelLabel = "Anyone with the link";
+      if (newLevel === "public") levelLabel = "Public";
+
+      // Show success toast
+      toast.success(`General access updated to "${levelLabel}"`);
+
     } catch (error: any) {
-      alert("Failed to update access level: " + error.message)
+      // Show error toast instead of alert
+      toast.error(error.message || "Failed to update access level");
     }
   }
 
