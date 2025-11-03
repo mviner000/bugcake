@@ -10,7 +10,7 @@ import { ShareModalHeader } from "./share-dialog/ShareModalHeader"
 import { SheetAddMemberInput } from "./share-dialog/SheetAddMemberInput"
 import { SheetGeneralAccess } from "./share-dialog/SheetGeneralAccess"
 import { PeopleWithAccessSection } from "./share-dialog/PeopleWithAccessSection"
-import { ActionButtonsSection } from "./share-dialog/ActionButtonsSection"
+import { SheetDialogFooter } from "./share-dialog/SheetDialogFooter"
 
 interface ShareModalProps {
   open: boolean
@@ -182,7 +182,7 @@ export function ShareModal({
           />
 
           {/* Action buttons */}
-          <ActionButtonsSection onClose={() => onOpenChange(false)} />
+          <SheetDialogFooter onClose={() => onOpenChange(false)} />
         </div>
       </DialogContent>
     </Dialog>

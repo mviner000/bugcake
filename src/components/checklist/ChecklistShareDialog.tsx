@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { ChecklistRoleDisplay } from "./ChecklistRoleDisplay";
 import { ChecklistGeneralAccess } from "./share-dialog/ChecklistGeneralAccess";
 import { ChecklistPeopleAccessHeader } from "./share-dialog/ChecklistPeopleAccessHeader";
-import { ChecklistMembersDialogFooter } from "./share-dialog/ChecklistMembersDialogFooter";
+import { ChecklistDialogFooter } from "./share-dialog/ChecklistDialogFooter";
 import { ChecklistMembersList } from "./share-dialog/ChecklistMembersList";
 import { ChecklistRequestsList } from "./share-dialog/ChecklistRequestsList";
 import { ChecklistAddMemberInput } from "./share-dialog/ChecklistAddMemberInput";
@@ -39,37 +39,28 @@ export function ChecklistShareDialog({
   sprintName,
   currentUserRole,
 }: ChecklistShareDialogProps) {
-  // ✅ REMOVED: newMemberEmail and newMemberRole states (now managed by ChecklistAddMemberInput)
-  // ✅ ADDED: Loading state for add member operation
   const [isAddingMember, setIsAddingMember] = useState(false);
-  
   const [activeTab, setActiveTab] = useState<"all" | "requests">("all");
-  const [isCopied, setIsCopied] = useState(false);
   const [selectedRequestRoles, setSelectedRequestRoles] = useState<Record<string, "qa_tester" | "qa_lead" | "viewer">>({});
   const [expandedRequests, setExpandedRequests] = useState<Record<string, boolean>>({});
 
-  // Fetch the full checklist document to get its current accessLevel
   const checklist = useQuery(
     api.myFunctions.getChecklistById,
     checklistId ? { checklistId: checklistId as Id<"checklists"> } : "skip"
   );
 
-  // Fetch members from database
   const members = useQuery(
     api.myFunctions.getChecklistMembers,
     checklistId ? { checklistId: checklistId as Id<"checklists"> } : "skip"
   );
 
-  // Fetch pending access requests
   const pendingRequests = useQuery(
     api.myFunctions.getPendingChecklistAccessRequests,
     checklistId ? { checklistId: checklistId as Id<"checklists"> } : "skip"
   );
 
-  // Fetch current user
   const currentUser = useQuery(api.myFunctions.getMyProfile);
 
-  // Mutations
   const addMember = useMutation(api.myFunctions.addChecklistMember);
   const removeMember = useMutation(api.myFunctions.removeChecklistMember);
   const updateMemberRole = useMutation(api.myFunctions.updateChecklistMemberRole);
@@ -77,10 +68,8 @@ export function ChecklistShareDialog({
   const declineRequest = useMutation(api.myFunctions.declineChecklistAccessRequest);
   const updateAccessLevel = useMutation(api.myFunctions.updateChecklistAccessLevel);
 
-  // Determine permissions
   const canManageMembers = currentUserRole === "owner" || currentUserRole === "qa_lead";
 
-  // ✅ UPDATED: Handler now receives both email and role as parameters
   const handleAddMember = async (email: string, role: "qa_tester" | "qa_lead" | "viewer") => {
     setIsAddingMember(true);
     
@@ -92,7 +81,6 @@ export function ChecklistShareDialog({
       });
 
       toast.success(`${result.member.name} has been added to the checklist.`);
-      // ✅ REMOVED: setNewMemberEmail and setNewMemberRole (handled by child component)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to add member.");
     } finally {
@@ -100,7 +88,6 @@ export function ChecklistShareDialog({
     }
   };
 
-  // Handle remove member
   const handleRemoveMember = async (memberId: string) => {
     try {
       await removeMember({
@@ -113,7 +100,6 @@ export function ChecklistShareDialog({
     }
   };
 
-  // Handle update member role
   const handleUpdateMemberRole = async (
     memberId: string,
     newRole: "qa_tester" | "qa_lead" | "viewer"
@@ -130,7 +116,6 @@ export function ChecklistShareDialog({
     }
   };
 
-  // Handle approve request
   const handleApproveRequest = async (requestId: string, finalRole: "qa_tester" | "qa_lead" | "viewer") => {
     try {
       await approveRequest({
@@ -156,7 +141,6 @@ export function ChecklistShareDialog({
     }
   };
 
-  // Handle decline request
   const handleDeclineRequest = async (requestId: string) => {
     try {
       await declineRequest({
@@ -181,7 +165,6 @@ export function ChecklistShareDialog({
     }
   };
 
-  // ✅ UPDATED: Access level now uses camelCase
   const handleAccessLevelChange = async (
     newLevel: "restricted" | "anyoneWithLink" | "public"
   ) => {
@@ -191,25 +174,20 @@ export function ChecklistShareDialog({
         accessLevel: newLevel,
       });
 
-      // Get a user-friendly label for the success message
       let levelLabel = "Restricted";
       if (newLevel === "anyoneWithLink") levelLabel = "Anyone with the link";
       if (newLevel === "public") levelLabel = "Public";
 
-      // Show success toast
       toast.success(`General access updated to "${levelLabel}"`);
       
     } catch (error: any) {
-      // Show error toast
       toast.error(error.message || "Failed to update access level");
     }
   };
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href).then(() => {
-      setIsCopied(true);
       toast.success("Checklist link has been copied to clipboard.");
-      setTimeout(() => setIsCopied(false), 2000);
     });
   };
 
@@ -227,27 +205,23 @@ export function ChecklistShareDialog({
     });
   };
 
-  // Get the current access level from the fetched checklist data
   const currentAccessLevel = checklist?.accessLevel || "restricted";
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-lg p-0">
-        {/* Header */}
         <ChecklistMembersDialogHeader
           sprintName={sprintName}
           checklistId={checklistId}
           checklistOwnerId={checklistOwnerId}
         />
 
-        {/* ✅ UPDATED: Simplified component usage - no more email/role props */}
         <ChecklistAddMemberInput
           onAddMember={handleAddMember}
           canManageMembers={canManageMembers}
           isLoading={isAddingMember}
         />
 
-        {/* People with access header */}
         <ChecklistPeopleAccessHeader
           activeTab={activeTab}
           onTabChange={setActiveTab}
@@ -264,7 +238,6 @@ export function ChecklistShareDialog({
           />
         </div>
 
-        {/* Members List / Requests List */}
         <div className="px-5 max-h-96 overflow-y-auto">
           {activeTab === "all" ? (
             <ChecklistMembersList
@@ -289,16 +262,13 @@ export function ChecklistShareDialog({
           )}
         </div>
 
-        {/* General access section */}
         <ChecklistGeneralAccess
           generalAccess={currentAccessLevel}
           onAccessChange={handleAccessLevelChange}
           canManageMembers={canManageMembers}
         />
 
-        {/* Footer */}
-        <ChecklistMembersDialogFooter
-          isCopied={isCopied}
+        <ChecklistDialogFooter
           onCopyLink={handleCopyLink}
           onClose={onClose}
         />
