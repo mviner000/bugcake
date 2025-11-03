@@ -1,63 +1,43 @@
-// src/components/checklist/share-dialog/ChecklistShareDialog.tsx
+// src/components/checklist/share-dialog/ChecklistAddMemberInput.tsx
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { GenericAddPeopleSection, RoleOption } from "@/components/common/share/GenericAddPeopleSection"
 
 interface ChecklistAddMemberInputProps {
-  newMemberEmail: string;
-  newMemberRole: "qa_tester" | "qa_lead" | "viewer";
-  onEmailChange: (email: string) => void;
-  onRoleChange: (role: "qa_tester" | "qa_lead" | "viewer") => void;
-  onAddMember: () => void;
+  onAddMember: (email: string, role: "qa_tester" | "qa_lead" | "viewer") => Promise<void>;
   canManageMembers: boolean;
+  isLoading?: boolean; // Optional loading state
 }
 
+// Define the role options for checklists
+const checklistRoleOptions: RoleOption[] = [
+  { value: "viewer", label: "Viewer" },
+  { value: "qa_tester", label: "QA Tester" },
+  { value: "qa_lead", label: "QA Lead" },
+];
+
 export function ChecklistAddMemberInput({
-  newMemberEmail,
-  newMemberRole,
-  onEmailChange,
-  onRoleChange,
   onAddMember,
   canManageMembers,
+  isLoading = false,
 }: ChecklistAddMemberInputProps) {
-  if (!canManageMembers) {
-    return null;
-  }
+  // Type-safe wrapper that validates the role
+  const handleAddPerson = async (email: string, role: string) => {
+    // Type guard to ensure role is valid
+    if (role === "viewer" || role === "qa_tester" || role === "qa_lead") {
+      await onAddMember(email, role);
+    } else {
+      console.error(`Invalid role: ${role}`);
+    }
+  };
 
   return (
-    <div className="px-5">
-      <div className="flex gap-2">
-        <Input
-          type="email"
-          placeholder="Add people by email"
-          value={newMemberEmail}
-          onChange={(e) => onEmailChange(e.target.value)}
-          className="flex-1"
-          onKeyDown={(e) => {
-            if (e.key === "Enter") onAddMember();
-          }}
-        />
-        <Select value={newMemberRole} onValueChange={(v: any) => onRoleChange(v)}>
-          <SelectTrigger className="w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="viewer">Viewer</SelectItem>
-            <SelectItem value="qa_tester">QA Tester</SelectItem>
-            <SelectItem value="qa_lead">QA Lead</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button onClick={onAddMember} disabled={!newMemberEmail.trim()}>
-          Add
-        </Button>
-      </div>
-    </div>
+    <GenericAddPeopleSection
+      onAddPerson={handleAddPerson}
+      roleOptions={checklistRoleOptions}
+      defaultRole="viewer"
+      isLoading={isLoading}
+      visible={canManageMembers} // Hide if user can't manage members
+      wrapperClassName="px-5" // Checklist-specific wrapper padding
+    />
   );
 }

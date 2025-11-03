@@ -39,8 +39,10 @@ export function ChecklistShareDialog({
   sprintName,
   currentUserRole,
 }: ChecklistShareDialogProps) {
-  const [newMemberEmail, setNewMemberEmail] = useState("");
-  const [newMemberRole, setNewMemberRole] = useState<"qa_tester" | "qa_lead" | "viewer">("viewer");
+  // ✅ REMOVED: newMemberEmail and newMemberRole states (now managed by ChecklistAddMemberInput)
+  // ✅ ADDED: Loading state for add member operation
+  const [isAddingMember, setIsAddingMember] = useState(false);
+  
   const [activeTab, setActiveTab] = useState<"all" | "requests">("all");
   const [isCopied, setIsCopied] = useState(false);
   const [selectedRequestRoles, setSelectedRequestRoles] = useState<Record<string, "qa_tester" | "qa_lead" | "viewer">>({});
@@ -73,32 +75,28 @@ export function ChecklistShareDialog({
   const updateMemberRole = useMutation(api.myFunctions.updateChecklistMemberRole);
   const approveRequest = useMutation(api.myFunctions.approveChecklistAccessRequest);
   const declineRequest = useMutation(api.myFunctions.declineChecklistAccessRequest);
-  
-  // Add the new mutation
   const updateAccessLevel = useMutation(api.myFunctions.updateChecklistAccessLevel);
 
   // Determine permissions
   const canManageMembers = currentUserRole === "owner" || currentUserRole === "qa_lead";
 
-  // Handle add member
-  const handleAddMember = async () => {
-    if (!newMemberEmail.trim()) {
-      toast.error("Please enter an email address.");
-      return;
-    }
-
+  // ✅ UPDATED: Handler now receives both email and role as parameters
+  const handleAddMember = async (email: string, role: "qa_tester" | "qa_lead" | "viewer") => {
+    setIsAddingMember(true);
+    
     try {
       const result = await addMember({
         checklistId: checklistId as Id<"checklists">,
-        memberEmail: newMemberEmail.trim(),
-        role: newMemberRole,
+        memberEmail: email,
+        role: role,
       });
 
       toast.success(`${result.member.name} has been added to the checklist.`);
-      setNewMemberEmail("");
-      setNewMemberRole("viewer");
+      // ✅ REMOVED: setNewMemberEmail and setNewMemberRole (handled by child component)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to add member.");
+    } finally {
+      setIsAddingMember(false);
     }
   };
 
@@ -183,9 +181,9 @@ export function ChecklistShareDialog({
     }
   };
 
-  // Add the handler for changing access level
+  // ✅ UPDATED: Access level now uses camelCase
   const handleAccessLevelChange = async (
-    newLevel: "restricted" | "anyone_with_link" | "public"
+    newLevel: "restricted" | "anyoneWithLink" | "public"
   ) => {
     try {
       await updateAccessLevel({
@@ -195,7 +193,7 @@ export function ChecklistShareDialog({
 
       // Get a user-friendly label for the success message
       let levelLabel = "Restricted";
-      if (newLevel === "anyone_with_link") levelLabel = "Anyone with the link";
+      if (newLevel === "anyoneWithLink") levelLabel = "Anyone with the link";
       if (newLevel === "public") levelLabel = "Public";
 
       // Show success toast
@@ -242,14 +240,11 @@ export function ChecklistShareDialog({
           checklistOwnerId={checklistOwnerId}
         />
 
-        {/* Add Member Input - Only show if user can manage members */}
+        {/* ✅ UPDATED: Simplified component usage - no more email/role props */}
         <ChecklistAddMemberInput
-          newMemberEmail={newMemberEmail}
-          newMemberRole={newMemberRole}
-          onEmailChange={setNewMemberEmail}
-          onRoleChange={setNewMemberRole}
           onAddMember={handleAddMember}
           canManageMembers={canManageMembers}
+          isLoading={isAddingMember}
         />
 
         {/* People with access header */}

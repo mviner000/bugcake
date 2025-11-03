@@ -474,7 +474,7 @@ export default defineSchema({
     
     accessLevel: v.union(
       v.literal("restricted"),      // Only explicitly added members
-      v.literal("anyone_with_link"), // Anyone with the link
+      v.literal("anyoneWithLink"), // Anyone with the link
       v.literal("public")            // Fully public
     ),
     

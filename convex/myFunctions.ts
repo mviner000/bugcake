@@ -4168,9 +4168,10 @@ export const declineChecklistAccessRequest = mutation({
 export const updateChecklistAccessLevel = mutation({
   args: {
     checklistId: v.id("checklists"),
+    // ✅ FIXED: Changed from snake_case to camelCase
     accessLevel: v.union(
       v.literal("restricted"),
-      v.literal("anyone_with_link"),
+      v.literal("anyoneWithLink"),  // ✅ Changed from "anyone_with_link"
       v.literal("public")
     ),
   },

@@ -1,4 +1,4 @@
-// components/sheet/share-dialog/GeneralAccessSection.tsx
+// components/sheet/share-dialog/SheetGeneralAccess.tsx
 
 import { Lock, LinkIcon, Globe } from "lucide-react"
 // Import the new generic component and its type definition
@@ -8,7 +8,7 @@ import {
 } from "@/components/common/share/GenericGeneralAccessSection" // Adjust this path as needed
 
 // Props remain unchanged to maintain the existing API
-interface GeneralAccessSectionProps {
+interface SheetGeneralAccessProps {
   currentAccessLevel: string
   onAccessLevelChange: (level: "restricted" | "anyoneWithLink" | "public") => void
 }
@@ -35,10 +35,10 @@ const sheetAccessLevels: AccessLevelOption[] = [
   },
 ]
 
-export function GeneralAccessSection({
+export function SheetGeneralAccess({
   currentAccessLevel,
   onAccessLevelChange,
-}: GeneralAccessSectionProps) {
+}: SheetGeneralAccessProps) {
   
   // Render the generic component, passing in sheet-specific data
   return (
