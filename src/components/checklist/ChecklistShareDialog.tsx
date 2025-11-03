@@ -16,7 +16,7 @@ import { ChecklistDialogFooter } from "./share-dialog/ChecklistDialogFooter";
 import { ChecklistMembersList } from "./share-dialog/ChecklistMembersList";
 import { ChecklistRequestsList } from "./share-dialog/ChecklistRequestsList";
 import { ChecklistAddMemberInput } from "./share-dialog/ChecklistAddMemberInput";
-import { ChecklistMembersDialogHeader } from "./share-dialog/ChecklistMembersDialogHeader";
+import { ChecklistDialogHeader } from "./share-dialog/ChecklistDialogHeader";
 
 type UserRole = "qa_lead" | "qa_tester" | "owner" | "viewer" | "guest" | undefined;
 
@@ -210,7 +210,7 @@ export function ChecklistShareDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-lg p-0">
-        <ChecklistMembersDialogHeader
+        <ChecklistDialogHeader
           sprintName={sprintName}
           checklistId={checklistId}
           checklistOwnerId={checklistOwnerId}

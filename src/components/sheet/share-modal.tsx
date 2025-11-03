@@ -6,7 +6,7 @@ import { useQuery, useMutation } from "convex/react"
 import { api } from "../../../convex/_generated/api"
 import { Id } from "../../../convex/_generated/dataModel"
 import { toast } from "sonner"
-import { ShareModalHeader } from "./share-dialog/ShareModalHeader"
+import { SheetDialogHeader } from "./share-dialog/SheetDialogHeader"
 import { SheetAddMemberInput } from "./share-dialog/SheetAddMemberInput"
 import { SheetGeneralAccess } from "./share-dialog/SheetGeneralAccess"
 import { PeopleWithAccessSection } from "./share-dialog/PeopleWithAccessSection"
@@ -159,7 +159,7 @@ export function ShareModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[520px] p-0 gap-0">
-        <ShareModalHeader fileName={fileName} usersWithAccess={usersWithAccess} />
+        <SheetDialogHeader fileName={fileName} usersWithAccess={usersWithAccess} />
 
         <div className="px-6 pb-6 space-y-6">
           {/* Search Input with Role Selector */}
