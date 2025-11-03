@@ -9,7 +9,7 @@ import { toast } from "sonner"
 import { SheetDialogHeader } from "./share-dialog/SheetDialogHeader"
 import { SheetAddMemberInput } from "./share-dialog/SheetAddMemberInput"
 import { SheetGeneralAccess } from "./share-dialog/SheetGeneralAccess"
-import { PeopleWithAccessSection } from "./share-dialog/PeopleWithAccessSection"
+import { SheetMembersList } from "./share-dialog/SheetMembersList"
 import { SheetDialogFooter } from "./share-dialog/SheetDialogFooter"
 
 interface ShareModalProps {
@@ -37,8 +37,8 @@ export function ShareModal({
   const declineRequest = useMutation(api.myFunctions.declineAccessRequest)
 
   const [isAddingUser, setIsAddingUser] = useState(false)
+  const [activeTab, setActiveTab] = useState<"all" | "requests">("all")
 
-  // ✅ UPDATED: Now uses toast instead of alert
   const handleAddUser = async (email: string, role: "viewer" | "qa_lead" | "qa_tester") => {
     setIsAddingUser(true)
     try {
@@ -48,22 +48,18 @@ export function ShareModal({
         role: role,
       })
       
-      // Get a user-friendly role label
       let roleLabel = "Viewer"
       if (role === "qa_lead") roleLabel = "QA Lead"
       if (role === "qa_tester") roleLabel = "QA Tester"
       
-      // ✅ Show success toast with user email and role
       toast.success(`${email} has been added as ${roleLabel}`)
     } catch (error: any) {
-      // ✅ Show error toast instead of alert
       toast.error(error.message || "Failed to add user")
     } finally {
       setIsAddingUser(false)
     }
   }
 
-  // ✅ UPDATED: Now uses toast instead of alert
   const handleRoleChange = async (userId: Id<"users">, newRole: "viewer" | "qa_lead" | "qa_tester") => {
     try {
       await updateUserRole({
@@ -72,30 +68,24 @@ export function ShareModal({
         role: newRole,
       })
       
-      // Get a user-friendly role label
       let roleLabel = "Viewer"
       if (newRole === "qa_lead") roleLabel = "QA Lead"
       if (newRole === "qa_tester") roleLabel = "QA Tester"
       
-      // ✅ Show success toast
       toast.success(`Role updated to ${roleLabel}`)
     } catch (error: any) {
-      // ✅ Show error toast instead of alert
       toast.error(error.message || "Failed to update role")
     }
   }
 
-  // ✅ UPDATED: Now uses toast instead of alert
   const handleRemoveUser = async (userId: Id<"users">) => {
     try {
       await removeUserAccess({
         sheetId,
         targetUserId: userId,
       })
-      // ✅ Show success toast
       toast.success("User removed from sheet")
     } catch (error: any) {
-      // ✅ Show error toast instead of alert
       toast.error(error.message || "Failed to remove user")
     }
   }
@@ -107,24 +97,19 @@ export function ShareModal({
         accessLevel: newLevel
       })
       
-      // Get a user-friendly label for the success message
       let levelLabel = "Restricted"
       if (newLevel === "anyoneWithLink") levelLabel = "Anyone with the link"
       if (newLevel === "public") levelLabel = "Public"
 
-      // Show success toast
       toast.success(`General access updated to "${levelLabel}"`)
 
     } catch (error: any) {
-      // Show error toast
       toast.error(error.message || "Failed to update access level")
     }
   }
 
-  // ✅ UPDATED: Now uses toast instead of alert
   const handleApproveRequest = async (permissionId: Id<"permissions">, requestedRole: string) => {
     try {
-      // Map select value back to role format
       let actualRole: "viewer" | "qa_lead" | "qa_tester" = "viewer"
       if (requestedRole === "editor") actualRole = "qa_lead"
       if (requestedRole === "commenter") actualRole = "qa_tester"
@@ -134,24 +119,29 @@ export function ShareModal({
         finalRole: actualRole,
       })
       
-      // ✅ Show success toast
       toast.success("Access request approved")
     } catch (error: any) {
-      // ✅ Show error toast instead of alert
       toast.error(error.message || "Failed to approve request")
     }
   }
 
-  // ✅ UPDATED: Now uses toast instead of alert
   const handleDeclineRequest = async (permissionId: Id<"permissions">) => {
     try {
       await declineRequest({ permissionId })
-      // ✅ Show success toast
       toast.success("Access request declined")
     } catch (error: any) {
-      // ✅ Show error toast instead of alert
       toast.error(error.message || "Failed to decline request")
     }
+  }
+
+  const handleCopyLink = () => {
+    const link = `${window.location.origin}/sheet/${sheetId}`
+    navigator.clipboard.writeText(link)
+    toast.success("Link copied to clipboard")
+  }
+
+  const handleSendEmail = () => {
+    toast.info("Email functionality coming soon")
   }
 
   const currentAccessLevel = sheet?.accessLevel || "restricted"
@@ -166,9 +156,13 @@ export function ShareModal({
           <SheetAddMemberInput onAddUser={handleAddUser} isAddingUser={isAddingUser} />
 
           {/* People with access section */}
-          <PeopleWithAccessSection
+          <SheetMembersList
             usersWithAccess={usersWithAccess}
             pendingRequests={pendingRequests}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            onCopyLink={handleCopyLink}
+            onSendEmail={handleSendEmail}
             onRoleChange={handleRoleChange}
             onRemoveUser={handleRemoveUser}
             onApproveRequest={handleApproveRequest}

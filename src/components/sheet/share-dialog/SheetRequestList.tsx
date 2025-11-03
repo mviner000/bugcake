@@ -14,17 +14,17 @@ interface AccessRequest {
   requestedAt: number
 }
 
-interface AccessRequestListProps {
+interface SheetRequestListProps {
   pendingRequests: AccessRequest[] | undefined
   onApproveRequest: (permissionId: Id<"permissions">, requestedRole: string) => void
   onDeclineRequest: (permissionId: Id<"permissions">) => void
 }
 
-export function AccessRequestList({
+export function SheetRequestList({
   pendingRequests,
   onApproveRequest,
   onDeclineRequest,
-}: AccessRequestListProps) {
+}: SheetRequestListProps) {
   
   // Convert AccessRequest[] to GenericAccessRequest[]
   const genericRequests: GenericAccessRequest[] | undefined = pendingRequests?.map(request => ({

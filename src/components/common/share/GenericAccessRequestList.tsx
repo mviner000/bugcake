@@ -1,9 +1,11 @@
 // components/common/share/GenericAccessRequestList.tsx
 
 import { useState, ReactNode } from "react"
-import { ChevronDown, ChevronUp } from "lucide-react"
+import { ChevronDown, ChevronUp, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { OverlayScrollbarsComponent } from "overlayscrollbars-react"
 
 /**
  * Defines a role option for the dropdown
@@ -130,7 +132,6 @@ export function GenericAccessRequestList({
     }
 
     if (variant === "sheet") {
-      const { Avatar, AvatarFallback, AvatarImage } = require("@/components/ui/avatar")
       return (
         <Avatar className="h-10 w-10 flex-shrink-0">
           {request.avatarUrl ? (
@@ -216,7 +217,6 @@ export function GenericAccessRequestList({
         </div>
       )
     } else {
-      const { User } = require("lucide-react")
       return (
         <div className="text-center py-8 text-gray-500">
           <User className="h-12 w-12 mx-auto mb-2 text-gray-400" />
@@ -447,7 +447,6 @@ export function GenericAccessRequestList({
 
   // Wrap in scrollable container if requested
   if (scrollable && variant === "sheet") {
-    const { OverlayScrollbarsComponent } = require("overlayscrollbars-react")
     return (
       <OverlayScrollbarsComponent
         options={{
