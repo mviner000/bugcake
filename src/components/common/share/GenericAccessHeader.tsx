@@ -1,7 +1,7 @@
-// components/common/share/GenericAccessHeader.tsx
+// src/components/common/share/GenericAccessHeader.tsx
 
 import { ReactNode } from "react"
-import { Mail, LinkIcon, Link } from "lucide-react"
+import { Mail, Link } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
@@ -76,16 +76,19 @@ export function GenericAccessHeader({
   // Default action buttons
   const defaultActionButtons: ActionButton[] = [
     {
-      icon: variant === "sheet" ? <LinkIcon className="h-4 w-4" /> : <Link className="w-5 h-5" />,
+      icon: <Link className={variant === "sheet" ? "h-4 w-4" : "w-5 h-5"} />,
       onClick: onCopyLink,
-      ariaLabel: "Copy link",
+      ariaLabel: "Copy link to clipboard",
     },
-    ...(onSendEmail ? [{
+  ]
+
+  if (onSendEmail) {
+    defaultActionButtons.push({
       icon: <Mail className={variant === "sheet" ? "h-4 w-4" : "w-5 h-5"} />,
       onClick: onSendEmail,
-      ariaLabel: "Send email",
-    }] : []),
-  ]
+      ariaLabel: "Send email invitation",
+    })
+  }
 
   const actionButtons = customActionButtons || defaultActionButtons
 
@@ -114,7 +117,7 @@ export function GenericAccessHeader({
           {actionButtons.map((button, index) => (
             <button
               key={index}
-              className="text-gray-600 hover:text-gray-800"
+              className="text-gray-600 hover:text-gray-800 transition-colors"
               onClick={button.onClick}
               aria-label={button.ariaLabel}
             >
@@ -141,12 +144,14 @@ export function GenericAccessHeader({
             <TabsTrigger
               value="all"
               className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
+              aria-label="View all members"
             >
               {tabLabels.all}
             </TabsTrigger>
             <TabsTrigger
               value="requests"
               className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
+              aria-label={`View pending requests${pendingRequestsCount > 0 ? ` (${pendingRequestsCount})` : ''}`}
             >
               {tabLabels.requests}
               {pendingRequestsCount > 0 && (
@@ -160,10 +165,13 @@ export function GenericAccessHeader({
       )
     } else {
       return (
-        <div className="grid grid-cols-2 border rounded-lg overflow-hidden">
+        <div className="grid grid-cols-2 border rounded-lg overflow-hidden" role="tablist">
           <button
+            role="tab"
+            aria-selected={activeTab === "all"}
+            aria-label="View all members"
             onClick={() => onTabChange("all")}
-            className={`py-2 text-sm font-medium ${
+            className={`py-2 text-sm font-medium transition-colors ${
               activeTab === "all"
                 ? "bg-white border-b-2 border-black"
                 : "bg-gray-50 text-gray-600"
@@ -172,8 +180,11 @@ export function GenericAccessHeader({
             {tabLabels.all}
           </button>
           <button
+            role="tab"
+            aria-selected={activeTab === "requests"}
+            aria-label={`View pending requests${pendingRequestsCount > 0 ? ` (${pendingRequestsCount})` : ''}`}
             onClick={() => onTabChange("requests")}
-            className={`py-2 text-sm font-medium relative ${
+            className={`py-2 text-sm font-medium relative transition-colors ${
               activeTab === "requests"
                 ? "bg-white border-b-2 border-black"
                 : "bg-gray-50 text-gray-600"

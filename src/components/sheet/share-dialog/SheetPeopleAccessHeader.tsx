@@ -1,4 +1,4 @@
-// components/sheet/share-dialog/SheetPeopleAccessHeader.tsx
+// src/components/sheet/share-dialog/SheetPeopleAccessHeader.tsx
 
 import { GenericAccessHeader } from "@/components/common/share/GenericAccessHeader"
 
@@ -8,16 +8,20 @@ interface SheetPeopleAccessHeaderProps {
   onCopyLink: () => void
   onSendEmail: () => void
   pendingRequestsCount: number
-  showTabs?: boolean // NEW: Optional prop to hide tabs
+  showTabs?: boolean
 }
 
+/**
+ * Sheet-specific header that uses the generic component.
+ * Optionally hides tabs based on showTabs prop.
+ */
 export function SheetPeopleAccessHeader({
   activeTab,
   onTabChange,
   onCopyLink,
   onSendEmail,
   pendingRequestsCount,
-  showTabs = true, // NEW: Default to true for backwards compatibility
+  showTabs = true,
 }: SheetPeopleAccessHeaderProps) {
   return (
     <GenericAccessHeader
@@ -27,7 +31,7 @@ export function SheetPeopleAccessHeader({
       onSendEmail={onSendEmail}
       pendingRequestsCount={pendingRequestsCount}
       variant="sheet"
-      showTabs={showTabs} // NEW: Pass through showTabs prop
+      showTabs={showTabs}
     />
   )
 }

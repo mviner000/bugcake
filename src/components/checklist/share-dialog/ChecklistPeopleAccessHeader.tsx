@@ -8,9 +8,13 @@ interface ChecklistPeopleAccessHeaderProps {
   onCopyLink: () => void
   canManageMembers: boolean
   pendingRequestsCount: number
-  onSendEmail?: () => void // Made optional since it wasn't being used in original
+  onSendEmail?: () => void
 }
 
+/**
+ * Checklist-specific header that uses the generic component.
+ * Conditionally shows tabs based on user permissions.
+ */
 export function ChecklistPeopleAccessHeader({
   activeTab,
   onTabChange,
@@ -27,7 +31,7 @@ export function ChecklistPeopleAccessHeader({
       onSendEmail={onSendEmail}
       pendingRequestsCount={pendingRequestsCount}
       variant="checklist"
-      showTabs={canManageMembers} // Only show tabs if user can manage members
+      showTabs={canManageMembers}
     />
   )
 }
