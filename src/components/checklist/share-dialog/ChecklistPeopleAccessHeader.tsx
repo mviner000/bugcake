@@ -1,6 +1,6 @@
 // src/components/checklist/share-dialog/ChecklistPeopleAccessHeader.tsx
 
-import { GenericAccessHeader } from "@/components/common/share/GenericAccessHeader"
+import { GenericPeopleAccessHeader } from "@/components/common/share/GenericPeopleAccessHeader"
 
 interface ChecklistPeopleAccessHeaderProps {
   activeTab: "all" | "requests"
@@ -24,7 +24,7 @@ export function ChecklistPeopleAccessHeader({
   onSendEmail,
 }: ChecklistPeopleAccessHeaderProps) {
   return (
-    <GenericAccessHeader
+    <GenericPeopleAccessHeader
       activeTab={activeTab}
       onTabChange={onTabChange}
       onCopyLink={onCopyLink}

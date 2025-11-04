@@ -1,4 +1,4 @@
-// src/components/common/share/GenericAccessHeader.tsx
+// src/components/common/share/GenericPeopleAccessHeader.tsx
 
 import { ReactNode } from "react"
 import { Mail, Link } from "lucide-react"
@@ -17,7 +17,7 @@ export interface ActionButton {
 /**
  * Props for the generic access header
  */
-interface GenericAccessHeaderProps {
+interface GenericPeopleAccessHeaderProps {
   /** Current active tab */
   activeTab: "all" | "requests";
   
@@ -59,7 +59,7 @@ interface GenericAccessHeaderProps {
  * Generic reusable component for access management header with tabs.
  * Supports two visual variants and can be customized extensively.
  */
-export function GenericAccessHeader({
+export function GenericPeopleAccessHeader({
   activeTab,
   onTabChange,
   onCopyLink,
@@ -71,7 +71,7 @@ export function GenericAccessHeader({
   customActionButtons,
   wrapperClassName,
   tabLabels = { all: "All", requests: "Requests" },
-}: GenericAccessHeaderProps) {
+}: GenericPeopleAccessHeaderProps) {
   
   // Default action buttons
   const defaultActionButtons: ActionButton[] = [

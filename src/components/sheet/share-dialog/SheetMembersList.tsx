@@ -1,10 +1,9 @@
 // components/sheet/share-dialog/SheetMembersList.tsx
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Id } from "../../../../convex/_generated/dataModel"
-import { SheetRequestList } from "./SheetRequestList"
-import { SheetPeopleAccessHeader } from "./SheetPeopleAccessHeader"
-import { GenericPeopleWithAccessList, GenericAccessMember } from "@/components/common/share/GenericPeopleWithAccessList"
+// UPDATED: Import GenericAccessManager, GenericAccessRequest, and GenericAccessMember 
+// from the single source: "@/components/common/share/GenericAccessManager"
+import { GenericAccessManager, GenericAccessRequest, GenericAccessMember } from "@/components/common/share/GenericAccessManager"
 import { RoleOption } from "@/components/common/share/GenericAccessRequestList"
 
 interface User {
@@ -38,7 +37,7 @@ interface SheetMembersListProps {
   onRemoveUser: (userId: Id<"users">) => void
   onApproveRequest: (permissionId: Id<"permissions">, requestedRole: string) => void
   onDeclineRequest: (permissionId: Id<"permissions">) => void
-  canManageMembers?: boolean // NEW: Add permission prop
+  canManageMembers?: boolean
 }
 
 const roleOptions: RoleOption[] = [
@@ -58,73 +57,48 @@ export function SheetMembersList({
   onRemoveUser,
   onApproveRequest,
   onDeclineRequest,
-  canManageMembers = true, // NEW: Default to true for backwards compatibility
+  canManageMembers = true,
 }: SheetMembersListProps) {
   
-  const genericUsersWithAccess: GenericAccessMember[] | undefined = usersWithAccess?.map(user => ({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    avatarUrl: user.avatarUrl,
-    isCurrentUser: user.isCurrentUser,
-  }))
+  // Transform users to generic format
+  const genericUsersWithAccess: GenericAccessMember<Id<"users">>[] | undefined = 
+    usersWithAccess?.map(user => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      avatarUrl: user.avatarUrl,
+      isCurrentUser: user.isCurrentUser,
+    }))
 
-  const renderSheetAvatar = (person: GenericAccessMember) => {
-    const getInitials = (name: string) => {
-      return name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
-    }
-
-    return (
-      <Avatar className="h-10 w-10 flex-shrink-0">
-        {person.avatarUrl ? (
-          <AvatarImage src={person.avatarUrl || "/placeholder.svg"} alt={person.name} />
-        ) : null}
-        <AvatarFallback className="bg-muted">
-          {getInitials(person.name)}
-        </AvatarFallback>
-      </Avatar>
-    )
-  }
+  // Transform requests to generic format
+  const genericPendingRequests: GenericAccessRequest<Id<"permissions">, Id<"users">>[] | undefined =
+    pendingRequests?.map(request => ({
+      id: request.id,
+      userId: request.userId,
+      name: request.name,
+      email: request.email,
+      avatarUrl: request.avatarUrl,
+      requestedRole: request.requestedRole,
+      requestMessage: request.requestMessage,
+      requestedAt: request.requestedAt,
+    }))
 
   return (
-    <div className="space-y-4">
-      <SheetPeopleAccessHeader
-        activeTab={activeTab}
-        onTabChange={onTabChange}
-        onCopyLink={onCopyLink}
-        onSendEmail={onSendEmail}
-        pendingRequestsCount={pendingRequests?.length || 0}
-        showTabs={canManageMembers} // NEW: Hide tabs if user can't manage members
-      />
-
-      <div className="space-y-3">
-        {activeTab === "all" ? (
-          <GenericPeopleWithAccessList
-            variant="sheet"
-            usersWithAccess={genericUsersWithAccess}
-            roleOptions={roleOptions}
-            canManageMembers={canManageMembers} // NEW: Pass permission down
-            onRoleChange={onRoleChange as (id: string, role: string) => void}
-            onRemoveMember={onRemoveUser as (id: string) => void}
-            renderAvatar={renderSheetAvatar}
-          />
-        ) : (
-          // NEW: Only show requests if user has permission
-          canManageMembers ? (
-            <SheetRequestList
-              pendingRequests={pendingRequests}
-              onApproveRequest={onApproveRequest}
-              onDeclineRequest={onDeclineRequest}
-            />
-          ) : null
-        )}
-      </div>
-    </div>
+    <GenericAccessManager<Id<"users">, Id<"permissions">, "viewer" | "qa_lead" | "qa_tester">
+      variant="sheet"
+      usersWithAccess={genericUsersWithAccess}
+      pendingRequests={genericPendingRequests}
+      activeTab={activeTab}
+      onTabChange={onTabChange}
+      onCopyLink={onCopyLink}
+      onSendEmail={onSendEmail}
+      roleOptions={roleOptions}
+      canManageMembers={canManageMembers}
+      onRoleChange={onRoleChange}
+      onRemoveMember={onRemoveUser}
+      onApproveRequest={onApproveRequest}
+      onDeclineRequest={onDeclineRequest}
+    />
   )
 }

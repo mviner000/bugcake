@@ -4,13 +4,15 @@ import { X } from "lucide-react";
 import { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RoleOption } from "./GenericAccessRequestList"; // Use RoleOption from the shared file
+// FIX: Import Avatar components statically for browser compatibility
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; 
+import { RoleOption } from "./GenericAccessRequestList"; 
 
 /**
  * Generic member data structure
  */
-export interface GenericAccessMember {
-  id: string;
+export interface GenericAccessMember<TId = string> {
+  id: TId;
   name: string;
   email: string;
   role: string;
@@ -21,9 +23,9 @@ export interface GenericAccessMember {
 /**
  * Props for the generic member row component
  */
-export interface GenericAccessMemberRowProps {
+export interface GenericAccessMemberRowProps<TId = string> {
   /** The member data */
-  member: GenericAccessMember;
+  member: GenericAccessMember<TId>;
   
   /** Available role options for the dropdown (excluding 'owner') */
   roleOptions: RoleOption[];
@@ -32,13 +34,13 @@ export interface GenericAccessMemberRowProps {
   canManageMembers: boolean;
   
   /** Callback when member's role is changed */
-  onRoleChange: (memberId: string, newRole: string) => Promise<void> | void;
+  onRoleChange: (memberId: TId, newRole: string) => Promise<void> | void;
   
   /** Callback when remove button is clicked */
-  onRemoveMember: (memberId: string) => Promise<void> | void;
+  onRemoveMember: (memberId: TId) => Promise<void> | void;
   
   /** Optional custom avatar renderer */
-  renderAvatar?: (member: GenericAccessMember) => ReactNode;
+  renderAvatar?: (member: GenericAccessMember<TId>) => ReactNode;
   
   /** Custom styling variant */
   variant?: "sheet" | "checklist";
@@ -47,7 +49,7 @@ export interface GenericAccessMemberRowProps {
 /**
  * Renders a single row for a user with access, including role management controls.
  */
-export function GenericAccessMemberRow({
+export function GenericAccessMemberRow<TId = string>({
   member,
   roleOptions,
   canManageMembers,
@@ -55,9 +57,9 @@ export function GenericAccessMemberRow({
   onRemoveMember,
   renderAvatar,
   variant = "sheet",
-}: GenericAccessMemberRowProps) {
+}: GenericAccessMemberRowProps<TId>) {
   // --- Avatar Renderer ---
-  const defaultRenderAvatar = (person: GenericAccessMember) => {
+  const defaultRenderAvatar = (person: GenericAccessMember<TId>) => {
     const getInitials = (name: string) => {
       return name
         .split(" ")
@@ -68,7 +70,7 @@ export function GenericAccessMemberRow({
     }
 
     if (variant === "sheet") {
-      const { Avatar, AvatarFallback, AvatarImage } = require("@/components/ui/avatar")
+      // FIX: Removed the require statement. Components are now imported statically at the top.
       return (
         <Avatar className="h-10 w-10 flex-shrink-0">
           {person.avatarUrl ? (
@@ -113,7 +115,7 @@ export function GenericAccessMemberRow({
           {canManageMembers && member.role !== 'owner' ? (
             <>
               <Select 
-                defaultValue={member.role}
+                value={member.role}
                 onValueChange={(value) => onRoleChange(member.id, value)}
               >
                 <SelectTrigger className="w-[110px] h-9">

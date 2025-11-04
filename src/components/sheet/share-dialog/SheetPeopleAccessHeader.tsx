@@ -1,6 +1,6 @@
 // src/components/sheet/share-dialog/SheetPeopleAccessHeader.tsx
 
-import { GenericAccessHeader } from "@/components/common/share/GenericAccessHeader"
+import { GenericPeopleAccessHeader } from "@/components/common/share/GenericPeopleAccessHeader"
 
 interface SheetPeopleAccessHeaderProps {
   activeTab: "all" | "requests"
@@ -24,7 +24,7 @@ export function SheetPeopleAccessHeader({
   showTabs = true,
 }: SheetPeopleAccessHeaderProps) {
   return (
-    <GenericAccessHeader
+    <GenericPeopleAccessHeader
       activeTab={activeTab}
       onTabChange={onTabChange}
       onCopyLink={onCopyLink}

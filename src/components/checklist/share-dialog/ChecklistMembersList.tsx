@@ -1,4 +1,7 @@
-import { GenericPeopleWithAccessList, GenericAccessMember } from "@/components/common/share/GenericPeopleWithAccessList";
+// src/components/checklist/share-dialog/ChecklistMembersList.tsx
+
+// UPDATED: Import GenericAccessManager and GenericAccessMember from the single source
+import { GenericAccessManager, GenericAccessMember } from "@/components/common/share/GenericAccessManager";
 import { RoleOption } from "@/components/common/share/GenericAccessRequestList";
 
 interface Member {
@@ -24,6 +27,15 @@ const roleOptions: RoleOption[] = [
     { value: "qa_lead", label: "QA Lead" },
 ];
 
+const renderChecklistAvatar = (person: GenericAccessMember<string>) => {
+    const initial = person.name.charAt(0).toUpperCase();
+    return (
+      <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 font-medium">
+        {initial}
+      </div>
+    );
+};
+
 export function ChecklistMembersList({
   members,
   currentUserId,
@@ -32,33 +44,36 @@ export function ChecklistMembersList({
   onRemoveMember,
 }: ChecklistMembersListProps) {
   
-  const genericMembersWithAccess: GenericAccessMember[] | undefined = members?.map(member => ({
-    id: member.id,
-    name: member.name,
-    email: member.email,
-    role: member.role,
-    avatarUrl: undefined,
-    isCurrentUser: currentUserId === member.id,
-  }));
-
-  const renderChecklistAvatar = (person: GenericAccessMember) => {
-    const initial = person.name.charAt(0).toUpperCase();
-    return (
-      <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 font-medium">
-        {initial}
-      </div>
-    );
-  };
+  // Transform local Member array to generic format
+  const genericMembersWithAccess: GenericAccessMember<string>[] | undefined = 
+    members?.map(member => ({
+      id: member.id,
+      name: member.name,
+      email: member.email,
+      role: member.role,
+      avatarUrl: undefined,
+      isCurrentUser: currentUserId === member.id,
+    }));
 
   return (
-    <GenericPeopleWithAccessList
-      variant="checklist"
+    // Use GenericAccessManager for all member list needs
+    <GenericAccessManager<string, string, "qa_tester" | "qa_lead" | "viewer">
+      // 1. Keep checklist variant for styling consistency
+      variant="checklist" 
       usersWithAccess={genericMembersWithAccess}
-      roleOptions={roleOptions}
+      
+      // 2. Omitting 'pendingRequests' prevents the "Requests" tab from appearing
+
       canManageMembers={canManageMembers}
-      onRoleChange={onUpdateMemberRole as (id: string, role: string) => void}
-      onRemoveMember={onRemoveMember as (id: string) => void}
+      roleOptions={roleOptions}
+      onRoleChange={onUpdateMemberRole}
+      onRemoveMember={onRemoveMember}
       renderAvatar={renderChecklistAvatar}
+
+      // 3. Provide NO-OP functions for request-related handlers (required by interface, ignored in practice)
+      onTabChange={() => {}} 
+      onApproveRequest={() => {}} 
+      onDeclineRequest={() => {}}
     />
   );
 }
