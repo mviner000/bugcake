@@ -6,7 +6,7 @@ import {
   Menu,
 } from "lucide-react";
 import { api } from "../../../convex/_generated/api"
-import { ShareModal } from "./share-modal";
+import { SheetShareDialog } from "./SheetShareDialog";
 import { Id } from "convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import ActivityApprovalsSheet from "./right-side/ActivityApprovalsSheet";
@@ -34,7 +34,7 @@ export function Header({ sheetName, sheetId, sheetType }: HeaderProps & { sheetI
 
   return (
     <>
-      <ShareModal 
+      <SheetShareDialog 
         open={isShareModalOpen} 
         onOpenChange={setIsShareModalOpen} 
         fileName={sheetName} 

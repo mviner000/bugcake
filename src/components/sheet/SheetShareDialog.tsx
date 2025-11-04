@@ -1,4 +1,4 @@
-// components/sheet/share-modal.tsx
+// components/sheet/SheetShareDialog.tsx
 
 import { useState } from "react"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
@@ -12,28 +12,27 @@ import { SheetGeneralAccess } from "./share-dialog/SheetGeneralAccess"
 import { SheetMembersList } from "./share-dialog/SheetMembersList"
 import { SheetDialogFooter } from "./share-dialog/SheetDialogFooter"
 import { SheetPeopleAccessHeader } from "./share-dialog/SheetPeopleAccessHeader"
+import { SheetRoleCount } from "./share-dialog/SheetRoleCount"
 
-interface ShareModalProps {
+interface SheetShareDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   fileName?: string
   sheetId: Id<"sheets">
 }
 
-export function ShareModal({
+export function SheetShareDialog({
   open,
   onOpenChange,
   fileName = "Regression Testing [09-19-2025].xlsx",
   sheetId,
-}: ShareModalProps) {
+}: SheetShareDialogProps) {
   const usersWithAccess = useQuery(api.myFunctions.getUsersWithAccess, { sheetId })
   const sheet = useQuery(api.myFunctions.getSheetById, { id: sheetId })
   
-  // NEW: Conditionally fetch pending requests only if user can manage members
   const currentUser = usersWithAccess?.find(u => u.isCurrentUser)
   const canManageMembers = currentUser?.role === "qa_lead" || currentUser?.role === "owner"
   
-  // Only fetch pending requests if user has permission
   const pendingRequests = useQuery(
     api.myFunctions.getPendingAccessRequests, 
     canManageMembers ? { sheetId } : "skip"
@@ -161,14 +160,12 @@ export function ShareModal({
         <SheetDialogHeader fileName={fileName} usersWithAccess={usersWithAccess} />
 
         <div className="px-6 pb-6 space-y-6">
-          {/* Search Input with Role Selector - NEW: Pass canManageMembers */}
           <SheetAddMemberInput 
             onAddUser={handleAddUser} 
             isAddingUser={isAddingUser}
             canManageMembers={canManageMembers}
           />
 
-          {/* People with access section - NOW WITH HEADER */}
           <div>
             <SheetPeopleAccessHeader
               activeTab={activeTab}
@@ -178,6 +175,11 @@ export function ShareModal({
               pendingRequestsCount={pendingRequests?.length || 0}
               showTabs={canManageMembers}
             />
+            
+            <div className="px-5">
+              <SheetRoleCount usersWithAccess={usersWithAccess} />
+            </div>
+
             <SheetMembersList
               usersWithAccess={usersWithAccess}
               pendingRequests={pendingRequests}
@@ -193,13 +195,11 @@ export function ShareModal({
             />
           </div>
 
-          {/* General access section */}
           <SheetGeneralAccess
             currentAccessLevel={currentAccessLevel}
             onAccessLevelChange={handleAccessLevelChange}
           />
 
-          {/* Action buttons */}
           <SheetDialogFooter 
             onCopyLink={handleCopyLink}
             onClose={() => onOpenChange(false)} 

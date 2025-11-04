@@ -1,6 +1,6 @@
-// src/components/checklist/ChecklistRoleDisplay.tsx
+// src/components/common/share/GenericRoleCount.tsx
 
-interface ChecklistMember {
+interface GenericMember {
   id: any;
   name: string;
   email: string;
@@ -9,17 +9,18 @@ interface ChecklistMember {
   isCurrentUser?: boolean;
 }
 
-interface ChecklistRoleDisplayProps {
-  members: ChecklistMember[] | undefined;
-  includeOwner?: boolean;
-  ownerEmail?: string;
+interface GenericRoleCountProps {
+  members: GenericMember[] | undefined;
+  customRoleLabels?: Record<string, string>;
+  customRoleOrder?: string[];
 }
 
-export function ChecklistRoleDisplay({ 
-  members, 
-  includeOwner = false,
-}: ChecklistRoleDisplayProps) {
-  const validMembers = Array.isArray(members) ? (members as ChecklistMember[]) : [];
+export function GenericRoleCount({ 
+  members,
+  customRoleLabels,
+  customRoleOrder,
+}: GenericRoleCountProps) {
+  const validMembers = Array.isArray(members) ? (members as GenericMember[]) : [];
 
   // Count roles from members
   const roleCounts = validMembers.reduce(
@@ -30,25 +31,23 @@ export function ChecklistRoleDisplay({
     {} as Record<string, number>
   );
 
-  // Add owner to counts if includeOwner is true
-  if (includeOwner) {
-    roleCounts["owner"] = (roleCounts["owner"] || 0) + 1;
-  }
-
   // If no roles to display, return null
   if (Object.keys(roleCounts).length === 0) {
     return null;
   }
 
-  const roleLabels: Record<string, string> = {
+  const defaultRoleLabels: Record<string, string> = {
     owner: "Owner",
     qa_lead: "QA Lead",
     qa_tester: "QA Tester",
     viewer: "Viewer",
   };
 
+  const roleLabels = customRoleLabels || defaultRoleLabels;
+
   // Define role order for display
-  const roleOrder = ["owner", "qa_lead", "qa_tester", "viewer"];
+  const defaultRoleOrder = ["owner", "qa_lead", "qa_tester", "viewer"];
+  const roleOrder = customRoleOrder || defaultRoleOrder;
 
   const roleDisplay = roleOrder
     .filter((role) => roleCounts[role] > 0)
@@ -59,8 +58,8 @@ export function ChecklistRoleDisplay({
     .join(", ");
 
   return (
-    <span className="inline-block bg-black text-white text-xs font-medium px-3 py-1 rounded-full">
+    <div className="inline-flex items-center px-3 py-1 bg-black text-white text-xs rounded-full font-medium">
       {roleDisplay}
-    </span>
+    </div>
   );
 }

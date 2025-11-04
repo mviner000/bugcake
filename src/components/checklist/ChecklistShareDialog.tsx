@@ -1,6 +1,6 @@
 // src/components/checklist/ChecklistShareDialog.tsx
 
-import { useState, useMemo } from "react"; // ✅ IMPORT useMemo
+import { useState, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,14 +9,13 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { toast } from "sonner";
-import { ChecklistRoleDisplay } from "./ChecklistRoleDisplay";
 import { ChecklistGeneralAccess } from "./share-dialog/ChecklistGeneralAccess";
 import { ChecklistPeopleAccessHeader } from "./share-dialog/ChecklistPeopleAccessHeader";
 import { ChecklistDialogFooter } from "./share-dialog/ChecklistDialogFooter";
 import { ChecklistMembersList } from "./share-dialog/ChecklistMembersList";
-import { ChecklistRequestsList } from "./share-dialog/ChecklistRequestsList";
 import { ChecklistAddMemberInput } from "./share-dialog/ChecklistAddMemberInput";
 import { ChecklistDialogHeader } from "./share-dialog/ChecklistDialogHeader";
+import { ChecklistRoleCount } from "./share-dialog/ChecklistRoleCount";
 
 type UserRole = "qa_lead" | "qa_tester" | "owner" | "viewer" | "guest" | undefined;
 
@@ -41,8 +40,6 @@ export function ChecklistShareDialog({
 }: ChecklistShareDialogProps) {
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [activeTab, setActiveTab] = useState<"all" | "requests">("all");
-  const [selectedRequestRoles, setSelectedRequestRoles] = useState<Record<string, "qa_tester" | "qa_lead" | "viewer">>({});
-  const [expandedRequests, setExpandedRequests] = useState<Record<string, boolean>>({});
 
   const checklist = useQuery(
     api.myFunctions.getChecklistById,
@@ -67,32 +64,26 @@ export function ChecklistShareDialog({
 
   const canManageMembers = currentUserRole === "owner" || currentUserRole === "qa_lead";
 
-  // ✅ START OF FIX
   const allMembers = useMemo(() => {
     // Wait until members are loaded
     if (!members) {
       return undefined;
     }
 
-    // 1. Create the synthetic owner object
-    // This object mimics the structure of a member object
+    // Create the synthetic owner object
     const ownerMember = {
-      // Use checklistOwnerId as the 'id'. This is safe because
-      // the GenericAccessManager renders the owner row as non-mutable,
-      // so this ID will never be passed to onRemoveMember.
       id: checklistOwnerId,
       userId: checklistOwnerId,
-      name: checklistOwnerEmail.split('@')[0], // Use email prefix as name
+      name: checklistOwnerEmail.split('@')[0],
       email: checklistOwnerEmail,
-      role: "owner" as const, // This is what GenericAccessManager looks for
-      addedAt: 0, // Not applicable
-      addedBy: "System", // Not applicable
+      role: "owner" as const,
+      addedAt: 0,
+      addedBy: "System",
     };
 
-    // 2. Combine the synthetic owner with the rest of the members
+    // Combine the synthetic owner with the rest of the members
     return [ownerMember, ...members];
   }, [members, checklistOwnerId, checklistOwnerEmail]);
-  // ✅ END OF FIX
 
   const handleAddMember = async (email: string, role: "qa_tester" | "qa_lead" | "viewer") => {
     setIsAddingMember(true);
@@ -145,17 +136,6 @@ export function ChecklistShareDialog({
         finalRole: finalRole,
       });
       toast.success("Access request approved successfully.");
-      
-      setSelectedRequestRoles(prev => {
-        const newRoles = { ...prev };
-        delete newRoles[requestId];
-        return newRoles;
-      });
-      setExpandedRequests(prev => {
-        const newExpanded = { ...prev };
-        delete newExpanded[requestId];
-        return newExpanded;
-      });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to approve request.");
     }
@@ -167,17 +147,6 @@ export function ChecklistShareDialog({
         requestId: requestId as Id<"checklistAccessRequests">,
       });
       toast.success("Access request declined.");
-      
-      setSelectedRequestRoles(prev => {
-        const newRoles = { ...prev };
-        delete newRoles[requestId];
-        return newRoles;
-      });
-      setExpandedRequests(prev => {
-        const newExpanded = { ...prev };
-        delete newExpanded[requestId];
-        return newExpanded;
-      });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to decline request.");
     }
@@ -207,102 +176,70 @@ export function ChecklistShareDialog({
     });
   };
 
-  // NEW: Handler for sending email invitations
   const handleSendEmail = () => {
-    // You can implement email functionality here
-    // For now, we'll show a toast message
     toast.info("Email invitation feature coming soon!");
-    // Example implementation (uncomment when ready):
-    // const subject = encodeURIComponent(`You've been invited to ${sprintName}`);
-    // const body = encodeURIComponent(`Join this checklist: ${window.location.href}`);
-    // window.open(`mailto:?subject=${subject}&body=${body}`);
-  };
-
-  const handleToggleExpand = (requestId: string) => {
-    setExpandedRequests({
-      ...expandedRequests,
-      [requestId]: !expandedRequests[requestId],
-    });
-  };
-
-  const handleSelectRole = (requestId: string, role: "qa_tester" | "qa_lead" | "viewer") => {
-    setSelectedRequestRoles({
-      ...selectedRequestRoles,
-      [requestId]: role,
-    });
   };
 
   const currentAccessLevel = checklist?.accessLevel || "restricted";
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg p-0">
+      <DialogContent className="max-w-[520px] p-0 gap-0">
         <ChecklistDialogHeader
           sprintName={sprintName}
           checklistId={checklistId}
           checklistOwnerId={checklistOwnerId}
         />
 
-        <ChecklistAddMemberInput
-          onAddMember={handleAddMember}
-          canManageMembers={canManageMembers}
-          isAddingUser={isAddingMember}
-        />
-
-        <ChecklistPeopleAccessHeader
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          onCopyLink={handleCopyLink}
-          canManageMembers={canManageMembers}
-          pendingRequestsCount={pendingRequests?.length || 0}
-        />
-
-        <div className="px-5">
-          <ChecklistRoleDisplay
-            members={members} 
-            includeOwner={true}
-            ownerEmail={checklistOwnerEmail}
+        <div className="px-6 pb-6 space-y-6">
+          <ChecklistAddMemberInput
+            onAddMember={handleAddMember}
+            canManageMembers={canManageMembers}
+            isAddingUser={isAddingMember}
           />
-        </div>
 
-        <div className="px-5 max-h-96 overflow-y-auto">
-          {activeTab === "all" ?
-            (
+          <div>
+            <ChecklistPeopleAccessHeader
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              onCopyLink={handleCopyLink}
+              canManageMembers={canManageMembers}
+              pendingRequestsCount={pendingRequests?.length || 0}
+            />
+
+            <div className="px-5">
+              <ChecklistRoleCount members={allMembers} />
+            </div>
+
             <ChecklistMembersList
-              members={allMembers} // ✅ CHANGED: Use allMembers instead of members
+              members={allMembers}
+              pendingRequests={pendingRequests}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
               checklistOwnerEmail={checklistOwnerEmail}
               checklistOwnerId={checklistOwnerId}
               currentUserId={currentUser?._id}
               canManageMembers={canManageMembers}
               onUpdateMemberRole={handleUpdateMemberRole}
               onRemoveMember={handleRemoveMember}
-              // NEW: Pass the copy link and send email handlers
               onCopyLink={handleCopyLink}
               onSendEmail={handleSendEmail}
-            />
-          ) : (
-            <ChecklistRequestsList
-              pendingRequests={pendingRequests}
-              expandedRequests={expandedRequests}
-              selectedRequestRoles={selectedRequestRoles}
-              onToggleExpand={handleToggleExpand}
-              onSelectRole={handleSelectRole}
               onApproveRequest={handleApproveRequest}
               onDeclineRequest={handleDeclineRequest}
             />
-          )}
+          </div>
+
+          <ChecklistGeneralAccess
+            generalAccess={currentAccessLevel}
+            onAccessChange={handleAccessLevelChange}
+            canManageMembers={canManageMembers}
+          />
+
+          <ChecklistDialogFooter
+            onCopyLink={handleCopyLink}
+            onClose={onClose}
+          />
         </div>
-
-        <ChecklistGeneralAccess
-          generalAccess={currentAccessLevel}
-          onAccessChange={handleAccessLevelChange}
-          canManageMembers={canManageMembers}
-        />
-
-        <ChecklistDialogFooter
-          onCopyLink={handleCopyLink}
-          onClose={onClose}
-        />
       </DialogContent>
     </Dialog>
   );

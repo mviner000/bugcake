@@ -1,6 +1,5 @@
 // components/sheet/share-dialog/SheetMembersList.tsx
 
-import { ReactNode } from "react"
 import { Id } from "../../../../convex/_generated/dataModel"
 import { GenericAccessManager, GenericAccessRequest, GenericAccessMember } from "@/components/common/share/GenericAccessManager"
 import { RoleOption } from "@/components/common/share/GenericAccessRequestList"
@@ -81,11 +80,6 @@ export function SheetMembersList({
       requestedAt: request.requestedAt,
     }))
 
-  // Custom header renderer that ONLY shows the role summary
-  const customHeaderRenderer = ({ roleSummary }: { roleSummary?: ReactNode }) => {
-    return roleSummary ? <div className="mb-3">{roleSummary}</div> : null
-  }
-
   return (
     <GenericAccessManager<Id<"users">, Id<"permissions">, "viewer" | "qa_lead" | "qa_tester">
       variant="sheet"
@@ -99,8 +93,7 @@ export function SheetMembersList({
       onRemoveMember={onRemoveUser}
       onApproveRequest={onApproveRequest}
       onDeclineRequest={onDeclineRequest}
-      // Custom header that only renders the role summary
-      renderHeader={customHeaderRenderer}
+      showBuiltInHeader={false}
     />
   )
 }

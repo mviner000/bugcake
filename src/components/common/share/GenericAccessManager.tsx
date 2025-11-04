@@ -42,7 +42,6 @@ interface HeaderProps {
   onCopyLink?: () => void;
   onSendEmail?: () => void;
   pendingRequestsCount: number;
-  roleSummary?: ReactNode; 
 }
 
 /**
@@ -270,39 +269,6 @@ export function GenericAccessManager<TUserId = string, TRequestId = string, TRol
 
   const RequestItemComponent = renderRequestItem || defaultRequestRenderer;
 
-  // --- Calculate role summary ---
-  let roleSummary: ReactNode = null;
-  if (usersWithAccess) {
-    const counts: Record<string, number> = {};
-    usersWithAccess.forEach(user => {
-      counts[user.role] = (counts[user.role] || 0) + 1;
-    });
-
-    const formatRole = (role: string) => {
-        if (role === 'qa_lead') return 'QA Lead';
-        if (role === 'qa_tester') return 'QA Tester';
-        return role.charAt(0).toUpperCase() + role.slice(1);
-    };
-
-    const parts = Object.entries(counts)
-      .sort(([roleA], [roleB]) => {
-        const order: Record<string, number> = { 'owner': 0, 'qa_lead': 1, 'qa_tester': 2, 'viewer': 3 };
-        return (order[roleA] ?? 99) - (order[roleB] ?? 99);
-      })
-      .map(([role, count]) => {
-        const label = formatRole(role);
-        return `${count} ${label}${count > 1 ? 's' : ''}`;
-      });
-
-    if (parts.length > 0) {
-      roleSummary = (
-        <div className="inline-flex items-center px-3 py-1 bg-black text-white text-sm rounded-full font-medium">
-          {parts.join(', ')}
-        </div>
-      );
-    }
-  }
-
   // --- MEMBER LIST LOGIC ---
   const renderMembersList = () => {
     // Loading State
@@ -386,7 +352,6 @@ export function GenericAccessManager<TUserId = string, TRequestId = string, TRol
         onCopyLink,
         onSendEmail,
         pendingRequestsCount: pendingRequests?.length || 0,
-        roleSummary,
       });
     }
   }
