@@ -2,7 +2,6 @@
 
 import { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 
 import { GenericAccessMemberRow } from "./GenericAccessMemberRow";
@@ -121,122 +120,6 @@ export interface GenericAccessManagerProps<TUserId = string, TRequestId = string
   showBuiltInHeader?: boolean;
 }
 
-// --- Reusable Share Buttons Component ---
-interface ShareButtonsProps {
-  onCopyLink?: () => void;
-  onSendEmail?: () => void;
-}
-
-function ShareButtons({ onCopyLink, onSendEmail }: ShareButtonsProps) {
-  if (!onCopyLink && !onSendEmail) {
-    return null;
-  }
-
-  return (
-    <div className="flex gap-2">
-      {onCopyLink && (
-        <Button variant="outline" size="sm" onClick={onCopyLink}>
-          Copy Link
-        </Button>
-      )}
-      {onSendEmail && (
-        <Button size="sm" onClick={onSendEmail}>
-          Send Email
-        </Button>
-      )}
-    </div>
-  );
-}
-
-/**
- * Default header renderer for sheet variant
- */
-function DefaultSheetHeader({ 
-  activeTab, 
-  onTabChange, 
-  onCopyLink, 
-  onSendEmail, 
-  pendingRequestsCount,
-  roleSummary,
-}: HeaderProps) {
-  const handleTabChange = (value: string) => {
-    onTabChange(value as "all" | "requests");
-  };
-
-  return (
-    <div className="space-y-3">
-      <Tabs value={activeTab} onValueChange={handleTabChange}> 
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="all">All Members</TabsTrigger>
-          <TabsTrigger value="requests" className="relative">
-            Requests
-            {pendingRequestsCount > 0 && (
-              <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-destructive rounded-full">
-                {pendingRequestsCount}
-              </span>
-            )}
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
-      
-      {roleSummary}
-
-      <ShareButtons onCopyLink={onCopyLink} onSendEmail={onSendEmail} />
-    </div>
-  );
-}
-
-/**
- * Default header renderer for checklist variant
- */
-function DefaultChecklistHeader({ 
-  activeTab, 
-  onTabChange, 
-  onCopyLink, 
-  onSendEmail, 
-  pendingRequestsCount,
-  roleSummary,
-}: HeaderProps) {
-  const handleTabChange = (tab: "all" | "requests") => {
-    onTabChange(tab);
-  };
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-4 border-b">
-        <button
-          onClick={() => handleTabChange("all")}
-          className={`pb-2 px-1 text-sm font-medium transition-colors ${
-            activeTab === "all"
-              ? "border-b-2 border-blue-600 text-blue-600"
-              : "text-gray-600 hover:text-gray-900"
-          }`}
-        >
-          All Members
-        </button>
-        <button
-          onClick={() => handleTabChange("requests")}
-          className={`pb-2 px-1 text-sm font-medium transition-colors relative ${
-            activeTab === "requests"
-              ? "border-b-2 border-blue-600 text-blue-600"
-              : "text-gray-600 hover:text-gray-900"
-          }`}
-        >
-          Requests
-          {pendingRequestsCount > 0 && (
-            <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full">
-              {pendingRequestsCount}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {roleSummary}
-
-      <ShareButtons onCopyLink={onCopyLink} onSendEmail={onSendEmail} />
-    </div>
-  );
-}
 
 /**
  * Default request item renderer for sheet variant
@@ -383,7 +266,6 @@ export function GenericAccessManager<TUserId = string, TRequestId = string, TRol
 }: GenericAccessManagerProps<TUserId, TRequestId, TRole>) {
   
   // Select default renderers based on variant
-  const defaultHeaderRenderer = variant === "sheet" ? DefaultSheetHeader : DefaultChecklistHeader;
   const defaultRequestRenderer = variant === "sheet" ? DefaultSheetRequestItem : DefaultChecklistRequestItem;
 
   const RequestItemComponent = renderRequestItem || defaultRequestRenderer;
@@ -506,22 +388,6 @@ export function GenericAccessManager<TUserId = string, TRequestId = string, TRol
         pendingRequestsCount: pendingRequests?.length || 0,
         roleSummary,
       });
-    }
-    // Use default header if renderHeader is undefined
-    else {
-      const showTabs = canManageMembers && pendingRequests !== undefined;
-      const showButtons = onCopyLink || onSendEmail;
-      
-      if (showTabs || showButtons) {
-        headerElement = defaultHeaderRenderer({
-          activeTab,
-          onTabChange,
-          onCopyLink,
-          onSendEmail,
-          pendingRequestsCount: pendingRequests?.length || 0,
-          roleSummary,
-        });
-      }
     }
   }
 
