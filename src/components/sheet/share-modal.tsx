@@ -146,7 +146,6 @@ export function ShareModal({
   const handleCopyLink = () => {
     const link = `${window.location.origin}/sheet/${sheetId}`
     navigator.clipboard.writeText(link)
-    toast.success("Link copied to clipboard")
   }
 
   const handleSendEmail = () => {
@@ -190,7 +189,10 @@ export function ShareModal({
           />
 
           {/* Action buttons */}
-          <SheetDialogFooter onClose={() => onOpenChange(false)} />
+          <SheetDialogFooter 
+            onCopyLink={handleCopyLink}
+            onClose={() => onOpenChange(false)} 
+          />
         </div>
       </DialogContent>
     </Dialog>

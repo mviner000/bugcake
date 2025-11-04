@@ -9,7 +9,7 @@ interface ChecklistDialogFooterProps {
 
 /**
  * Checklist-specific footer that uses the generic component.
- * Passes through the parent's copy link handler which includes toast notification.
+ * Passes through the parent's copy link handler.
  */
 export function ChecklistDialogFooter({
   onCopyLink,

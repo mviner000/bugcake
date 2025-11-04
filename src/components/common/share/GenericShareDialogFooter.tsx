@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Check, Copy } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
 
 interface GenericShareDialogFooterProps {
   /** Callback when Done button is clicked */
@@ -45,17 +46,41 @@ export function GenericShareDialogFooter({
   const handleCopyLink = async () => {
     if (onCopyLink) {
       // Use custom copy function if provided
-      onCopyLink()
-      setIsCopied(true)
-      setTimeout(() => setIsCopied(false), 2000)
+      try {
+        onCopyLink()
+        setIsCopied(true)
+        setTimeout(() => setIsCopied(false), 2000)
+        
+        // Show success toast with Sonner
+        toast.success("Link copied!", {
+          description: "The link has been copied to your clipboard.",
+        })
+      } catch (error) {
+        console.error("Failed to copy link:", error)
+        
+        // Show error toast with Sonner
+        toast.error("Failed to copy", {
+          description: "Could not copy the link. Please try again.",
+        })
+      }
     } else {
       // Default: copy current URL
       try {
         await navigator.clipboard.writeText(window.location.href)
         setIsCopied(true)
         setTimeout(() => setIsCopied(false), 2000)
+        
+        // Show success toast with Sonner
+        toast.success("Link copied!", {
+          description: "The link has been copied to your clipboard.",
+        })
       } catch (error) {
         console.error("Failed to copy link:", error)
+        
+        // Show error toast with Sonner
+        toast.error("Failed to copy", {
+          description: "Could not copy the link. Please try again.",
+        })
       }
     }
   }
@@ -67,6 +92,7 @@ export function GenericShareDialogFooter({
           variant="outline" 
           onClick={handleCopyLink} 
           disabled={isCopied}
+          aria-label={isCopied ? "Link copied to clipboard" : "Copy link to clipboard"}
         >
           {isCopied ? (
             <Check className="h-4 w-4 mr-2 text-green-600" />
@@ -79,7 +105,10 @@ export function GenericShareDialogFooter({
       
       {!showCopyButton && <div />}
       
-      <Button onClick={onClose}>
+      <Button 
+        onClick={onClose}
+        aria-label="Close dialog"
+      >
         {doneButtonText}
       </Button>
     </div>

@@ -26,11 +26,13 @@ export function SheetDialogHeader({ fileName, usersWithAccess }: SheetDialogHead
   return (
     <GenericShareDialogHeader
       title={fileName}
-      subtitle={<UserRoleDisplay usersWithAccess={usersWithAccess} />}
+      subtitle={
+        <UserRoleDisplay usersWithAccess={usersWithAccess} />
+      }
       titlePrefix="Share"
       useDialogHeader={true}
       wrapperClassName="px-6 pt-6 pb-4"
-      titleClassName="text-xl font-normal"
+      titleClassName="text-xl font-semibold"
     />
   )
 }
