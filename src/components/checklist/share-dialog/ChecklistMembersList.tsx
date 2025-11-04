@@ -19,6 +19,9 @@ interface ChecklistMembersListProps {
   canManageMembers: boolean;
   onUpdateMemberRole: (memberId: string, newRole: "qa_tester" | "qa_lead" | "viewer") => void;
   onRemoveMember: (memberId: string) => void;
+  // NEW: Added these two props
+  onCopyLink: () => void;
+  onSendEmail: () => void;
 }
 
 const roleOptions: RoleOption[] = [
@@ -42,6 +45,8 @@ export function ChecklistMembersList({
   canManageMembers,
   onUpdateMemberRole,
   onRemoveMember,
+  onCopyLink,    // NEW: Destructure the new props
+  onSendEmail,   // NEW: Destructure the new props
 }: ChecklistMembersListProps) {
   
   // Transform local Member array to generic format
@@ -69,6 +74,10 @@ export function ChecklistMembersList({
       onRoleChange={onUpdateMemberRole}
       onRemoveMember={onRemoveMember}
       renderAvatar={renderChecklistAvatar}
+
+      // NEW: Pass the copy link and send email handlers to GenericAccessManager
+      onCopyLink={onCopyLink}
+      onSendEmail={onSendEmail}
 
       // 3. Provide NO-OP functions for request-related handlers (required by interface, ignored in practice)
       onTabChange={() => {}} 

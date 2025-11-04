@@ -3,8 +3,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
-
-
 export const checklistStatusEnum = v.union(
   v.literal("Open"),
   v.literal("In Progress"),

@@ -191,6 +191,18 @@ export function ChecklistShareDialog({
     });
   };
 
+  // NEW: Handler for sending email invitations
+  const handleSendEmail = () => {
+    // You can implement email functionality here
+    // For now, we'll show a toast message
+    toast.info("Email invitation feature coming soon!");
+    
+    // Example implementation (uncomment when ready):
+    // const subject = encodeURIComponent(`You've been invited to ${sprintName}`);
+    // const body = encodeURIComponent(`Join this checklist: ${window.location.href}`);
+    // window.open(`mailto:?subject=${subject}&body=${body}`);
+  };
+
   const handleToggleExpand = (requestId: string) => {
     setExpandedRequests({
       ...expandedRequests,
@@ -248,6 +260,9 @@ export function ChecklistShareDialog({
               canManageMembers={canManageMembers}
               onUpdateMemberRole={handleUpdateMemberRole}
               onRemoveMember={handleRemoveMember}
+              // NEW: Pass the copy link and send email handlers
+              onCopyLink={handleCopyLink}
+              onSendEmail={handleSendEmail}
             />
           ) : (
             <ChecklistRequestsList

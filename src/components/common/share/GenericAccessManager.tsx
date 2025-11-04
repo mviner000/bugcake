@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 
-import { GenericAccessMemberRow } from "./GenericAccessMemberRow"; 
+import { GenericAccessMemberRow } from "./GenericAccessMemberRow";
 import { RoleOption } from "./GenericAccessRequestList";
 
 /**
@@ -44,6 +44,7 @@ interface HeaderProps {
   onCopyLink?: () => void;
   onSendEmail?: () => void;
   pendingRequestsCount: number;
+  roleSummary?: ReactNode; 
 }
 
 /**
@@ -66,49 +67,63 @@ export interface GenericAccessManagerProps<TUserId = string, TRequestId = string
   
   /** Array of pending access requests (optional) */
   pendingRequests?: GenericAccessRequest<TRequestId, TUserId>[] | undefined;
-  
   /** Current active tab */
   activeTab?: "all" | "requests";
-  
   /** Tab change handler */
-  onTabChange?: (tab: "all" | "requests") => void;
-  
+  onTabChange: (tab: "all" | "requests") => void;
   /** Copy link handler (optional) */
   onCopyLink?: () => void;
-  
   /** Send email handler (optional) */
   onSendEmail?: () => void;
-  
   /** Available role options for the dropdown */
   roleOptions: RoleOption[];
-  
   /** Whether the current user can manage members */
   canManageMembers: boolean;
-  
   /** Callback when member's role is changed */
   onRoleChange: (memberId: TUserId, newRole: TRole) => Promise<void> | void;
-  
   /** Callback when remove button is clicked */
   onRemoveMember: (memberId: TUserId) => Promise<void> | void;
-  
   /** Callback when access request is approved (optional) */
   onApproveRequest?: (requestId: TRequestId, requestedRole: string) => void;
-  
   /** Callback when access request is declined (optional) */
   onDeclineRequest?: (requestId: TRequestId) => void;
-  
   /** Optional custom avatar renderer */
   renderAvatar?: (member: GenericAccessMember<TUserId>) => ReactNode;
-  
   /** Custom styling variant */
   variant?: "sheet" | "checklist";
-  
   /** Optional custom header renderer */
   renderHeader?: (props: HeaderProps) => ReactNode;
-  
   /** Optional custom request item renderer */
   renderRequestItem?: (props: RequestItemProps<TRequestId, TUserId>) => ReactNode;
 }
+
+// --- NEW: Reusable Share Buttons Component ---
+interface ShareButtonsProps {
+  onCopyLink?: () => void;
+  onSendEmail?: () => void;
+}
+
+function ShareButtons({ onCopyLink, onSendEmail }: ShareButtonsProps) {
+  if (!onCopyLink && !onSendEmail) {
+    return null;
+  }
+
+  return (
+    <div className="flex gap-2">
+      {onCopyLink && (
+        <Button variant="outline" size="sm" onClick={onCopyLink}>
+          Copy Link
+        </Button>
+      )}
+      {onSendEmail && (
+        <Button size="sm" onClick={onSendEmail}>
+          Send Email
+        </Button>
+      )}
+    </div>
+  );
+}
+// --- END: Reusable Share Buttons Component ---
 
 /**
  * Default header renderer for sheet variant
@@ -118,7 +133,8 @@ function DefaultSheetHeader({
   onTabChange, 
   onCopyLink, 
   onSendEmail, 
-  pendingRequestsCount 
+  pendingRequestsCount,
+  roleSummary,
 }: HeaderProps) {
   
   // FIX: This wrapper function explicitly casts the generic 'string' 
@@ -126,7 +142,7 @@ function DefaultSheetHeader({
   const handleTabChange = (value: string) => {
     onTabChange(value as "all" | "requests");
   };
-  
+
   return (
     <div className="space-y-3">
       {/* Use the fixed handleTabChange function */}
@@ -144,20 +160,10 @@ function DefaultSheetHeader({
         </TabsList>
       </Tabs>
       
-      {(onCopyLink || onSendEmail) && (
-        <div className="flex gap-2">
-          {onCopyLink && (
-            <Button variant="outline" size="sm" onClick={onCopyLink}>
-              Copy Link
-            </Button>
-          )}
-          {onSendEmail && (
-            <Button size="sm" onClick={onSendEmail}>
-              Send Email
-            </Button>
-          )}
-        </div>
-      )}
+      {roleSummary}
+
+      {/* REFACTORED: Use ShareButtons component */}
+      <ShareButtons onCopyLink={onCopyLink} onSendEmail={onSendEmail} />
     </div>
   );
 }
@@ -170,7 +176,8 @@ function DefaultChecklistHeader({
   onTabChange, 
   onCopyLink, 
   onSendEmail, 
-  pendingRequestsCount 
+  pendingRequestsCount,
+  roleSummary,
 }: HeaderProps) {
   // FIX: Although the checklist header's buttons use constants, 
   // we add the same wrapper for robustness if the UI changes.
@@ -208,26 +215,10 @@ function DefaultChecklistHeader({
         </button>
       </div>
 
-      {(onCopyLink || onSendEmail) && (
-        <div className="flex gap-2">
-          {onCopyLink && (
-            <button
-              onClick={onCopyLink}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-            >
-              Copy Link
-            </button>
-          )}
-          {onSendEmail && (
-            <button
-              onClick={onSendEmail}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Send Email
-            </button>
-          )}
-        </div>
-      )}
+      {roleSummary}
+
+      {/* REFACTORED: Use ShareButtons component */}
+      <ShareButtons onCopyLink={onCopyLink} onSendEmail={onSendEmail} />
     </div>
   );
 }
@@ -377,7 +368,8 @@ export function GenericAccessManager<TUserId = string, TRequestId = string, TRol
   
   // Determine if we should show tabs/header
   const showTabs = canManageMembers && pendingRequests !== undefined && onTabChange;
-  const showHeader = onCopyLink || onSendEmail || showTabs;
+  const showButtons = onCopyLink || onSendEmail;
+  const showHeader = showButtons || showTabs;
 
   // Select default renderers based on variant
   const defaultHeaderRenderer = variant === "sheet" ? DefaultSheetHeader : DefaultChecklistHeader;
@@ -385,6 +377,43 @@ export function GenericAccessManager<TUserId = string, TRequestId = string, TRol
 
   const HeaderComponent = renderHeader || defaultHeaderRenderer;
   const RequestItemComponent = renderRequestItem || defaultRequestRenderer;
+
+  // --- NEW: Calculate role summary for all variants ---
+  let roleSummary: ReactNode = null;
+  if (usersWithAccess) {
+    const counts: Record<string, number> = {};
+    usersWithAccess.forEach(user => {
+      counts[user.role] = (counts[user.role] || 0) + 1;
+    });
+
+    const formatRole = (role: string) => {
+        if (role === 'qa_lead') return 'QA Lead';
+        if (role === 'qa_tester') return 'QA Tester';
+        return role.charAt(0).toUpperCase() + role.slice(1);
+    };
+
+    const parts = Object.entries(counts)
+      // Sort to put Owner first, then lead, tester, viewer
+      .sort(([roleA], [roleB]) => {
+        const order: Record<string, number> = { 'owner': 0, 'qa_lead': 1, 'qa_tester': 2, 'viewer': 3 };
+        return (order[roleA] ?? 99) - (order[roleB] ?? 99);
+      })
+      .map(([role, count]) => {
+        const label = formatRole(role);
+        return `${count} ${label}${count > 1 ? 's' : ''}`;
+      });
+
+    if (parts.length > 0) {
+      // UPDATED: Use consistent black pill styling for all variants
+      roleSummary = (
+        <div className="inline-flex items-center px-3 py-1 bg-black text-white text-sm rounded-full font-medium">
+          {parts.join(', ')}
+        </div>
+      );
+    }
+  }
+  // --- END NEW LOGIC ---
+
 
   // --- MEMBER LIST LOGIC (Integrated from GenericMembersList.tsx) ---
   const renderMembersList = () => {
@@ -432,7 +461,6 @@ export function GenericAccessManager<TUserId = string, TRequestId = string, TRol
               renderAvatar={renderAvatar}
               variant={variant}
             />
-            
             {variant === "sheet" && nonOwners.length > 0 && <div className="h-px bg-border my-2" />}
           </>
         )}
@@ -458,15 +486,24 @@ export function GenericAccessManager<TUserId = string, TRequestId = string, TRol
 
   return (
     <div className="space-y-4">
-      {/* Header Section */}
-      {showHeader && showTabs && (
-        <HeaderComponent
-          activeTab={activeTab}
-          onTabChange={onTabChange}
-          onCopyLink={onCopyLink}
-          onSendEmail={onSendEmail}
-          pendingRequestsCount={pendingRequests?.length || 0}
-        />
+      {/* Header Section - Show if we have buttons OR tabs */}
+      {showHeader && (
+        <>
+          {showTabs ? (
+            <HeaderComponent
+              activeTab={activeTab}
+              onTabChange={onTabChange!}
+              onCopyLink={onCopyLink}
+              onSendEmail={onSendEmail}
+              pendingRequestsCount={pendingRequests?.length || 0}
+              roleSummary={roleSummary} 
+            />
+          ) : (
+            // REFACTORED: Use ShareButtons component
+            // This renders only if showTabs is false but showButtons is true
+            showButtons ? <ShareButtons onCopyLink={onCopyLink} onSendEmail={onSendEmail} /> : null
+          )}
+        </>
       )}
 
       {/* Content Section */}
