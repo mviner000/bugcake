@@ -57,7 +57,7 @@ interface GenericPeopleAccessHeaderProps {
 
 /**
  * Generic reusable component for access management header with tabs.
- * Supports two visual variants and can be customized extensively.
+ * Uses Shadcn Tabs component with underline styling.
  */
 export function GenericPeopleAccessHeader({
   activeTab,
@@ -92,7 +92,7 @@ export function GenericPeopleAccessHeader({
 
   const actionButtons = customActionButtons || defaultActionButtons
 
-  // Render action buttons based on variant
+  // Render action buttons
   const renderActionButtons = () => {
     if (variant === "sheet") {
       return (
@@ -129,77 +129,39 @@ export function GenericPeopleAccessHeader({
     }
   }
 
-  // Render tabs based on variant
+  // Shadcn Tabs with underline styling
   const renderTabs = () => {
     if (!showTabs) return null
 
-    if (variant === "sheet") {
-      return (
-        <Tabs 
-          value={activeTab} 
-          onValueChange={(value) => onTabChange(value as "all" | "requests")} 
-          className="w-full"
-        >
-          <TabsList className="w-full justify-start h-auto p-0 bg-transparent border-b rounded-none">
-            <TabsTrigger
-              value="all"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
-              aria-label="View all members"
-            >
-              {tabLabels.all}
-            </TabsTrigger>
-            <TabsTrigger
-              value="requests"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
-              aria-label={`View pending requests${pendingRequestsCount > 0 ? ` (${pendingRequestsCount})` : ''}`}
-            >
+    return (
+      <Tabs 
+        value={activeTab} 
+        onValueChange={(value) => onTabChange(value as "all" | "requests")}
+        className="w-full"
+      >
+        <TabsList className="w-full justify-start h-auto p-0 bg-transparent border-b rounded-none">
+          <TabsTrigger
+            value="all"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 pb-3"
+          >
+            {tabLabels.all}
+          </TabsTrigger>
+          <TabsTrigger
+            value="requests"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 pb-3 ml-8"
+          >
+            <span className="flex items-center gap-2">
               {tabLabels.requests}
               {pendingRequestsCount > 0 && (
-                <span className="ml-2 px-2 py-0.5 text-xs bg-primary text-primary-foreground rounded-full">
+                <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold text-white bg-red-600 rounded-full">
                   {pendingRequestsCount}
                 </span>
               )}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      )
-    } else {
-      return (
-        <div className="grid grid-cols-2 border rounded-lg overflow-hidden" role="tablist">
-          <button
-            role="tab"
-            aria-selected={activeTab === "all"}
-            aria-label="View all members"
-            onClick={() => onTabChange("all")}
-            className={`py-2 text-sm font-medium transition-colors ${
-              activeTab === "all"
-                ? "bg-white border-b-2 border-black"
-                : "bg-gray-50 text-gray-600"
-            }`}
-          >
-            {tabLabels.all}
-          </button>
-          <button
-            role="tab"
-            aria-selected={activeTab === "requests"}
-            aria-label={`View pending requests${pendingRequestsCount > 0 ? ` (${pendingRequestsCount})` : ''}`}
-            onClick={() => onTabChange("requests")}
-            className={`py-2 text-sm font-medium relative transition-colors ${
-              activeTab === "requests"
-                ? "bg-white border-b-2 border-black"
-                : "bg-gray-50 text-gray-600"
-            }`}
-          >
-            {tabLabels.requests}
-            {pendingRequestsCount > 0 && (
-              <span className="absolute top-1 right-2 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-600 rounded-full">
-                {pendingRequestsCount}
-              </span>
-            )}
-          </button>
-        </div>
-      )
-    }
+            </span>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+    )
   }
 
   // Apply wrapper styling based on variant

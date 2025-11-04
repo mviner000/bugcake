@@ -11,6 +11,7 @@ import { SheetAddMemberInput } from "./share-dialog/SheetAddMemberInput"
 import { SheetGeneralAccess } from "./share-dialog/SheetGeneralAccess"
 import { SheetMembersList } from "./share-dialog/SheetMembersList"
 import { SheetDialogFooter } from "./share-dialog/SheetDialogFooter"
+import { SheetPeopleAccessHeader } from "./share-dialog/SheetPeopleAccessHeader"
 
 interface ShareModalProps {
   open: boolean
@@ -167,20 +168,30 @@ export function ShareModal({
             canManageMembers={canManageMembers}
           />
 
-          {/* People with access section - NEW: Pass canManageMembers */}
-          <SheetMembersList
-            usersWithAccess={usersWithAccess}
-            pendingRequests={pendingRequests}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            onCopyLink={handleCopyLink}
-            onSendEmail={handleSendEmail}
-            onRoleChange={handleRoleChange}
-            onRemoveUser={handleRemoveUser}
-            onApproveRequest={handleApproveRequest}
-            onDeclineRequest={handleDeclineRequest}
-            canManageMembers={canManageMembers}
-          />
+          {/* People with access section - NOW WITH HEADER */}
+          <div>
+            <SheetPeopleAccessHeader
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              onCopyLink={handleCopyLink}
+              onSendEmail={handleSendEmail}
+              pendingRequestsCount={pendingRequests?.length || 0}
+              showTabs={canManageMembers}
+            />
+            <SheetMembersList
+              usersWithAccess={usersWithAccess}
+              pendingRequests={pendingRequests}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              onCopyLink={handleCopyLink}
+              onSendEmail={handleSendEmail}
+              onRoleChange={handleRoleChange}
+              onRemoveUser={handleRemoveUser}
+              onApproveRequest={handleApproveRequest}
+              onDeclineRequest={handleDeclineRequest}
+              canManageMembers={canManageMembers}
+            />
+          </div>
 
           {/* General access section */}
           <SheetGeneralAccess

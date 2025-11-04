@@ -1,7 +1,6 @@
 // components/common/share/GenericAccessManager.tsx
 
 import { ReactNode } from "react";
-// FIX: Static imports for browser compatibility
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
@@ -10,7 +9,7 @@ import { GenericAccessMemberRow } from "./GenericAccessMemberRow";
 import { RoleOption } from "./GenericAccessRequestList";
 
 /**
- * Generic member data structure (MOVED HERE from GenericMembersList)
+ * Generic member data structure
  */
 export interface GenericAccessMember<TId = string> {
   id: TId;
@@ -67,37 +66,62 @@ export interface GenericAccessManagerProps<TUserId = string, TRequestId = string
   
   /** Array of pending access requests (optional) */
   pendingRequests?: GenericAccessRequest<TRequestId, TUserId>[] | undefined;
+  
   /** Current active tab */
   activeTab?: "all" | "requests";
+  
   /** Tab change handler */
   onTabChange: (tab: "all" | "requests") => void;
+  
   /** Copy link handler (optional) */
   onCopyLink?: () => void;
+  
   /** Send email handler (optional) */
   onSendEmail?: () => void;
+  
   /** Available role options for the dropdown */
   roleOptions: RoleOption[];
+  
   /** Whether the current user can manage members */
   canManageMembers: boolean;
+  
   /** Callback when member's role is changed */
   onRoleChange: (memberId: TUserId, newRole: TRole) => Promise<void> | void;
+  
   /** Callback when remove button is clicked */
   onRemoveMember: (memberId: TUserId) => Promise<void> | void;
+  
   /** Callback when access request is approved (optional) */
   onApproveRequest?: (requestId: TRequestId, requestedRole: string) => void;
+  
   /** Callback when access request is declined (optional) */
   onDeclineRequest?: (requestId: TRequestId) => void;
+  
   /** Optional custom avatar renderer */
   renderAvatar?: (member: GenericAccessMember<TUserId>) => ReactNode;
+  
   /** Custom styling variant */
   variant?: "sheet" | "checklist";
-  /** Optional custom header renderer */
-  renderHeader?: (props: HeaderProps) => ReactNode;
+  
+  /** 
+   * Optional custom header renderer 
+   * Pass null or () => null to hide the header completely
+   * Pass undefined (default) to use the built-in header
+   */
+  renderHeader?: ((props: HeaderProps) => ReactNode) | null;
+  
   /** Optional custom request item renderer */
   renderRequestItem?: (props: RequestItemProps<TRequestId, TUserId>) => ReactNode;
+  
+  /** 
+   * Whether to show the built-in header (tabs + buttons + role summary)
+   * Set to false if you're using an external header component
+   * @default true
+   */
+  showBuiltInHeader?: boolean;
 }
 
-// --- NEW: Reusable Share Buttons Component ---
+// --- Reusable Share Buttons Component ---
 interface ShareButtonsProps {
   onCopyLink?: () => void;
   onSendEmail?: () => void;
@@ -123,7 +147,6 @@ function ShareButtons({ onCopyLink, onSendEmail }: ShareButtonsProps) {
     </div>
   );
 }
-// --- END: Reusable Share Buttons Component ---
 
 /**
  * Default header renderer for sheet variant
@@ -136,16 +159,12 @@ function DefaultSheetHeader({
   pendingRequestsCount,
   roleSummary,
 }: HeaderProps) {
-  
-  // FIX: This wrapper function explicitly casts the generic 'string' 
-  // from the Tabs component back to the expected literal type.
   const handleTabChange = (value: string) => {
     onTabChange(value as "all" | "requests");
   };
 
   return (
     <div className="space-y-3">
-      {/* Use the fixed handleTabChange function */}
       <Tabs value={activeTab} onValueChange={handleTabChange}> 
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="all">All Members</TabsTrigger>
@@ -162,7 +181,6 @@ function DefaultSheetHeader({
       
       {roleSummary}
 
-      {/* REFACTORED: Use ShareButtons component */}
       <ShareButtons onCopyLink={onCopyLink} onSendEmail={onSendEmail} />
     </div>
   );
@@ -179,8 +197,6 @@ function DefaultChecklistHeader({
   pendingRequestsCount,
   roleSummary,
 }: HeaderProps) {
-  // FIX: Although the checklist header's buttons use constants, 
-  // we add the same wrapper for robustness if the UI changes.
   const handleTabChange = (tab: "all" | "requests") => {
     onTabChange(tab);
   };
@@ -217,7 +233,6 @@ function DefaultChecklistHeader({
 
       {roleSummary}
 
-      {/* REFACTORED: Use ShareButtons component */}
       <ShareButtons onCopyLink={onCopyLink} onSendEmail={onSendEmail} />
     </div>
   );
@@ -364,21 +379,16 @@ export function GenericAccessManager<TUserId = string, TRequestId = string, TRol
   variant = "sheet",
   renderHeader,
   renderRequestItem,
+  showBuiltInHeader = true,
 }: GenericAccessManagerProps<TUserId, TRequestId, TRole>) {
   
-  // Determine if we should show tabs/header
-  const showTabs = canManageMembers && pendingRequests !== undefined && onTabChange;
-  const showButtons = onCopyLink || onSendEmail;
-  const showHeader = showButtons || showTabs;
-
   // Select default renderers based on variant
   const defaultHeaderRenderer = variant === "sheet" ? DefaultSheetHeader : DefaultChecklistHeader;
   const defaultRequestRenderer = variant === "sheet" ? DefaultSheetRequestItem : DefaultChecklistRequestItem;
 
-  const HeaderComponent = renderHeader || defaultHeaderRenderer;
   const RequestItemComponent = renderRequestItem || defaultRequestRenderer;
 
-  // --- NEW: Calculate role summary for all variants ---
+  // --- Calculate role summary ---
   let roleSummary: ReactNode = null;
   if (usersWithAccess) {
     const counts: Record<string, number> = {};
@@ -393,7 +403,6 @@ export function GenericAccessManager<TUserId = string, TRequestId = string, TRol
     };
 
     const parts = Object.entries(counts)
-      // Sort to put Owner first, then lead, tester, viewer
       .sort(([roleA], [roleB]) => {
         const order: Record<string, number> = { 'owner': 0, 'qa_lead': 1, 'qa_tester': 2, 'viewer': 3 };
         return (order[roleA] ?? 99) - (order[roleB] ?? 99);
@@ -404,7 +413,6 @@ export function GenericAccessManager<TUserId = string, TRequestId = string, TRol
       });
 
     if (parts.length > 0) {
-      // UPDATED: Use consistent black pill styling for all variants
       roleSummary = (
         <div className="inline-flex items-center px-3 py-1 bg-black text-white text-sm rounded-full font-medium">
           {parts.join(', ')}
@@ -412,10 +420,8 @@ export function GenericAccessManager<TUserId = string, TRequestId = string, TRol
       );
     }
   }
-  // --- END NEW LOGIC ---
 
-
-  // --- MEMBER LIST LOGIC (Integrated from GenericMembersList.tsx) ---
+  // --- MEMBER LIST LOGIC ---
   const renderMembersList = () => {
     // Loading State
     if (usersWithAccess === undefined) {
@@ -449,7 +455,7 @@ export function GenericAccessManager<TUserId = string, TRequestId = string, TRol
     // Main Render
     return (
       <div className={variant === "sheet" ? "space-y-3" : ""}>
-        {/* 1. Render Owner (View Only) */}
+        {/* Render Owner (View Only) */}
         {owner && (
           <>
             <GenericAccessMemberRow
@@ -465,7 +471,7 @@ export function GenericAccessManager<TUserId = string, TRequestId = string, TRol
           </>
         )}
   
-        {/* 2. Render Non-Owners (with controls if allowed) */}
+        {/* Render Non-Owners (with controls if allowed) */}
         {nonOwners.map((person) => (
           <GenericAccessMemberRow
             key={String(person.id)}
@@ -481,36 +487,54 @@ export function GenericAccessManager<TUserId = string, TRequestId = string, TRol
       </div>
     );
   };
-  // --- END MEMBER LIST LOGIC ---
 
+  // --- Determine what header to show ---
+  let headerElement: ReactNode = null;
+  
+  if (showBuiltInHeader) {
+    // Check if renderHeader is explicitly null (hide header)
+    if (renderHeader === null) {
+      headerElement = null;
+    }
+    // Check if renderHeader is a function (custom header)
+    else if (typeof renderHeader === 'function') {
+      headerElement = renderHeader({
+        activeTab,
+        onTabChange,
+        onCopyLink,
+        onSendEmail,
+        pendingRequestsCount: pendingRequests?.length || 0,
+        roleSummary,
+      });
+    }
+    // Use default header if renderHeader is undefined
+    else {
+      const showTabs = canManageMembers && pendingRequests !== undefined;
+      const showButtons = onCopyLink || onSendEmail;
+      
+      if (showTabs || showButtons) {
+        headerElement = defaultHeaderRenderer({
+          activeTab,
+          onTabChange,
+          onCopyLink,
+          onSendEmail,
+          pendingRequestsCount: pendingRequests?.length || 0,
+          roleSummary,
+        });
+      }
+    }
+  }
 
   return (
     <div className="space-y-4">
-      {/* Header Section - Show if we have buttons OR tabs */}
-      {showHeader && (
-        <>
-          {showTabs ? (
-            <HeaderComponent
-              activeTab={activeTab}
-              onTabChange={onTabChange!}
-              onCopyLink={onCopyLink}
-              onSendEmail={onSendEmail}
-              pendingRequestsCount={pendingRequests?.length || 0}
-              roleSummary={roleSummary} 
-            />
-          ) : (
-            // REFACTORED: Use ShareButtons component
-            // This renders only if showTabs is false but showButtons is true
-            showButtons ? <ShareButtons onCopyLink={onCopyLink} onSendEmail={onSendEmail} /> : null
-          )}
-        </>
-      )}
+      {/* Header Section */}
+      {headerElement}
 
       {/* Content Section */}
       <div className={variant === "sheet" ? "space-y-3" : ""}>
         {activeTab === "all" ? (
           // Members List
-          renderMembersList() // Calling the integrated function
+          renderMembersList()
         ) : (
           // Requests List
           canManageMembers && onApproveRequest && onDeclineRequest ? (
