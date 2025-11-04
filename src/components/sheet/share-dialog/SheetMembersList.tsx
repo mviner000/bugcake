@@ -38,6 +38,7 @@ interface SheetMembersListProps {
   onRemoveUser: (userId: Id<"users">) => void
   onApproveRequest: (permissionId: Id<"permissions">, requestedRole: string) => void
   onDeclineRequest: (permissionId: Id<"permissions">) => void
+  canManageMembers?: boolean // NEW: Add permission prop
 }
 
 const roleOptions: RoleOption[] = [
@@ -57,6 +58,7 @@ export function SheetMembersList({
   onRemoveUser,
   onApproveRequest,
   onDeclineRequest,
+  canManageMembers = true, // NEW: Default to true for backwards compatibility
 }: SheetMembersListProps) {
   
   const genericUsersWithAccess: GenericAccessMember[] | undefined = usersWithAccess?.map(user => ({
@@ -98,6 +100,7 @@ export function SheetMembersList({
         onCopyLink={onCopyLink}
         onSendEmail={onSendEmail}
         pendingRequestsCount={pendingRequests?.length || 0}
+        showTabs={canManageMembers} // NEW: Hide tabs if user can't manage members
       />
 
       <div className="space-y-3">
@@ -106,17 +109,20 @@ export function SheetMembersList({
             variant="sheet"
             usersWithAccess={genericUsersWithAccess}
             roleOptions={roleOptions}
-            canManageMembers={true}
+            canManageMembers={canManageMembers} // NEW: Pass permission down
             onRoleChange={onRoleChange as (id: string, role: string) => void}
             onRemoveMember={onRemoveUser as (id: string) => void}
             renderAvatar={renderSheetAvatar}
           />
         ) : (
-          <SheetRequestList
-            pendingRequests={pendingRequests}
-            onApproveRequest={onApproveRequest}
-            onDeclineRequest={onDeclineRequest}
-          />
+          // NEW: Only show requests if user has permission
+          canManageMembers ? (
+            <SheetRequestList
+              pendingRequests={pendingRequests}
+              onApproveRequest={onApproveRequest}
+              onDeclineRequest={onDeclineRequest}
+            />
+          ) : null
         )}
       </div>
     </div>

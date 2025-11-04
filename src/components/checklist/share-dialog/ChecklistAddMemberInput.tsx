@@ -1,11 +1,11 @@
 // src/components/checklist/share-dialog/ChecklistAddMemberInput.tsx
 
-import { GenericAddPeopleSection, RoleOption } from "@/components/common/share/GenericAddPeopleSection"
+import { GenericAddMemberInput, RoleOption } from "@/components/common/share/GenericAddMemberInput"
 
 interface ChecklistAddMemberInputProps {
   onAddMember: (email: string, role: "qa_tester" | "qa_lead" | "viewer") => Promise<void>;
   canManageMembers: boolean;
-  isLoading?: boolean; // Optional loading state
+  isAddingUser?: boolean; // Optional loading state
 }
 
 // Define the role options for checklists
@@ -18,7 +18,7 @@ const checklistRoleOptions: RoleOption[] = [
 export function ChecklistAddMemberInput({
   onAddMember,
   canManageMembers,
-  isLoading = false,
+  isAddingUser = false,
 }: ChecklistAddMemberInputProps) {
   // Type-safe wrapper that validates the role
   const handleAddPerson = async (email: string, role: string) => {
@@ -31,11 +31,11 @@ export function ChecklistAddMemberInput({
   };
 
   return (
-    <GenericAddPeopleSection
+    <GenericAddMemberInput
       onAddPerson={handleAddPerson}
       roleOptions={checklistRoleOptions}
       defaultRole="viewer"
-      isLoading={isLoading}
+      isLoading={isAddingUser}
       visible={canManageMembers} // Hide if user can't manage members
       wrapperClassName="px-5" // Checklist-specific wrapper padding
     />

@@ -219,7 +219,7 @@ export function ChecklistShareDialog({
         <ChecklistAddMemberInput
           onAddMember={handleAddMember}
           canManageMembers={canManageMembers}
-          isLoading={isAddingMember}
+          isAddingUser={isAddingMember}
         />
 
         <ChecklistPeopleAccessHeader

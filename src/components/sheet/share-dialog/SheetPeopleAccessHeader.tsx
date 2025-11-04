@@ -8,6 +8,7 @@ interface SheetPeopleAccessHeaderProps {
   onCopyLink: () => void
   onSendEmail: () => void
   pendingRequestsCount: number
+  showTabs?: boolean // NEW: Optional prop to hide tabs
 }
 
 export function SheetPeopleAccessHeader({
@@ -16,6 +17,7 @@ export function SheetPeopleAccessHeader({
   onCopyLink,
   onSendEmail,
   pendingRequestsCount,
+  showTabs = true, // NEW: Default to true for backwards compatibility
 }: SheetPeopleAccessHeaderProps) {
   return (
     <GenericAccessHeader
@@ -25,7 +27,7 @@ export function SheetPeopleAccessHeader({
       onSendEmail={onSendEmail}
       pendingRequestsCount={pendingRequestsCount}
       variant="sheet"
-      showTabs={true}
+      showTabs={showTabs} // NEW: Pass through showTabs prop
     />
   )
 }

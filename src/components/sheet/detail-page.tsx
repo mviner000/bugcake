@@ -51,20 +51,23 @@ export function DetailPage() {
 		sheetId ? { sheetId: sheetId as Id<"sheets"> } : "skip", 
 	);
 
+	// ✅ IMPORTANT: Don't fetch modules if access is denied
+	// This prevents unauthorized queries before the access check
+	const hasAccessDenied = queryResult && typeof queryResult === 'object' && 'accessDenied' in queryResult;
+	
 	// 💡 FIX 2: Cast sheetId to Id<"sheets"> when passing to Convex query args
+	// Only fetch modules if we have a valid sheetId AND haven't been denied access
 	const modules = useQuery(
 		api.myFunctions.getModulesForSheet,
-		sheetId ? { sheetId: sheetId as Id<"sheets"> } : "skip",
-	) as Doc<"modules">[] | undefined; 
+		sheetId && !hasAccessDenied ? { sheetId: sheetId as Id<"sheets"> } : "skip",
+	) as Doc<"modules">[] | undefined;
 
 	const onBack = () => { 
 		void navigate("/");
 	};
 	
-	if (queryResult === undefined || modules === undefined) { 
-		return <div className="p-4 text-center">Loading sheet...</div>; 
-	}
-
+	// ✅ CRITICAL: Check for access denied BEFORE checking if data is loaded
+	// This prevents the loading state from masking access issues
 	if (queryResult && typeof queryResult === 'object' && 'accessDenied' in queryResult) {
 		if (queryResult.requiresAuth) {
 			return (
@@ -87,6 +90,10 @@ export function DetailPage() {
 		
 		// ✅ This now uses the wrapper component which internally uses the generic AccessRequest
 		return <AccessRequest />; 
+	}
+	
+	if (queryResult === undefined || (modules === undefined && !hasAccessDenied)) { 
+		return <div className="p-4 text-center">Loading sheet...</div>; 
 	}
 
 	if (queryResult === null) {

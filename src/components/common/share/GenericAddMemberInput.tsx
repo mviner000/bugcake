@@ -1,4 +1,4 @@
-// src/components/common/share/GenericAddPeopleSection.tsx
+// src/components/common/share/GenericAddMemberInput.tsx
 
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
@@ -16,7 +16,7 @@ export interface RoleOption {
 /**
  * Props for the generic add people section
  */
-interface GenericAddPeopleSectionProps {
+interface GenericAddMemberInputProps {
   /** Callback when user clicks Add button */
   onAddPerson: (email: string, role: string) => Promise<void>;
   
@@ -58,7 +58,7 @@ interface GenericAddPeopleSectionProps {
  * Generic reusable component for adding people with email and role selection.
  * Manages its own internal state for email and role.
  */
-export function GenericAddPeopleSection({
+export function GenericAddMemberInput({
   onAddPerson,
   roleOptions,
   defaultRole,
@@ -71,7 +71,7 @@ export function GenericAddPeopleSection({
   inputClassName = "h-9 flex-1",
   selectClassName = "w-[140px] h-9",
   buttonClassName = "h-9",
-}: GenericAddPeopleSectionProps) {
+}: GenericAddMemberInputProps) {
   const [email, setEmail] = useState("")
   const [selectedRole, setSelectedRole] = useState(defaultRole)
 

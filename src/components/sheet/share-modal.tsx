@@ -27,7 +27,16 @@ export function ShareModal({
 }: ShareModalProps) {
   const usersWithAccess = useQuery(api.myFunctions.getUsersWithAccess, { sheetId })
   const sheet = useQuery(api.myFunctions.getSheetById, { id: sheetId })
-  const pendingRequests = useQuery(api.myFunctions.getPendingAccessRequests, { sheetId })
+  
+  // NEW: Conditionally fetch pending requests only if user can manage members
+  const currentUser = usersWithAccess?.find(u => u.isCurrentUser)
+  const canManageMembers = currentUser?.role === "qa_lead" || currentUser?.role === "owner"
+  
+  // Only fetch pending requests if user has permission
+  const pendingRequests = useQuery(
+    api.myFunctions.getPendingAccessRequests, 
+    canManageMembers ? { sheetId } : "skip"
+  )
   
   const addUserAccess = useMutation(api.myFunctions.addUserAccessToSheet)
   const removeUserAccess = useMutation(api.myFunctions.removeUserAccessFromSheet)
@@ -152,10 +161,14 @@ export function ShareModal({
         <SheetDialogHeader fileName={fileName} usersWithAccess={usersWithAccess} />
 
         <div className="px-6 pb-6 space-y-6">
-          {/* Search Input with Role Selector */}
-          <SheetAddMemberInput onAddUser={handleAddUser} isAddingUser={isAddingUser} />
+          {/* Search Input with Role Selector - NEW: Pass canManageMembers */}
+          <SheetAddMemberInput 
+            onAddUser={handleAddUser} 
+            isAddingUser={isAddingUser}
+            canManageMembers={canManageMembers}
+          />
 
-          {/* People with access section */}
+          {/* People with access section - NEW: Pass canManageMembers */}
           <SheetMembersList
             usersWithAccess={usersWithAccess}
             pendingRequests={pendingRequests}
@@ -167,6 +180,7 @@ export function ShareModal({
             onRemoveUser={handleRemoveUser}
             onApproveRequest={handleApproveRequest}
             onDeclineRequest={handleDeclineRequest}
+            canManageMembers={canManageMembers}
           />
 
           {/* General access section */}
