@@ -20,7 +20,7 @@ export function ChecklistDialogFooter({
       onClose={onClose}
       onCopyLink={onCopyLink}
       showCopyButton={true}
-      wrapperClassName="py-4 border-t flex items-center justify-between"
+      wrapperClassName="flex items-center justify-between pt-2"
     />
   )
 }

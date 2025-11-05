@@ -4,7 +4,6 @@ import { X } from "lucide-react";
 import { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-// FIX: Import Avatar components statically for browser compatibility
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; 
 import { RoleOption } from "./GenericAccessRequestList"; 
 
@@ -41,9 +40,6 @@ export interface GenericAccessMemberRowProps<TId = string> {
   
   /** Optional custom avatar renderer */
   renderAvatar?: (member: GenericAccessMember<TId>) => ReactNode;
-  
-  /** Custom styling variant */
-  variant?: "sheet" | "checklist";
 }
 
 /**
@@ -56,7 +52,6 @@ export function GenericAccessMemberRow<TId = string>({
   onRoleChange,
   onRemoveMember,
   renderAvatar,
-  variant = "sheet",
 }: GenericAccessMemberRowProps<TId>) {
   // --- Avatar Renderer ---
   const defaultRenderAvatar = (person: GenericAccessMember<TId>) => {
@@ -69,25 +64,16 @@ export function GenericAccessMemberRow<TId = string>({
         .slice(0, 2)
     }
 
-    if (variant === "sheet") {
-      // FIX: Removed the require statement. Components are now imported statically at the top.
-      return (
-        <Avatar className="h-10 w-10 flex-shrink-0">
-          {person.avatarUrl ? (
-            <AvatarImage src={person.avatarUrl || "/placeholder.svg"} alt={person.name} />
-          ) : null}
-          <AvatarFallback className="bg-muted">
-            {getInitials(person.name)}
-          </AvatarFallback>
-        </Avatar>
-      )
-    } else {
-      return (
-        <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 font-medium">
-          {person.name.charAt(0).toUpperCase()}
-        </div>
-      )
-    }
+    return (
+      <Avatar className="h-10 w-10 flex-shrink-0">
+        {person.avatarUrl ? (
+          <AvatarImage src={person.avatarUrl || "/placeholder.svg"} alt={person.name} />
+        ) : null}
+        <AvatarFallback className="bg-muted">
+          {getInitials(person.name)}
+        </AvatarFallback>
+      </Avatar>
+    )
   }
 
   const avatarRenderer = renderAvatar || defaultRenderAvatar
@@ -97,105 +83,53 @@ export function GenericAccessMemberRow<TId = string>({
     return role.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 
-  // --- Sheet Variant (Shadcn UI styling) ---
-  if (variant === "sheet") {
-    return (
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          {avatarRenderer(member)}
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">
-              {member.name}
-              {member.isCurrentUser && <span className="text-muted-foreground font-normal"> (you)</span>}
-            </p>
-            <p className="text-xs text-muted-foreground truncate">{member.email}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {canManageMembers && member.role !== 'owner' ? (
-            <>
-              <Select 
-                value={member.role}
-                onValueChange={(value) => onRoleChange(member.id, value)}
-              >
-                <SelectTrigger className="w-[110px] h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {roleOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {!member.isCurrentUser && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9"
-                  onClick={() => onRemoveMember(member.id)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </>
-          ) : (
-            // Display role text for non-managers or the current user/owner (if owner isn't filtered upstream)
-            <div className={`text-sm ${member.role === 'owner' ? 'text-muted-foreground' : 'text-gray-600'}`}>
-              {formatRoleDisplay(member.role)}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // --- Checklist Variant (Custom Tailwind styling) ---
   return (
-    <div className="flex items-center justify-between py-3">
-      <div className="flex items-center gap-3">
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-3 flex-1 min-w-0">
         {avatarRenderer(member)}
-        <div>
-          <p className="text-sm font-medium">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium truncate">
             {member.name}
-            {member.isCurrentUser && <span className="text-gray-500 font-normal"> (you)</span>}
+            {member.isCurrentUser && <span className="text-muted-foreground font-normal"> (you)</span>}
           </p>
-          <p className="text-xs text-gray-500">{member.email}</p>
+          <p className="text-xs text-muted-foreground truncate">{member.email}</p>
         </div>
       </div>
-      
-      {canManageMembers && member.role !== 'owner' ? (
-        <div className="flex items-center gap-2">
-          <Select
-            value={member.role}
-            onValueChange={(v) => onRoleChange(member.id, v)}
-          >
-            <SelectTrigger className="w-32 h-9 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {roleOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {!member.isCurrentUser && (
-            <button
-              onClick={() => onRemoveMember(member.id)}
-              className="text-gray-600 hover:text-gray-800"
+      <div className="flex items-center gap-2">
+        {canManageMembers && member.role !== 'owner' ? (
+          <>
+            <Select 
+              value={member.role}
+              onValueChange={(value) => onRoleChange(member.id, value)}
             >
-              <X className="w-5 h-5" />
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className="text-sm text-gray-600">
-          {formatRoleDisplay(member.role)}
-        </div>
-      )}
+              <SelectTrigger className="w-[110px] h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {roleOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {!member.isCurrentUser && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9"
+                onClick={() => onRemoveMember(member.id)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </>
+        ) : (
+          <div className="text-sm text-muted-foreground">
+            {formatRoleDisplay(member.role)}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

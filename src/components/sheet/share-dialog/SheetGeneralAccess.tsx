@@ -47,7 +47,7 @@ export function SheetGeneralAccess({
       onValueChange={(value) => onAccessLevelChange(value as "restricted" | "anyoneWithLink" | "public")}
       accessLevels={sheetAccessLevels}
       disabled={false} // This component version did not have a disabled state
-      wrapperClassName="space-y-3" // This component's specific wrapper style
+      wrapperClassName="py-3 border-t space-y-3" // This component's specific wrapper style
     />
   )
 }

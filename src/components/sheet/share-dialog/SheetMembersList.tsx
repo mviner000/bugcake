@@ -1,7 +1,8 @@
 // components/sheet/share-dialog/SheetMembersList.tsx
 
 import { Id } from "../../../../convex/_generated/dataModel"
-import { GenericAccessManager, GenericAccessRequest, GenericAccessMember } from "@/components/common/share/GenericAccessManager"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { GenericAccessManager, GenericAccessMember, GenericAccessRequest } from "@/components/common/share/GenericAccessManager"
 import { RoleOption } from "@/components/common/share/GenericAccessRequestList"
 
 interface User {
@@ -56,7 +57,28 @@ export function SheetMembersList({
   canManageMembers = true,
 }: SheetMembersListProps) {
   
-  // Transform users to generic format
+  const renderAvatar = (member: GenericAccessMember<Id<"users">>) => {
+    const getInitials = (name: string) => {
+      return name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    }
+
+    return (
+      <Avatar className="h-10 w-10 flex-shrink-0">
+        {member.avatarUrl && (
+          <AvatarImage src={member.avatarUrl} alt={member.name} />
+        )}
+        <AvatarFallback className="bg-muted">
+          {getInitials(member.name)}
+        </AvatarFallback>
+      </Avatar>
+    )
+  }
+
   const genericUsersWithAccess: GenericAccessMember<Id<"users">>[] | undefined = 
     usersWithAccess?.map(user => ({
       id: user.id,
@@ -67,7 +89,6 @@ export function SheetMembersList({
       isCurrentUser: user.isCurrentUser,
     }))
 
-  // Transform requests to generic format
   const genericPendingRequests: GenericAccessRequest<Id<"permissions">, Id<"users">>[] | undefined =
     pendingRequests?.map(request => ({
       id: request.id,
@@ -82,7 +103,6 @@ export function SheetMembersList({
 
   return (
     <GenericAccessManager<Id<"users">, Id<"permissions">, "viewer" | "qa_lead" | "qa_tester">
-      variant="sheet"
       usersWithAccess={genericUsersWithAccess}
       pendingRequests={genericPendingRequests}
       activeTab={activeTab}
@@ -93,6 +113,7 @@ export function SheetMembersList({
       onRemoveMember={onRemoveUser}
       onApproveRequest={onApproveRequest}
       onDeclineRequest={onDeclineRequest}
+      renderAvatar={renderAvatar}
       showBuiltInHeader={false}
     />
   )
