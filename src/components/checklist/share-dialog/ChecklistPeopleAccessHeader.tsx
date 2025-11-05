@@ -30,7 +30,6 @@ export function ChecklistPeopleAccessHeader({
       onCopyLink={onCopyLink}
       onSendEmail={onSendEmail}
       pendingRequestsCount={pendingRequestsCount}
-      variant="checklist"
       showTabs={canManageMembers}
     />
   )

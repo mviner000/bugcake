@@ -37,7 +37,6 @@ export function ChecklistAddMemberInput({
       defaultRole="viewer"
       isLoading={isAddingUser}
       visible={canManageMembers} // Hide if user can't manage members
-      wrapperClassName="px-5" // Checklist-specific wrapper padding
     />
   );
 }

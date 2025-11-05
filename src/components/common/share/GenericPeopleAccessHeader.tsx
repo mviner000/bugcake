@@ -36,9 +36,6 @@ interface GenericPeopleAccessHeaderProps {
   /** Whether to show the tabs - useful for permission-based visibility */
   showTabs?: boolean;
   
-  /** Visual variant */
-  variant?: "sheet" | "checklist";
-  
   /** Custom header title */
   title?: string;
   
@@ -66,7 +63,6 @@ export function GenericPeopleAccessHeader({
   onSendEmail,
   pendingRequestsCount,
   showTabs = true,
-  variant = "sheet",
   title = "People with access",
   customActionButtons,
   wrapperClassName,
@@ -76,7 +72,7 @@ export function GenericPeopleAccessHeader({
   // Default action buttons
   const defaultActionButtons: ActionButton[] = [
     {
-      icon: <Link className={variant === "sheet" ? "h-4 w-4" : "w-5 h-5"} />,
+      icon: <Link className="h-4 w-4" />,
       onClick: onCopyLink,
       ariaLabel: "Copy link to clipboard",
     },
@@ -84,7 +80,7 @@ export function GenericPeopleAccessHeader({
 
   if (onSendEmail) {
     defaultActionButtons.push({
-      icon: <Mail className={variant === "sheet" ? "h-4 w-4" : "w-5 h-5"} />,
+      icon: <Mail className="h-4 w-4" />,
       onClick: onSendEmail,
       ariaLabel: "Send email invitation",
     })
@@ -94,39 +90,22 @@ export function GenericPeopleAccessHeader({
 
   // Render action buttons
   const renderActionButtons = () => {
-    if (variant === "sheet") {
-      return (
-        <div className="flex gap-2">
-          {actionButtons.map((button, index) => (
-            <Button
-              key={index}
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={button.onClick}
-              aria-label={button.ariaLabel}
-            >
-              {button.icon}
-            </Button>
-          ))}
-        </div>
-      )
-    } else {
-      return (
-        <div className="flex items-center gap-3">
-          {actionButtons.map((button, index) => (
-            <button
-              key={index}
-              className="text-gray-600 hover:text-gray-800 transition-colors"
-              onClick={button.onClick}
-              aria-label={button.ariaLabel}
-            >
-              {button.icon}
-            </button>
-          ))}
-        </div>
-      )
-    }
+    return (
+      <div className="flex gap-2">
+        {actionButtons.map((button, index) => (
+          <Button
+            key={index}
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={button.onClick}
+            aria-label={button.ariaLabel}
+          >
+            {button.icon}
+          </Button>
+        ))}
+      </div>
+    )
   }
 
   // Shadcn Tabs with underline styling
@@ -164,20 +143,12 @@ export function GenericPeopleAccessHeader({
     )
   }
 
-  // Apply wrapper styling based on variant
-  const baseWrapperClass = variant === "sheet" ? "space-y-4" : "px-5 pt-2"
-  const wrapperClass = wrapperClassName || baseWrapperClass
-
-  const titleClass = variant === "sheet" 
-    ? "text-sm font-medium" 
-    : "text-sm font-semibold"
-
-  const headerSpacing = variant === "sheet" ? "" : "mb-3"
+  const wrapperClass = wrapperClassName || "space-y-4"
 
   return (
     <div className={wrapperClass}>
-      <div className={`flex items-center justify-between ${headerSpacing}`}>
-        <h3 className={titleClass}>{title}</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium">{title}</h3>
         {renderActionButtons()}
       </div>
 

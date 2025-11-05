@@ -76,14 +76,14 @@ export function ChecklistMembersList({
   if (activeTab === "all") {
     if (!members) {
       return (
-        <div className="px-5 py-8 text-center text-sm text-gray-500">
+        <div className="py-8 text-center text-sm text-gray-500">
           Loading members...
         </div>
       );
     }
 
     return (
-      <div className="px-5 max-h-96 overflow-y-auto">
+      <div className="max-h-96 overflow-y-auto">
         <div className="space-y-3">
           {members.map((member) => {
             const isOwner = member.role === "owner";

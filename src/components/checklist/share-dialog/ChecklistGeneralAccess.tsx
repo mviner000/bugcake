@@ -47,7 +47,7 @@ export function ChecklistGeneralAccess({
       onValueChange={(value) => onAccessChange(value as "restricted" | "anyoneWithLink" | "public")}
       accessLevels={checklistAccessLevels}
       disabled={!canManageMembers}
-      wrapperClassName="px-5 py-3 border-t space-y-3"
+      wrapperClassName="py-3 border-t space-y-3"
     />
   );
 }

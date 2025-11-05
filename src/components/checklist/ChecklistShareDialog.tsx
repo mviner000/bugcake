@@ -203,13 +203,12 @@ export function ChecklistShareDialog({
               activeTab={activeTab}
               onTabChange={setActiveTab}
               onCopyLink={handleCopyLink}
+              onSendEmail={handleSendEmail}
               canManageMembers={canManageMembers}
               pendingRequestsCount={pendingRequests?.length || 0}
             />
 
-            <div className="px-5">
-              <ChecklistRoleCount members={allMembers} />
-            </div>
+            <ChecklistRoleCount members={allMembers} />
 
             <ChecklistMembersList
               members={allMembers}

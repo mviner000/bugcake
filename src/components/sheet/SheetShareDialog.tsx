@@ -145,7 +145,9 @@ export function SheetShareDialog({
 
   const handleCopyLink = () => {
     const link = `${window.location.origin}/sheet/${sheetId}`
-    navigator.clipboard.writeText(link)
+    navigator.clipboard.writeText(link).then(() => {
+      toast.success("Link copied to clipboard")
+    })
   }
 
   const handleSendEmail = () => {
@@ -175,10 +177,8 @@ export function SheetShareDialog({
               pendingRequestsCount={pendingRequests?.length || 0}
               showTabs={canManageMembers}
             />
-            
-            <div className="px-5">
-              <SheetRoleCount usersWithAccess={usersWithAccess} />
-            </div>
+
+            <SheetRoleCount usersWithAccess={usersWithAccess} />
 
             <SheetMembersList
               usersWithAccess={usersWithAccess}

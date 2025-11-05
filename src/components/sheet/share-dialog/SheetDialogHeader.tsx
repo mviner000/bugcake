@@ -31,7 +31,7 @@ export function SheetDialogHeader({ fileName, usersWithAccess }: SheetDialogHead
       }
       titlePrefix="Share"
       useDialogHeader={true}
-      wrapperClassName="px-6 pt-6 pb-4"
+      wrapperClassName="px-5 py-4"
       titleClassName="text-xl font-semibold"
     />
   )

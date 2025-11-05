@@ -30,7 +30,6 @@ export function SheetPeopleAccessHeader({
       onCopyLink={onCopyLink}
       onSendEmail={onSendEmail}
       pendingRequestsCount={pendingRequestsCount}
-      variant="sheet"
       showTabs={showTabs}
     />
   )

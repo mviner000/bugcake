@@ -58,7 +58,7 @@ export function GenericRoleCount({
     .join(", ");
 
   return (
-    <div className="inline-flex items-center px-3 py-1 bg-black text-white text-xs rounded-full font-medium">
+    <div className="my-3 inline-flex items-center px-3 py-1 bg-black text-white text-xs rounded-full font-medium">
       {roleDisplay}
     </div>
   );
