@@ -1,14 +1,10 @@
 // src/components/checklist/ChecklistShareDialog.tsx
 
-import { useState, useMemo } from "react";
-import {
-  Dialog,
-  DialogContent,
-} from "@/components/ui/dialog";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { toast } from "sonner";
+import { GenericShareDialog, Member, PendingRequest } from "../shared/GenericShareDialog";
 import { ChecklistGeneralAccess } from "./share-dialog/ChecklistGeneralAccess";
 import { ChecklistPeopleAccessHeader } from "./share-dialog/ChecklistPeopleAccessHeader";
 import { ChecklistDialogFooter } from "./share-dialog/ChecklistDialogFooter";
@@ -16,6 +12,7 @@ import { ChecklistMembersList } from "./share-dialog/ChecklistMembersList";
 import { ChecklistAddMemberInput } from "./share-dialog/ChecklistAddMemberInput";
 import { ChecklistDialogHeader } from "./share-dialog/ChecklistDialogHeader";
 import { ChecklistRoleCount } from "./share-dialog/ChecklistRoleCount";
+import { useMemo, useCallback } from "react";
 
 type UserRole = "qa_lead" | "qa_tester" | "owner" | "viewer" | "guest" | undefined;
 
@@ -29,6 +26,12 @@ interface ChecklistShareDialogProps {
   currentUserRole: UserRole;
 }
 
+/**
+ * Share Dialog for Checklists
+ * 
+ * Manages member access and permissions for a specific checklist.
+ * Integrates with the GenericShareDialog for consistent UI and behavior.
+ */
 export function ChecklistShareDialog({
   isOpen,
   onClose,
@@ -38,18 +41,15 @@ export function ChecklistShareDialog({
   sprintName,
   currentUserRole,
 }: ChecklistShareDialogProps) {
-  const [isAddingMember, setIsAddingMember] = useState(false);
-  const [activeTab, setActiveTab] = useState<"all" | "requests">("all");
-
   const checklist = useQuery(
     api.myFunctions.getChecklistById,
     checklistId ? { checklistId: checklistId as Id<"checklists"> } : "skip"
   );
-  const members = useQuery(
+  const rawMembers = useQuery(
     api.myFunctions.getChecklistMembers,
     checklistId ? { checklistId: checklistId as Id<"checklists"> } : "skip"
   );
-  const pendingRequests = useQuery(
+  const rawPendingRequests = useQuery(
     api.myFunctions.getPendingChecklistAccessRequests,
     checklistId ? { checklistId: checklistId as Id<"checklists"> } : "skip"
   );
@@ -64,44 +64,74 @@ export function ChecklistShareDialog({
 
   const canManageMembers = currentUserRole === "owner" || currentUserRole === "qa_lead";
 
-  const allMembers = useMemo(() => {
-    // Wait until members are loaded
-    if (!members) {
+  // Check if data is still loading
+  const isLoading = checklist === undefined || rawMembers === undefined;
+
+  // Create synthetic owner member and combine with regular members
+  const allMembers: Member[] | undefined = useMemo(() => {
+    if (!rawMembers) {
       return undefined;
     }
 
-    // Create the synthetic owner object
-    const ownerMember = {
+    // Transform API response to match GenericShareDialog Member interface
+    const transformedMembers: Member[] = rawMembers.map(member => ({
+      id: member.id,
+      userId: member.userId,
+      name: member.name,
+      email: member.email,
+      role: member.role,
+      addedAt: member.addedAt,
+      addedBy: member.addedBy,
+    }));
+
+    // Add synthetic owner member at the beginning
+    const ownerMember: Member = {
       id: checklistOwnerId,
       userId: checklistOwnerId,
       name: checklistOwnerEmail.split('@')[0],
       email: checklistOwnerEmail,
-      role: "owner" as const,
+      role: "owner",
       addedAt: 0,
       addedBy: "System",
     };
 
-    // Combine the synthetic owner with the rest of the members
-    return [ownerMember, ...members];
-  }, [members, checklistOwnerId, checklistOwnerEmail]);
+    return [ownerMember, ...transformedMembers];
+  }, [rawMembers, checklistOwnerId, checklistOwnerEmail]);
 
-  const handleAddMember = async (email: string, role: "qa_tester" | "qa_lead" | "viewer") => {
-    setIsAddingMember(true);
+  // Transform API response to match GenericShareDialog PendingRequest interface
+  const pendingRequests: PendingRequest[] | undefined = useMemo(() => {
+    if (!rawPendingRequests) {
+      return undefined;
+    }
+
+    return rawPendingRequests.map(request => ({
+      id: request.id,
+      requesterId: request.requesterId,
+      name: request.name,
+      email: request.email,
+      avatarUrl: request.avatarUrl,
+      requestedAt: request.requestedAt,
+      requestMessage: request.requestMessage,
+      requestedRole: request.requestedRole,
+    }));
+  }, [rawPendingRequests]);
+
+  const handleAddMember = useCallback(async (email: string, role: string) => {
     try {
       const result = await addMember({
         checklistId: checklistId as Id<"checklists">,
         memberEmail: email,
-        role: role,
+        role: role as "qa_tester" | "qa_lead" | "viewer",
       });
       toast.success(`${result.member.name} has been added to the checklist.`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to add member.");
-    } finally {
-      setIsAddingMember(false);
+      const errorMessage = error instanceof Error ? error.message : "Failed to add member.";
+      toast.error(errorMessage);
+      throw error;
     }
-  };
+  }, [addMember, checklistId]);
 
-  const handleRemoveMember = async (memberId: string) => {
+  const handleRemoveMember = useCallback(async (memberId: string) => {
     try {
       await removeMember({
         checklistId: checklistId as Id<"checklists">,
@@ -109,50 +139,55 @@ export function ChecklistShareDialog({
       });
       toast.success("Member has been removed from the checklist.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to remove member.");
+      const errorMessage = error instanceof Error ? error.message : "Failed to remove member.";
+      toast.error(errorMessage);
+      throw error;
     }
-  };
+  }, [removeMember, checklistId]);
 
-  const handleUpdateMemberRole = async (
-    memberId: string,
-    newRole: "qa_tester" | "qa_lead" | "viewer"
-  ) => {
+  const handleUpdateMemberRole = useCallback(async (memberId: string, newRole: string) => {
     try {
       await updateMemberRole({
         checklistId: checklistId as Id<"checklists">,
         memberId: memberId,
-        newRole: newRole,
+        newRole: newRole as "qa_tester" | "qa_lead" | "viewer",
       });
       toast.success(`Member role has been updated to ${newRole}.`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update role.");
+      const errorMessage = error instanceof Error ? error.message : "Failed to update role.";
+      toast.error(errorMessage);
+      throw error;
     }
-  };
+  }, [updateMemberRole, checklistId]);
 
-  const handleApproveRequest = async (requestId: string, finalRole: "qa_tester" | "qa_lead" | "viewer") => {
+  const handleApproveRequest = useCallback(async (requestId: string, finalRole: string) => {
     try {
       await approveRequest({
         requestId: requestId as Id<"checklistAccessRequests">,
-        finalRole: finalRole,
+        finalRole: finalRole as "qa_tester" | "qa_lead" | "viewer",
       });
       toast.success("Access request approved successfully.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to approve request.");
+      const errorMessage = error instanceof Error ? error.message : "Failed to approve request.";
+      toast.error(errorMessage);
+      throw error;
     }
-  };
+  }, [approveRequest]);
 
-  const handleDeclineRequest = async (requestId: string) => {
+  const handleDeclineRequest = useCallback(async (requestId: string) => {
     try {
       await declineRequest({
         requestId: requestId as Id<"checklistAccessRequests">,
       });
       toast.success("Access request declined.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to decline request.");
+      const errorMessage = error instanceof Error ? error.message : "Failed to decline request.";
+      toast.error(errorMessage);
+      throw error;
     }
-  };
+  }, [declineRequest]);
 
-  const handleAccessLevelChange = async (
+  const handleAccessLevelChange = useCallback(async (
     newLevel: "restricted" | "anyoneWithLink" | "public"
   ) => {
     try {
@@ -166,80 +201,51 @@ export function ChecklistShareDialog({
 
       toast.success(`General access updated to "${levelLabel}"`);
     } catch (error: any) {
-      toast.error(error.message || "Failed to update access level");
+      const errorMessage = error?.message || "Failed to update access level";
+      toast.error(errorMessage);
+      throw error;
     }
-  };
+  }, [updateAccessLevel, checklistId]);
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href).then(() => {
-      toast.success("Checklist link has been copied to clipboard.");
-    });
-  };
-
-  const handleSendEmail = () => {
-    toast.info("Email invitation feature coming soon!");
-  };
+  const getLinkUrl = useCallback(() => {
+    return window.location.href;
+  }, []);
 
   const currentAccessLevel = checklist?.accessLevel || "restricted";
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[520px] p-0 gap-0">
-        <ChecklistDialogHeader
-          sprintName={sprintName}
-          checklistId={checklistId}
-          checklistOwnerId={checklistOwnerId}
-        />
-
-        <div className="px-6 pb-6 space-y-6">
-          <ChecklistAddMemberInput
-            onAddMember={handleAddMember}
-            canManageMembers={canManageMembers}
-            isAddingUser={isAddingMember}
-          />
-
-          <div>
-            <ChecklistPeopleAccessHeader
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-              onCopyLink={handleCopyLink}
-              onSendEmail={handleSendEmail}
-              canManageMembers={canManageMembers}
-              pendingRequestsCount={pendingRequests?.length || 0}
-            />
-
-            <ChecklistRoleCount members={allMembers} />
-
-            <ChecklistMembersList
-              members={allMembers}
-              pendingRequests={pendingRequests}
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-              checklistOwnerEmail={checklistOwnerEmail}
-              checklistOwnerId={checklistOwnerId}
-              currentUserId={currentUser?._id}
-              canManageMembers={canManageMembers}
-              onUpdateMemberRole={handleUpdateMemberRole}
-              onRemoveMember={handleRemoveMember}
-              onCopyLink={handleCopyLink}
-              onSendEmail={handleSendEmail}
-              onApproveRequest={handleApproveRequest}
-              onDeclineRequest={handleDeclineRequest}
-            />
-          </div>
-
-          <ChecklistGeneralAccess
-            generalAccess={currentAccessLevel}
-            onAccessChange={handleAccessLevelChange}
-            canManageMembers={canManageMembers}
-          />
-
-          <ChecklistDialogFooter
-            onCopyLink={handleCopyLink}
-            onClose={onClose}
-          />
-        </div>
-      </DialogContent>
-    </Dialog>
+    <GenericShareDialog
+      isOpen={isOpen}
+      onClose={onClose}
+      entityName={sprintName}
+      entityId={checklistId}
+      entityType="checklist"
+      members={allMembers}
+      pendingRequests={pendingRequests}
+      currentUserId={currentUser?._id}
+      currentUserRole={currentUserRole}
+      currentAccessLevel={currentAccessLevel}
+      canManageMembers={canManageMembers}
+      onAddMember={handleAddMember}
+      onRemoveMember={handleRemoveMember}
+      onUpdateMemberRole={handleUpdateMemberRole}
+      onApproveRequest={handleApproveRequest}
+      onDeclineRequest={handleDeclineRequest}
+      onAccessLevelChange={handleAccessLevelChange}
+      getLinkUrl={getLinkUrl}
+      isLoading={isLoading}
+      DialogHeader={ChecklistDialogHeader}
+      AddMemberInput={ChecklistAddMemberInput}
+      PeopleAccessHeader={ChecklistPeopleAccessHeader}
+      RoleCount={ChecklistRoleCount}
+      MembersList={ChecklistMembersList}
+      GeneralAccess={ChecklistGeneralAccess}
+      DialogFooter={ChecklistDialogFooter}
+      headerProps={{
+        sprintName: sprintName,
+        checklistId: checklistId,
+        checklistOwnerId: checklistOwnerId,
+      }}
+    />
   );
 }

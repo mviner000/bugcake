@@ -37,7 +37,6 @@ export function Header({ sheetName, sheetId, sheetType }: HeaderProps & { sheetI
       <SheetShareDialog 
         open={isShareModalOpen} 
         onOpenChange={setIsShareModalOpen} 
-        fileName={sheetName} 
         sheetId={normalizedSheetId}
       />
       <header className="bg-white border-b border-gray-200 relative z-10 h-auto sm:h-17 px-4 sm:px-0">
