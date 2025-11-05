@@ -22,8 +22,7 @@ interface SheetShareDialogProps {
 
 /**
  * Share Dialog for Sheets
- * 
- * Manages user access and permissions for a specific sheet.
+ * * Manages user access and permissions for a specific sheet.
  * Integrates with the GenericShareDialog for consistent UI and behavior.
  */
 export function SheetShareDialog({
@@ -36,12 +35,10 @@ export function SheetShareDialog({
   
   const currentUser = rawUsersWithAccess?.find(u => u.isCurrentUser);
   const canManageMembers = currentUser?.role === "qa_lead" || currentUser?.role === "owner";
-  
   const rawPendingRequests = useQuery(
     api.myFunctions.getPendingAccessRequests, 
     canManageMembers ? { sheetId } : "skip"
   );
-  
   const addUserAccess = useMutation(api.myFunctions.addUserAccessToSheet);
   const removeUserAccess = useMutation(api.myFunctions.removeUserAccessFromSheet);
   const updateUserRole = useMutation(api.myFunctions.updatePermission);
@@ -50,15 +47,16 @@ export function SheetShareDialog({
   const declineRequest = useMutation(api.myFunctions.declineAccessRequest);
 
   // Check if data is still loading
-  const isLoading = rawUsersWithAccess === undefined || sheet === undefined;
+  const isLoading = rawUsersWithAccess === undefined ||
+sheet === undefined;
 
   // Get the actual sheet name from the database, fallback to a default if not available
   const fileName = useMemo(() => {
     return sheet?.name || "Untitled Sheet";
   }, [sheet]);
-
   // Transform API response to match GenericShareDialog Member interface
-  const members: Member[] | undefined = useMemo(() => {
+  const members: Member[] |
+undefined = useMemo(() => {
     if (!rawUsersWithAccess) {
       return undefined;
     }
@@ -73,9 +71,9 @@ export function SheetShareDialog({
       isCurrentUser: user.isCurrentUser,
     }));
   }, [rawUsersWithAccess]);
-
   // Transform API response to match GenericShareDialog PendingRequest interface
-  const pendingRequests: PendingRequest[] | undefined = useMemo(() => {
+  const pendingRequests: PendingRequest[] |
+undefined = useMemo(() => {
     if (!rawPendingRequests) {
       return undefined;
     }
@@ -91,7 +89,6 @@ export function SheetShareDialog({
       requestedRole: request.requestedRole,
     }));
   }, [rawPendingRequests]);
-
   const handleAddUser = useCallback(async (email: string, role: string) => {
     try {
       await addUserAccess({
@@ -102,7 +99,7 @@ export function SheetShareDialog({
       
       let roleLabel = "Viewer";
       if (role === "qa_lead") roleLabel = "QA Lead";
-      if (role === "qa_tester") roleLabel = "QA Tester";
+      if (role === "qa_tester") roleLabel = "QA Tester"; 
       
       toast.success(`${email} has been added as ${roleLabel}`);
     } catch (error: any) {
@@ -111,7 +108,6 @@ export function SheetShareDialog({
       throw error;
     }
   }, [addUserAccess, sheetId]);
-
   const handleRoleChange = useCallback(async (userId: string, newRole: string) => {
     try {
       await updateUserRole({
@@ -122,7 +118,8 @@ export function SheetShareDialog({
       
       let roleLabel = "Viewer";
       if (newRole === "qa_lead") roleLabel = "QA Lead";
-      if (newRole === "qa_tester") roleLabel = "QA Tester";
+      if (newRole === "qa_tester") roleLabel 
+= "QA Tester";
       
       toast.success(`Role updated to ${roleLabel}`);
     } catch (error: any) {
@@ -131,7 +128,6 @@ export function SheetShareDialog({
       throw error;
     }
   }, [updateUserRole, sheetId]);
-
   const handleRemoveUser = useCallback(async (userId: string) => {
     try {
       await removeUserAccess({
@@ -145,7 +141,6 @@ export function SheetShareDialog({
       throw error;
     }
   }, [removeUserAccess, sheetId]);
-
   const handleAccessLevelChange = useCallback(async (
     newLevel: "restricted" | "anyoneWithLink" | "public"
   ) => {
@@ -159,14 +154,14 @@ export function SheetShareDialog({
       if (newLevel === "anyoneWithLink") levelLabel = "Anyone with the link";
       if (newLevel === "public") levelLabel = "Public";
 
-      toast.success(`General access updated to "${levelLabel}"`);
+     
+  toast.success(`General access updated to "${levelLabel}"`);
     } catch (error: any) {
       const errorMessage = error?.message || "Failed to update access level";
       toast.error(errorMessage);
       throw error;
     }
   }, [updateAccessLevel, sheetId]);
-
   const handleApproveRequest = useCallback(async (permissionId: string, requestedRole: string) => {
     try {
       let actualRole: "viewer" | "qa_lead" | "qa_tester" = "viewer";
@@ -178,14 +173,14 @@ export function SheetShareDialog({
         finalRole: actualRole,
       });
       
-      toast.success("Access request approved");
+   
+   toast.success("Access request approved");
     } catch (error: any) {
       const errorMessage = error?.message || "Failed to approve request";
       toast.error(errorMessage);
       throw error;
     }
   }, [approveRequest]);
-
   const handleDeclineRequest = useCallback(async (permissionId: string) => {
     try {
       await declineRequest({ 
@@ -198,13 +193,11 @@ export function SheetShareDialog({
       throw error;
     }
   }, [declineRequest]);
-
   const getLinkUrl = useCallback(() => {
     return `${window.location.origin}/sheet/${sheetId}`;
   }, [sheetId]);
 
   const currentAccessLevel = sheet?.accessLevel || "restricted";
-
   return (
     <GenericShareDialog
       isOpen={open}
@@ -222,7 +215,8 @@ export function SheetShareDialog({
       onRemoveMember={handleRemoveUser}
       onUpdateMemberRole={handleRoleChange}
       onApproveRequest={handleApproveRequest}
-      onDeclineRequest={handleDeclineRequest}
+   
+   onDeclineRequest={handleDeclineRequest} 
       onAccessLevelChange={handleAccessLevelChange}
       getLinkUrl={getLinkUrl}
       isLoading={isLoading}
@@ -236,6 +230,15 @@ export function SheetShareDialog({
       headerProps={{
         fileName: fileName,
         usersWithAccess: rawUsersWithAccess,
+        //
+        // 💡 --- FIX IS HERE --- 💡
+        //
+        // Pass sheetId and sheetOwnerId to the header.
+        // This allows SheetUserRoleBadge to determine the correct role
+        // instead of defaulting to "Guest".
+        //
+        sheetId: sheetId,
+        sheetOwnerId: sheet?.owner || "", 
       }}
     />
   );

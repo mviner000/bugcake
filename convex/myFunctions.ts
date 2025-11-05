@@ -4212,3 +4212,51 @@ export const updateChecklistAccessLevel = mutation({
     return { success: true };
   },
 });
+
+/**
+ * Gets all members of a sheet with their roles and details
+ * Similar to getChecklistMembers but for sheets
+ */
+export const getSheetMembers = query({
+  args: {
+    sheetId: v.id("sheets"),
+  },
+  handler: async (ctx, args) => {
+    // 1. Authentication check
+    const currentUserId = await getAuthUserId(ctx);
+    if (!currentUserId) {
+      return [];
+    }
+
+    // 2. Verify sheet exists
+    const sheet = await ctx.db.get(args.sheetId);
+    if (!sheet) {
+      return [];
+    }
+
+    // 3. Get all members from sheetPermissions table
+    const memberRecords = await ctx.db
+      .query("sheetPermissions")
+      .withIndex("by_sheet", (q) => q.eq("sheetId", args.sheetId))
+      .collect();
+
+    // 4. Enhance with user details
+    const members = await Promise.all(
+      memberRecords.map(async (record) => {
+        const user = await ctx.db.get(record.userId);
+
+        return {
+          id: record._id,
+          userId: record.userId,
+          email: user?.email || "N/A",
+          name: user?.name || user?.email?.split("@")[0] || "Unknown",
+          role: record.role,
+          avatarUrl: user?.image || null,
+          isCurrentUser: record.userId === currentUserId,
+        };
+      })
+    );
+
+    return members;
+  },
+});
