@@ -1,96 +1,65 @@
 // src/components/sheet/SheetUserRoleBadge.tsx
+
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
+import { UserRole, UserRoleBadge } from "../common/UserRoleBadge"; // <-- Import the generic badge and type
 
 interface SheetUserRoleBadgeProps {
   sheetId: string;
   sheetOwnerId: string;
 }
 
-export function SheetUserRoleBadge({
-  sheetId,
-  sheetOwnerId
-}: SheetUserRoleBadgeProps) {
-  // Get current user
+/**
+ * Custom hook to encapsulate the data fetching and role determination logic 
+ * for a specific sheet (assumes getSheetMembers exists).
+ */
+const useSheetUserRole = (sheetId: string, sheetOwnerId: string) => {
+  // 1. Get current user profile
   const currentUser = useQuery(api.myFunctions.getMyProfile);
   
-  // Get sheet members
+  // 2. Get sheet members (using the getSheetMembers API from your original file)
   const members = useQuery(
     api.myFunctions.getSheetMembers,
     sheetId ? { sheetId: sheetId as Id<"sheets"> } : "skip"
   );
 
-  // Determine the current user's role
-  const getUserRole = (): "owner" | "qa_lead" | "qa_tester" | "viewer" | "guest" | null => {
-    if (!currentUser) return null;
+  // 3. Determine the current user's role
+  const role: UserRole | null = (() => {
+    if (!currentUser) return null; 
 
-    // Check if user is the owner
+    // Check 1: User is the owner
     if (currentUser._id === sheetOwnerId) {
       return "owner";
     }
 
-    // Check if user is in the members list
+    // Check 2: User is a member
     if (members && Array.isArray(members)) {
       const memberRecord = members.find(
         (member) => member.userId === currentUser._id
       );
       if (memberRecord) {
-        return memberRecord.role as "owner" | "qa_lead" | "qa_tester" | "viewer";
+        return memberRecord.role as UserRole; 
       }
     }
 
-    // If not owner and not in members list, they're a guest
+    // Check 3: Logged in but not owner/member
     return "guest";
-  };
+  })();
 
-  const currentRole = getUserRole();
+  return role;
+}
 
-  // Don't render if we don't have user data yet
-  if (!currentUser || currentRole === null) {
-    return null;
-  }
+/**
+ * The container component for Sheets. 
+ * It determines the role and delegates the rendering to the generic badge.
+ */
+export function SheetUserRoleBadge({ 
+  sheetId, 
+  sheetOwnerId 
+}: SheetUserRoleBadgeProps) {
+  const role = useSheetUserRole(sheetId, sheetOwnerId);
 
-  // Role styling configuration
-  // FIX: Added the opening angle bracket '<' after Record
-  const roleConfig: Record<
-    "owner" | "qa_lead" | "qa_tester" | "viewer" | "guest",
-    { label: string; bgColor: string; textColor: string }
-  > = {
-    owner: {
-      label: "Owner",
-      bgColor: "bg-purple-100",
-      textColor: "text-purple-800",
-    },
-    qa_lead: {
-      label: "QA Lead",
-      bgColor: "bg-blue-100",
-      textColor: "text-blue-800",
-    },
-    qa_tester: {
-      label: "QA Tester",
-      bgColor: "bg-green-100",
-      textColor: "text-green-800",
-    },
-    viewer: {
-      label: "Viewer",
-      bgColor: "bg-gray-100",
-      textColor: "text-gray-800",
-    },
-    guest: {
-      label: "Guest",
-      bgColor: "bg-orange-100",
-      textColor: "text-orange-800",
-    },
-  };
-
-  const config = roleConfig[currentRole];
-
-  return (
-    <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.bgColor} ${config.textColor}`}
-    >
-      {config.label}
-    </span>
-  );
+  // Renders the generic component, reusing all its styling.
+  return <UserRoleBadge role={role} />;
 }

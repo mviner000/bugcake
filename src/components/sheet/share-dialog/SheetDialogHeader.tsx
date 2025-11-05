@@ -39,7 +39,6 @@ export function SheetDialogHeader({
         />
       }
       titlePrefix="Share"
-      useDialogHeader={true}
       wrapperClassName="px-5 py-4"
       titleClassName="text-xl font-semibold"
     />

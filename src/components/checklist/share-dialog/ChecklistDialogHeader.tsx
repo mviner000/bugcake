@@ -28,7 +28,6 @@ export function ChecklistDialogHeader({
         />
       }
       titlePrefix="Share"
-      useDialogHeader={false}
       wrapperClassName="px-5 py-4"
       titleClassName="text-xl font-semibold"
     />

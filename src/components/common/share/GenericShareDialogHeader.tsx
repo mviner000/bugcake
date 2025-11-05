@@ -19,8 +19,6 @@ interface GenericShareDialogHeaderProps {
   /** Optional: Custom title class name */
   titleClassName?: string
   
-  /** Optional: Whether to use DialogHeader component (for sheets style) */
-  useDialogHeader?: boolean
 }
 
 /**
@@ -33,7 +31,6 @@ export function GenericShareDialogHeader({
   titlePrefix = "Share",
   wrapperClassName = "px-6 pt-6 pb-4",
   titleClassName = "text-xl font-normal",
-  useDialogHeader = true,
 }: GenericShareDialogHeaderProps) {
   const titleContent = (
     <>
@@ -44,21 +41,11 @@ export function GenericShareDialogHeader({
     </>
   )
 
-  if (useDialogHeader) {
-    // Sheet-style: Uses DialogHeader wrapper
-    return (
+  return (
       <DialogHeader className={`${wrapperClassName} space-y-0`}>
         <div className="flex items-start justify-between w-full">
           <div>{titleContent}</div>
         </div>
       </DialogHeader>
-    )
-  }
-
-  // Checklist-style: Simple div wrapper
-  return (
-    <div className={`flex items-center justify-between ${wrapperClassName}`}>
-      <div className="flex flex-col gap-1">{titleContent}</div>
-    </div>
   )
 }
