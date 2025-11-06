@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://i.imgur.com/KtMGF2j.png" alt="BugCake Wireframe Design" width="800"/>
+</p>
+
 # 🧁 Welcome to **BugCake**
 
 BugCake is a modern **Quality Assurance (QA) Management Platform** that helps QA Analysts and software teams **plan, execute, and manage test cases** — all in one centralized and intuitive environment.
