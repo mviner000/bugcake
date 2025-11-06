@@ -8,7 +8,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { isAltTextTestCase, isFunctionalityTestCase } from "@/utils/typeGuards";
 import { AltTextAriaLabelTable } from "./alttextarialabel/AltTextAriaLabelTable";
 import { FunctionalityTestCasesTable } from "./functionality/FunctionalityTestCasesTable"; 
-import { Header } from "./Header";
+import { SheetHeader } from "./SheetHeader";
 // ✅ UPDATED: Import from the wrapper component to maintain compatibility
 import { AccessRequest } from "./access-request";
 import { WorkflowStatus } from "@/components/sheet/common/types/testCaseTypes";
@@ -174,7 +174,7 @@ export function DetailPage() {
 
 	return ( 
 		<div className="bg-white min-h-screen font-sans">
-			<Header 
+			<SheetHeader 
 					sheetName={sheet?.name} 
 					onBack={onBack} 
 					// 💡 FIX 5: Pass cast Id<"sheets"> type to Header

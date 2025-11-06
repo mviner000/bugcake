@@ -3,7 +3,7 @@
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
-import { UserRole, UserRoleBadge } from "../common/UserRoleBadge"; // <-- Import the generic badge and type
+import { UserRole, GenericUserRoleBadge } from "../common/GenericUserRoleBadge"; // <-- Import the generic badge and type
 
 interface SheetUserRoleBadgeProps {
   sheetId: string;
@@ -61,5 +61,5 @@ export function SheetUserRoleBadge({
   const role = useSheetUserRole(sheetId, sheetOwnerId);
 
   // Renders the generic component, reusing all its styling.
-  return <UserRoleBadge role={role} />;
+  return <GenericUserRoleBadge role={role} />;
 }

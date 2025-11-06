@@ -1,4 +1,4 @@
-// components/sheet/Header.tsx
+// components/sheet/SheetHeader.tsx
 
 import { useState } from "react";
 import {
@@ -12,25 +12,26 @@ import { Button } from "@/components/ui/button";
 import ActivityApprovalsSheet from "./right-side/ActivityApprovalsSheet";
 import AltTextAriaLabelDetailsModal from "./alttextarialabel/AltTextAriaLabelDetailsModal";
 import FunctionalityTestCasesDetailsModal from "./functionality/FunctionalityTestCaseDetailsModal";
-import { UserRoleDisplay } from "./UserRoleDisplay";
+import { SheetUserRoleBadge } from "./SheetUserRoleBadge";
 import { useQuery } from "convex/react";
 
 type SheetType = "altTextAriaLabel" | "functionality";
 
-interface HeaderProps {
+interface SheetHeaderProps {
   sheetName?: string;
   onBack: () => void;
   sheetType: SheetType;
 }
 
-export function Header({ sheetName, sheetId, sheetType }: HeaderProps & { sheetId: string }) {
+export function SheetHeader({ sheetName, sheetId, sheetType }: SheetHeaderProps & { sheetId: string }) {
   
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
   const normalizedSheetId = sheetId as Id<"sheets">;
 
-  const usersWithAccess = useQuery(api.myFunctions.getUsersWithAccess, {
-    sheetId: normalizedSheetId,
-  })
+  // Get the sheet data to access the owner ID
+  const sheet = useQuery(api.myFunctions.getSheetById, {
+    id: sheetId,
+  });
 
   return (
     <>
@@ -51,9 +52,14 @@ export function Header({ sheetName, sheetId, sheetType }: HeaderProps & { sheetI
                   <span className="text-base sm:text-xl text-gray-700 font-normal truncate">
                     {sheetName}
                   </span>
-                  {/* User role - inline with sheet name on mobile, spaced out on md+ */}
+                  {/* User role badge - inline with sheet name on mobile, spaced out on md+ */}
                   <div className="block md:inline-flex">
-                    <UserRoleDisplay usersWithAccess={usersWithAccess} />
+                    {sheet && sheet.owner && (
+                      <SheetUserRoleBadge 
+                        sheetId={sheetId}
+                        sheetOwnerId={sheet.owner}
+                      />
+                    )}
                   </div>
                 </div>
 
@@ -85,7 +91,7 @@ export function Header({ sheetName, sheetId, sheetType }: HeaderProps & { sheetI
             <Button 
               onClick={() => setIsShareModalOpen(true)} 
               size="sm" 
-              className="bg-blue-700 text-white hover:bg-blue-70 px-2 sm:px-3 whitespace-nowrap flex-shrink-0"
+              className="bg-blue-700 text-white hover:bg-blue-800 px-2 sm:px-3 whitespace-nowrap flex-shrink-0"
             >
               <Share className="w-4 h-4" />
               <span className="hidden sm:inline">Share</span>

@@ -6,7 +6,7 @@
  */
 export type UserRole = "owner" | "qa_lead" | "qa_tester" | "viewer" | "guest";
 
-interface UserRoleBadgeProps {
+interface GenericUserRoleBadgeProps {
   /** The current user's role for the resource. Can be null while loading. */
   role: UserRole | null;
 }
@@ -43,7 +43,7 @@ const roleMap: Record<UserRole, { label: string; style: string }> = {
  * @param role - The determined role (e.g., 'owner', 'qa_lead').
  * @returns A styled badge component or null.
  */
-export function UserRoleBadge({ role }: UserRoleBadgeProps) {
+export function GenericUserRoleBadge({ role }: GenericUserRoleBadgeProps) {
   // 1. Hide the badge if the role is null (loading) or 'guest' (not a member/owner)
   if (!role || role === "guest") {
     return null;

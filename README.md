@@ -1,4 +1,4 @@
-<p align="center">
+<p>
   <img src="https://i.imgur.com/KtMGF2j.png" alt="BugCake Wireframe Design" width="800"/>
 </p>
 
