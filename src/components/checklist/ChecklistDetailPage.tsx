@@ -1,30 +1,28 @@
 // src/components/checklist/ChecklistDetailPage.tsx
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useNavigate, useParams, Navigate } from "react-router-dom";
-import { AlertTriangle } from "lucide-react";
 import { Doc, Id } from "../../../convex/_generated/dataModel";
-import { Button } from "@/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { ChecklistDetailsTab } from "./ChecklistDetailsTab";
 import { ChecklistHistoryTab } from "./ChecklistHistoryTab";
 import { ChecklistHeader } from "./ChecklistHeader";
 import { ChecklistSidebar } from "./ChecklistSidebar";
 import { ChecklistModuleFilter } from "./ChecklistModuleFilter";
+import { ChecklistStatusButtonGroup } from "./ChecklistStatusButtonGroup";
+import { ChecklistStatusConfirmationDialog } from "./ChecklistStatusConfirmationDialog";
 import { DocumentIcon } from "../icons/DocumentIcon";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { useItemStatus } from "@/hooks/useItemStatus";
+import { useResponsiveDetail } from "@/hooks/useResponsiveDetail";
+import { useModuleFilter } from "@/hooks/useModuleFilter";
+import {
+  calculateProgress,
+  formatDate,
+  formatDateTime,
+  getStatusColor,
+  getStatusButtonColor,
+} from "@/utils/checklistUtils";
 
 // --- Type Definitions ---
 type ChecklistItem = Doc<"checklistItems"> & {
@@ -44,15 +42,23 @@ type TabType = "details" | "history";
 export function ChecklistDetailPage() {
   const navigate = useNavigate();
   const { checklistId } = useParams<{ checklistId: string }>();
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("details");
-  const [pendingStatusChange, setPendingStatusChange] = useState<{
-    itemId: string;
-    newStatus: string;
-  } | null>(null);
-  const [actualResults, setActualResults] = useState<string>("");
-  const [selectedModule, setSelectedModule] = useState<string | null>(null);
-  const [showDetailOnMobile, setShowDetailOnMobile] = useState(false);
+
+  // Use extracted hooks
+  const {
+    selectedItemId,
+    showDetailOnMobile,
+    handleItemSelect,
+    handleBackToList,
+  } = useResponsiveDetail();
+
+  const {
+    pendingStatusChange,
+    actualResults,
+    setActualResults,
+    initiateStatusChange,
+    cancelStatusChange,
+  } = useItemStatus();
 
   const updateItemStatus = useMutation(api.myFunctions.updateChecklistItemStatus);
   
@@ -83,18 +89,13 @@ export function ChecklistDetailPage() {
     selectedItemId ? { itemId: selectedItemId as Id<"checklistItems"> } : "skip"
   );
   
-  // Extract unique modules from checklist items
-  const uniqueModules = useMemo(() => {
-    if (!checklistItems) return [];
-    const modules = new Set(checklistItems.map(item => item.module));
-    return Array.from(modules).filter(Boolean).sort();
-  }, [checklistItems]);
-  
-  // Filter items based on selected module
-  const filteredItems = useMemo(() => {
-    if (!selectedModule || !checklistItems) return checklistItems;
-    return checklistItems.filter(item => item.module === selectedModule);
-  }, [checklistItems, selectedModule]);
+  // Use module filter hook
+  const {
+    selectedModule,
+    setSelectedModule,
+    uniqueModules,
+    filteredItems,
+  } = useModuleFilter(checklistItems);
   
   /**
    * Determines the current user's role for this specific checklist.
@@ -135,22 +136,6 @@ export function ChecklistDetailPage() {
     navigate("/");
   };
   
-  // Mobile-specific handler for item selection
-  const handleItemSelect = (itemId: string) => {
-    setSelectedItemId(itemId);
-    setShowDetailOnMobile(true);
-  };
-  
-  // Mobile-specific handler for back to list
-  const handleBackToList = () => {
-    setShowDetailOnMobile(false);
-  };
-  
-  const initiateStatusChange = (itemId: string, newStatus: string) => {
-    setPendingStatusChange({ itemId, newStatus });
-    setActualResults("");
-  };
-  
   const confirmStatusChange = async () => {
     if (!pendingStatusChange) return;
     try {
@@ -159,96 +144,10 @@ export function ChecklistDetailPage() {
         executionStatus: pendingStatusChange.newStatus as any,
         actualResults: actualResults,
       });
-      setPendingStatusChange(null);
-      setActualResults("");
+      cancelStatusChange();
     } catch (error) {
       console.error("Failed to update status:", error);
     }
-  };
-  
-  const cancelStatusChange = () => {
-    setPendingStatusChange(null);
-    setActualResults("");
-  };
-  
-  const calculateProgress = () => {
-    const items = filteredItems || [];
-    if (items.length === 0) {
-      return { 
-        completed: 0, 
-        total: 0, 
-        percentage: 0,
-        passed: 0,
-        failed: 0,
-        blocked: 0,
-        skipped: 0,
-        notRun: 0
-      };
-    }
-
-    const statusCounts = items.reduce((acc, item) => {
-      const status = item.executionStatus;
-      if (status === "Passed") acc.passed++;
-      else if (status === "Failed") acc.failed++;
-      else if (status === "Blocked") acc.blocked++;
-      else if (status === "Skipped") acc.skipped++;
-      else if (status === "Not Run") acc.notRun++;
-      return acc;
-    }, { passed: 0, failed: 0, blocked: 0, skipped: 0, notRun: 0 });
-    
-    const completed = items.filter(
-      (item) => item.executionStatus !== "Not Run"
-    ).length;
-    const total = items.length;
-    const percentage = Math.round((completed / total) * 100);
-    
-    return { 
-      completed, 
-      total, 
-      percentage,
-      ...statusCounts
-    };
-  };
-
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString("en-US", {
-      month: "2-digit",
-      day: "2-digit",
-      year: "numeric",
-    });
-  };
-
-  const formatDateTime = (timestamp: number) => {
-    return new Date(timestamp).toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-  };
-
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      "Not Run": "bg-gray-100 text-gray-800",
-      Passed: "bg-green-100 text-green-800",
-      Failed: "bg-red-100 text-red-800",
-      Blocked: "bg-yellow-100 text-yellow-800",
-      Skipped: "bg-blue-100 text-blue-800",
-    };
-    return colors[status] || "bg-gray-100 text-gray-800";
-  };
-
-  const getStatusButtonColor = (status: string) => {
-    const colors: Record<string, string> = {
-      Passed: "bg-green-600 hover:bg-green-700",
-      Failed: "bg-red-600 hover:bg-red-700",
-      Blocked: "bg-yellow-600 hover:bg-yellow-700",
-      "Not Run": "bg-gray-600 hover:bg-gray-700",
-      Skipped: "bg-blue-600 hover:bg-blue-700",
-    };
-    return colors[status] || "";
   };
 
   if (checklistData === undefined || checklistItems === undefined || currentUser === undefined || members === undefined) {
@@ -278,53 +177,19 @@ export function ChecklistDetailPage() {
   const selectedItem = selectedItemId
     ? checklistItems.find((item) => item._id === selectedItemId)
     : null;
-  const progress = calculateProgress();
+  const progress = calculateProgress(filteredItems || []);
   
   return (
     <div className="min-h-[calc(100vh-45px)] bg-gray-50">
-      {/* Confirmation Alert Dialog */}
-      <AlertDialog open={pendingStatusChange !== null} onOpenChange={(open) => !open && cancelStatusChange()}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-amber-600" />
-              Confirm Status Change
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to change the test case status to{" "}
-              <span className="font-semibold text-gray-900">
-                {pendingStatusChange?.newStatus}
-              </span>
-              ? This action will be recorded in the test execution history.
-            </AlertDialogDescription>
-
-            {pendingStatusChange?.newStatus === "Failed" && (
-              <div className="pt-4 space-y-2">
-                <Label htmlFor="actual-results" className="font-semibold text-gray-800">
-                  Actual Results (Required for Failed)
-                </Label>
-                <Textarea
-                  id="actual-results"
-                  placeholder="Describe what actually happened..."
-                  value={actualResults}
-                  onChange={(e) => setActualResults(e.target.value)}
-                  className="min-h-[100px] bg-white"
-                />
-              </div>
-            )}
-
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelStatusChange}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmStatusChange}
-              disabled={pendingStatusChange?.newStatus === "Failed" && !actualResults.trim()}
-            >
-              Confirm Change
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Confirmation Alert Dialog - Now using the separated component */}
+      <ChecklistStatusConfirmationDialog
+        isOpen={pendingStatusChange !== null}
+        newStatus={pendingStatusChange?.newStatus || null}
+        actualResults={actualResults}
+        onActualResultsChange={setActualResults}
+        onConfirm={confirmStatusChange}
+        onCancel={cancelStatusChange}
+      />
 
       {/* Header Component - Fixed with proper z-index stacking */}
       <div className={`${showDetailOnMobile ? 'hidden' : 'block'} md:block sticky top-[64px] z-30 bg-white`}>
@@ -392,59 +257,13 @@ export function ChecklistDetailPage() {
                     </p>
                   </div>
 
-                  {/* Button Group for Status Change - Improved for all devices */}
-                  <div className="flex gap-1 md:gap-2 lg:inline-flex lg:rounded-md lg:shadow-sm lg:flex-shrink-0" role="group">
-                    <Button
-                      variant={selectedItem.executionStatus === "Passed" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => initiateStatusChange(selectedItem._id, "Passed")}
-                      className={`flex-1 text-xs md:text-sm lg:flex-initial lg:rounded-r-none lg:border-r-0 ${
-                        selectedItem.executionStatus === "Passed" ? getStatusButtonColor("Passed") : ""
-                      }`}
-                    >
-                      Passed
-                    </Button>
-                    <Button
-                      variant={selectedItem.executionStatus === "Failed" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => initiateStatusChange(selectedItem._id, "Failed")}
-                      className={`flex-1 text-xs md:text-sm lg:flex-initial lg:rounded-none lg:border-r-0 ${
-                        selectedItem.executionStatus === "Failed" ? getStatusButtonColor("Failed") : ""
-                      }`}
-                    >
-                      Failed
-                    </Button>
-                    <Button
-                      variant={selectedItem.executionStatus === "Blocked" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => initiateStatusChange(selectedItem._id, "Blocked")}
-                      className={`flex-1 text-xs md:text-sm lg:flex-initial lg:rounded-none lg:border-r-0 ${
-                        selectedItem.executionStatus === "Blocked" ? getStatusButtonColor("Blocked") : ""
-                      }`}
-                    >
-                      Blocked
-                    </Button>
-                    <Button
-                      variant={selectedItem.executionStatus === "Not Run" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => initiateStatusChange(selectedItem._id, "Not Run")}
-                      className={`flex-1 text-xs md:text-sm lg:flex-initial lg:rounded-none lg:border-r-0 ${
-                        selectedItem.executionStatus === "Not Run" ? getStatusButtonColor("Not Run") : ""
-                      }`}
-                    >
-                      Not Run
-                    </Button>
-                    <Button
-                      variant={selectedItem.executionStatus === "Skipped" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => initiateStatusChange(selectedItem._id, "Skipped")}
-                      className={`flex-1 text-xs md:text-sm lg:flex-initial lg:rounded-l-none ${
-                        selectedItem.executionStatus === "Skipped" ? getStatusButtonColor("Skipped") : ""
-                      }`}
-                    >
-                      Skipped
-                    </Button>
-                  </div>
+                  {/* Button Group for Status Change - Now using the separated component */}
+                  <ChecklistStatusButtonGroup
+                    currentStatus={selectedItem.executionStatus}
+                    onStatusChange={initiateStatusChange}
+                    itemId={selectedItem._id}
+                    getStatusButtonColor={getStatusButtonColor}
+                  />
                 </div>
 
                 {/* Tabs */}

@@ -3,7 +3,7 @@
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
-import { UserRole, GenericUserRoleBadge } from "../common/GenericUserRoleBadge"; // <-- Import the generic badge and type
+import { UserRole, GenericUserRoleBadge } from "../common/share/GenericUserRoleBadge"; // <-- Import the generic badge and type
 
 interface ChecklistUserRoleBadgeProps {
   checklistId: string;
