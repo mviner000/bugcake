@@ -4425,3 +4425,27 @@ export const getBugsByBugListId = query({
     return bugsWithDetails;
   },
 });
+
+// ✅ NEW: Query to get a single bug by ID
+export const getBugById = query({
+  args: {
+    bugId: v.id("bugs"),
+  },
+  handler: async (ctx, args) => {
+    const bug = await ctx.db.get(args.bugId);
+    
+    if (!bug) {
+      return null;
+    }
+
+    // Get reporter and assignee details
+    const reporter = await ctx.db.get(bug.reportedBy);
+    const assignee = bug.assignedTo ? await ctx.db.get(bug.assignedTo) : null;
+
+    return {
+      ...bug,
+      reporterName: reporter?.email || "Unknown",
+      assigneeName: assignee?.email || "Unassigned",
+    };
+  },
+});

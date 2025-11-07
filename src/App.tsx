@@ -10,7 +10,8 @@ import { api } from "../convex/_generated/api";
 // Import your components
 import { DetailPage } from "./components/sheet/detail-page";
 import { ChecklistDetailPage } from "./components/checklist/ChecklistDetailPage";
-import { BugListPage } from "./components/buglist/BugListPage"; // ✅ NEW: Bug list page
+import { BugListPage } from "./components/buglist/BugListPage";
+import { BugDetailPage } from "./components/buglist/BugDetailPage"; // ✅ NEW: Bug detail page
 import { Header } from "./components/navbar/Header";
 import { Dashboard } from "./components/dashboard";
 import { ProfilePage } from "./components/profile/ProfilePage";
@@ -63,7 +64,8 @@ function AuthenticatedApp() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/sheet/:sheetId" element={<DetailPage />} />
           <Route path="/checklist/:checklistId" element={<ChecklistDetailPage />} />
-          <Route path="/checklist/:checklistId/bugs" element={<BugListPage />} /> {/* ✅ NEW: Bug list route */}
+          <Route path="/checklist/:checklistId/bugs" element={<BugListPage />} />
+          <Route path="/checklist/:checklistId/bugs/:bugId" element={<BugDetailPage />} /> {/* ✅ NEW: Bug detail route */}
 
           <Route 
             path="/checklist/:checklistId/request-access" 

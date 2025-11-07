@@ -33,6 +33,11 @@ export function BugListPage() {
     navigate(`/checklist/${checklistId}`);
   };
 
+  // ✅ NEW: Handler to navigate to bug detail page
+  const handleBugClick = (bugId: string) => {
+    navigate(`/checklist/${checklistId}/bugs/${bugId}`);
+  };
+
   // Loading state
   if (bugList === undefined || bugs === undefined || checklist === undefined) {
     return (
@@ -148,7 +153,11 @@ export function BugListPage() {
           ) : (
             <div className="divide-y">
               {bugs.map((bug) => (
-                <div key={bug._id} className="p-4 hover:bg-gray-50">
+                <div 
+                  key={bug._id} 
+                  className="p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                  onClick={() => handleBugClick(bug._id)}
+                >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2">
@@ -192,7 +201,7 @@ export function BugListPage() {
                           <span className="font-medium text-gray-700">
                             Steps to Reproduce:
                           </span>
-                          <p className="text-gray-600 mt-1 whitespace-pre-wrap">
+                          <p className="text-gray-600 mt-1 whitespace-pre-wrap line-clamp-2">
                             {bug.stepsToReproduce}
                           </p>
                         </div>
@@ -201,7 +210,7 @@ export function BugListPage() {
                           <span className="font-medium text-gray-700">
                             Expected Results:
                           </span>
-                          <p className="text-gray-600 mt-1 whitespace-pre-wrap">
+                          <p className="text-gray-600 mt-1 whitespace-pre-wrap line-clamp-2">
                             {bug.expectedResults}
                           </p>
                         </div>
@@ -210,7 +219,7 @@ export function BugListPage() {
                           <span className="font-medium text-gray-700">
                             Actual Results:
                           </span>
-                          <p className="text-gray-600 mt-1 whitespace-pre-wrap">
+                          <p className="text-gray-600 mt-1 whitespace-pre-wrap line-clamp-2">
                             {bug.actualResults}
                           </p>
                         </div>
