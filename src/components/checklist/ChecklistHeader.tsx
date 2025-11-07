@@ -1,6 +1,7 @@
 // src/components/checklist/ChecklistHeader.tsx
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom"; // ✅ NEW: Import useNavigate
 import { MoreHorizontal, X, UserPlus, Share, Bug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,8 +40,14 @@ export function ChecklistHeader({
   checklistId,
 }: ChecklistHeaderProps) {
   const [showMembersDialog, setShowMembersDialog] = useState(false);
+  const navigate = useNavigate(); // ✅ NEW: Initialize navigate
 
   const canManageMembers = currentUserRole === "owner" || currentUserRole === "qa_lead";
+
+  // ✅ NEW: Handler to navigate to bug list page
+  const handleViewBugs = () => {
+    navigate(`/checklist/${checklistId}/bugs`);
+  };
 
   return (
     <>
@@ -73,14 +80,13 @@ export function ChecklistHeader({
 
             {/* Right section - Action buttons */}
             <div className="flex items-center space-x-1 md:space-x-2 flex-shrink-0">
-              {/* View Bugs Button */}
+              {/* View Bugs Button - ✅ UPDATED: Now navigates to bug list page */}
               <Button
-                onClick={() => console.log("View Bugs clicked")} // replace with your handler
+                onClick={handleViewBugs}
                 size="sm"
                 className="bg-amber-600 text-white hover:bg-amber-700 px-2 sm:px-3 whitespace-nowrap flex-shrink-0"
               >
                 <Bug className="w-4 h-4" />
-
                 <span className="hidden sm:inline">View Bugs</span>
               </Button>
 
