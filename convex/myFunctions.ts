@@ -3468,14 +3468,41 @@ export const updateChecklistItemStatus = mutation({
       throw new Error("Checklist not found");
     }
 
-    // ✅ NEW: Get the bug list for this checklist
-    const bugList = await ctx.db
+    // ✅ FIX: Get the bug list OR create it if it doesn't exist
+    let bugList = await ctx.db
       .query("bugLists")
       .withIndex("by_checklist", (q) => q.eq("checklistId", item.checklistId))
       .unique();
 
+    // ✅ FIX: If no bug list exists, create one automatically
     if (!bugList) {
-      throw new Error("Bug list not found for this checklist");
+      console.log(`Creating missing bug list for checklist: ${item.checklistId}`);
+      
+      const bugListId = await ctx.db.insert("bugLists", {
+        checklistId: item.checklistId,
+        sheetId: checklist.sheetId,
+        sprintName: checklist.sprintName,
+        titleRevisionNumber: checklist.titleRevisionNumber,
+        environment: checklist.environment,
+        status: "Active",
+        totalBugs: 0,
+        openBugs: 0,
+        resolvedBugs: 0,
+        leadAssigneeId: checklist.testExecutorAssigneeId,
+        additionalAssignees: checklist.additionalAssignees,
+        accessLevel: checklist.accessLevel,
+        createdBy: userId,
+        createdAt: now,
+        updatedAt: now,
+        description: checklist.description,
+      });
+
+      // Fetch the newly created bug list
+      bugList = await ctx.db.get(bugListId);
+      
+      if (!bugList) {
+        throw new Error("Failed to create bug list");
+      }
     }
 
     // Find any existing bug for this item
@@ -3509,7 +3536,7 @@ export const updateChecklistItemStatus = mutation({
         const newBugId = await ctx.db.insert("bugs", {
           checklistItemId: args.itemId,
           checklistId: item.checklistId,
-          bugListId: bugList._id,  // ✅ Link to bug list
+          bugListId: bugList._id,
           sheetId: checklist.sheetId,
           originalTestCaseId: item.originalTestCaseId,
           title: item.title,
