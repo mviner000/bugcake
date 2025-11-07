@@ -3543,7 +3543,7 @@ export const updateChecklistItemStatus = mutation({
           stepsToReproduce: item.steps,
           expectedResults: item.expectedResults,
           actualResults: bugActualResults,
-          status: "New",
+          status: "Open",
           reportedBy: userId,
           createdAt: now,
           updatedAt: now,

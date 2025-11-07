@@ -630,7 +630,7 @@ export default defineSchema({
     // --- Links to the Source ---
     checklistItemId: v.id("checklistItems"), // The specific checklist item that failed
     checklistId: v.id("checklists"),       // The checklist/sprint this bug was found in
-    bugListId: v.id("bugLists"),           // ✅ NEW: Link to bug list
+    bugListId: v.id("bugLists"),           // Link to bug list
     sheetId: v.id("sheets"),              // The sheet this bug belongs to
     originalTestCaseId: v.string(),       // The original test case ID for traceability
 
@@ -642,13 +642,16 @@ export default defineSchema({
 
     // --- Bug Tracking ---
     status: v.union(
-      v.literal("New"),
-      v.literal("Assigned"),
-      v.literal("In Progress"),
-      v.literal("Fixed"),
-      v.literal("Ready for Retest"),
-      v.literal("Closed"),
-      v.literal("Reopened")
+      v.literal("Open"),            // Bug reported, awaiting initial review
+      v.literal("Under Review"),    // Developer/Tech Lead reviewing the bug for validity, priority, scope
+      v.literal("Assigned"),        // Bug validated and assigned to a developer
+      v.literal("In Progress"),     // Developer actively working on the fix
+      v.literal("Fixed"),           // Fix completed and deployed to test environment
+      v.literal("Waiting for QA"),  // Explicitly in QA's queue for retesting
+      v.literal("Passed"),          // QA confirmed the fix works
+      v.literal("Reopened"),        // QA retested and bug still exists
+      v.literal("Closed"),          // Final state, bug is resolved and verified
+      v.literal("Won't Fix")        // After review, bug rejected (duplicate, not a bug, won't address)
     ),
     priority: v.optional(v.union(
       v.literal("High"), v.literal("Medium"), v.literal("Low")
@@ -659,31 +662,30 @@ export default defineSchema({
     assignedTo: v.optional(v.id("users")),// The Software Engineer assigned to fix it
     createdAt: v.number(),
     updatedAt: v.number(),
-    
   })
     // --- Indexes for fast querying ---
     .index("by_checklistItem", ["checklistItemId"])
-    .index("by_bugList", ["bugListId"])  // ✅ NEW: Index for bug list
+    .index("by_bugList", ["bugListId"])
     .index("by_assignedTo", ["assignedTo"])
     .index("by_status", ["status"])
     .index("by_sheet", ["sheetId"]),
 
   checklistAccessRequests: defineTable({
-  checklistId: v.id("checklists"),
-  requesterId: v.id("users"),
-  requestedRole: v.union(
-    v.literal("qa_lead"),
-    v.literal("qa_tester"),
-    v.literal("viewer")
-  ),
-  status: v.union(
-    v.literal("pending"),
-    v.literal("approved"),
-    v.literal("declined")
-  ),
-  message: v.optional(v.string()),
-  requestedAt: v.number(),
-})
-  .index("by_checklist", ["checklistId"])
-  .index("by_checklist_and_requester", ["checklistId", "requesterId"]),
+    checklistId: v.id("checklists"),
+    requesterId: v.id("users"),
+    requestedRole: v.union(
+      v.literal("qa_lead"),
+      v.literal("qa_tester"),
+      v.literal("viewer")
+    ),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("approved"),
+      v.literal("declined")
+    ),
+    message: v.optional(v.string()),
+    requestedAt: v.number(),
+  })
+    .index("by_checklist", ["checklistId"])
+    .index("by_checklist_and_requester", ["checklistId", "requesterId"]),
 });
