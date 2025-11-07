@@ -195,7 +195,7 @@ export default defineSchema({
   // =======================================================
   modules: defineTable({
     sheetId: v.id("sheets"), // Link to the specific sheet
-    name: v.string(),        // The name of the module, e.g., "User Profile"
+    name: v.string(),        // The name of the module, e.g., "User Profile"
     createdBy: v.id("users"),// Who created the module
     
     // NEW FIELD: Optional array of user IDs for single or multiple assignees
@@ -327,18 +327,18 @@ export default defineSchema({
     .index("executedBy", ["executedBy"]),
 
     supportMessages: defineTable({
-    userId: v.id("users"), // The link to the user who sent the message
-    subject: v.string(), // The subject line from the form
-    message: v.string(), // The message content
-    isResolved: v.boolean(), // Simple flag to see if it's handled
-    
-    // New fields for tracking resolution
-    resolvedBy: v.optional(v.id("users")), // The admin who resolved the message
-    dateCreated: v.number(), // Timestamp of when the message was created
-    dateResolved: v.optional(v.number()), // Timestamp of when it was resolved
-  })
-    .index("by_userId", ["userId"]) // To find all messages from a user
-    .index("by_isResolved", ["isResolved"]), // To find all unresolved messages
+    userId: v.id("users"), // The link to the user who sent the message
+    subject: v.string(), // The subject line from the form
+    message: v.string(), // The message content
+    isResolved: v.boolean(), // Simple flag to see if it's handled
+    
+    // New fields for tracking resolution
+    resolvedBy: v.optional(v.id("users")), // The admin who resolved the message
+    dateCreated: v.number(), // Timestamp of when the message was created
+    dateResolved: v.optional(v.number()), // Timestamp of when it was resolved
+  })
+    .index("by_userId", ["userId"]) // To find all messages from a user
+    .index("by_isResolved", ["isResolved"]), // To find all unresolved messages
 
 
   /**
@@ -400,11 +400,11 @@ export default defineSchema({
     userId: v.id("users"),
     // Define the roles for access control
    role: v.union(
-      v.literal("owner"),
-      v.literal("qa_lead"), // Added QA Lead
-      v.literal("qa_tester"), // Added QA Tester
-      v.literal("viewer")
-    ),
+      v.literal("owner"),
+      v.literal("qa_lead"), // Added QA Lead
+      v.literal("qa_tester"), // Added QA Tester
+      v.literal("viewer")
+    ),
   })
     // Index for quickly checking a user's permission on a sheet (Critical for Step 5)
     .index("by_sheet_and_user", ["sheetId", "userId"])
@@ -576,18 +576,68 @@ export default defineSchema({
   .index("by_user", ["userId"])
   .index("by_checklist_and_user", ["checklistId", "userId"]),
   
+  // ✅ NEW: Bug Lists Table
+  bugLists: defineTable({
+    checklistId: v.id("checklists"),      // Link to parent checklist
+    sheetId: v.id("sheets"),              // Link to sheet for easy querying
+    
+    // Sprint Information (copied from checklist for convenience)
+    sprintName: v.string(),
+    titleRevisionNumber: v.string(),
+    environment: v.union(
+      v.literal("development"),
+      v.literal("testing"),
+      v.literal("production")
+    ),
+    
+    // Bug List Status
+    status: v.union(
+      v.literal("Active"),       // Bugs are being tracked
+      v.literal("Under Review"),  // Waiting for review/triage
+      v.literal("Resolved"),      // All bugs resolved
+      v.literal("Archived")       // Sprint completed, archived for reference
+    ),
+    
+    // Statistics (updated as bugs are created/resolved)
+    totalBugs: v.number(),
+    openBugs: v.number(),
+    resolvedBugs: v.number(),
+    
+    // Team Assignment (same as checklist)
+    leadAssigneeId: v.id("users"),
+    additionalAssignees: v.optional(v.array(v.id("users"))),
+    
+    // Access Control
+    accessLevel: v.union(
+      v.literal("restricted"),
+      v.literal("anyoneWithLink"),
+      v.literal("public")
+    ),
+    
+    // Metadata
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    
+    description: v.optional(v.string()),
+  })
+    .index("by_checklist", ["checklistId"])
+    .index("by_sheet", ["sheetId"])
+    .index("by_status", ["status"])
+    .index("by_leadAssignee", ["leadAssigneeId"]),
 
   bugs: defineTable({
     // --- Links to the Source ---
     checklistItemId: v.id("checklistItems"), // The specific checklist item that failed
     checklistId: v.id("checklists"),       // The checklist/sprint this bug was found in
+    bugListId: v.id("bugLists"),           // ✅ NEW: Link to bug list
     sheetId: v.id("sheets"),              // The sheet this bug belongs to
-    originalTestCaseId: v.string(),       // The original test case ID for traceability [cite: 41]
+    originalTestCaseId: v.string(),       // The original test case ID for traceability
 
     // --- Bug Details (Pre-filled from test case) ---
-    title: v.string(),                    // Pre-filled from checklistItem.title [cite: 41]
-    stepsToReproduce: v.string(),         // Pre-filled from checklistItem.steps [cite: 41]
-    expectedResults: v.string(),          // Pre-filled from checklistItem.expectedResults [cite: 41]
+    title: v.string(),                    // Pre-filled from checklistItem.title
+    stepsToReproduce: v.string(),         // Pre-filled from checklistItem.steps
+    expectedResults: v.string(),          // Pre-filled from checklistItem.expectedResults
     actualResults: v.string(),            // The "actual results" entered by the QA tester
 
     // --- Bug Tracking ---
@@ -613,6 +663,7 @@ export default defineSchema({
   })
     // --- Indexes for fast querying ---
     .index("by_checklistItem", ["checklistItemId"])
+    .index("by_bugList", ["bugListId"])  // ✅ NEW: Index for bug list
     .index("by_assignedTo", ["assignedTo"])
     .index("by_status", ["status"])
     .index("by_sheet", ["sheetId"]),
@@ -636,4 +687,3 @@ export default defineSchema({
   .index("by_checklist", ["checklistId"])
   .index("by_checklist_and_requester", ["checklistId", "requesterId"]),
 });
-

@@ -3059,7 +3059,6 @@ export const createChecklistFromSheetFunctionality = mutation({
     testExecutorAssigneeIds: v.array(v.id("users")),
     goalDateToFinish: v.number(),
     description: v.optional(v.string()),
-    // ✅ NEW: Environment field (required)
     environment: v.union(
       v.literal("development"),
       v.literal("testing"),
@@ -3105,7 +3104,7 @@ export const createChecklistFromSheetFunctionality = mutation({
     // Use first executor as primary, rest as additional
     const [primaryExecutor, ...additionalExecutors] = args.testExecutorAssigneeIds;
 
-    // ✅ UPDATED: Create the checklist with environment field
+    // Create the checklist
     const checklistId = await ctx.db.insert("checklists", {
       sheetId: args.sheetId,
       sprintName: args.sprintName,
@@ -3118,12 +3117,32 @@ export const createChecklistFromSheetFunctionality = mutation({
       additionalAssignees: additionalExecutors.length > 0 ? additionalExecutors : undefined,
       goalDateToFinish: args.goalDateToFinish,
       description: args.description,
-      environment: args.environment, // ✅ NEW: Add environment
+      environment: args.environment,
       createdBy: userId,
       createdAt: now,
       updatedAt: now,
       sourceTestCaseCount: validTestCases.length,
       includedWorkflowStatuses: ["Approved"],
+    });
+
+    // ✅ NEW: Auto-create Bug List
+    const bugListId = await ctx.db.insert("bugLists", {
+      checklistId: checklistId,
+      sheetId: args.sheetId,
+      sprintName: args.sprintName,
+      titleRevisionNumber: args.titleRevisionNumber,
+      environment: args.environment,
+      status: "Active",
+      totalBugs: 0,
+      openBugs: 0,
+      resolvedBugs: 0,
+      leadAssigneeId: primaryExecutor,
+      additionalAssignees: additionalExecutors.length > 0 ? additionalExecutors : undefined,
+      accessLevel: "restricted",
+      createdBy: userId,
+      createdAt: now,
+      updatedAt: now,
+      description: args.description,
     });
 
     // Create immutable copies as checklistItems
@@ -3165,8 +3184,9 @@ export const createChecklistFromSheetFunctionality = mutation({
 
     return { 
       checklistId, 
+      bugListId,  // ✅ NEW: Return bug list ID
       itemCount: validTestCases.length,
-      message: `Successfully created checklist with ${validTestCases.length} test case(s) assigned to ${args.testExecutorAssigneeIds.length} executor(s)` 
+      message: `Successfully created checklist and bug list with ${validTestCases.length} test case(s) assigned to ${args.testExecutorAssigneeIds.length} executor(s)` 
     };
   },
 });
@@ -3180,7 +3200,6 @@ export const createChecklistFromSheetAltText = mutation({
     testExecutorAssigneeIds: v.array(v.id("users")),
     goalDateToFinish: v.number(),
     description: v.optional(v.string()),
-    // ✅ NEW: Environment field (required)
     environment: v.union(
       v.literal("development"),
       v.literal("testing"),
@@ -3225,7 +3244,7 @@ export const createChecklistFromSheetAltText = mutation({
     // Use first executor as primary, rest as additional
     const [primaryExecutor, ...additionalExecutors] = args.testExecutorAssigneeIds;
 
-    // ✅ UPDATED: Create the checklist with environment field
+    // Create the checklist
     const checklistId = await ctx.db.insert("checklists", {
       sheetId: args.sheetId,
       sprintName: args.sprintName,
@@ -3238,12 +3257,32 @@ export const createChecklistFromSheetAltText = mutation({
       additionalAssignees: additionalExecutors.length > 0 ? additionalExecutors : undefined,
       goalDateToFinish: args.goalDateToFinish,
       description: args.description,
-      environment: args.environment, // ✅ NEW: Add environment
+      environment: args.environment,
       createdBy: userId,
       createdAt: now,
       updatedAt: now,
       sourceTestCaseCount: validTestCases.length,
       includedWorkflowStatuses: ["Approved"],
+    });
+
+    // ✅ NEW: Auto-create Bug List
+    const bugListId = await ctx.db.insert("bugLists", {
+      checklistId: checklistId,
+      sheetId: args.sheetId,
+      sprintName: args.sprintName,
+      titleRevisionNumber: args.titleRevisionNumber,
+      environment: args.environment,
+      status: "Active",
+      totalBugs: 0,
+      openBugs: 0,
+      resolvedBugs: 0,
+      leadAssigneeId: primaryExecutor,
+      additionalAssignees: additionalExecutors.length > 0 ? additionalExecutors : undefined,
+      accessLevel: "restricted",
+      createdBy: userId,
+      createdAt: now,
+      updatedAt: now,
+      description: args.description,
     });
 
     let sequenceNumber = 1;
@@ -3285,8 +3324,9 @@ export const createChecklistFromSheetAltText = mutation({
 
     return { 
       checklistId, 
+      bugListId,  // ✅ NEW: Return bug list ID
       itemCount: validTestCases.length,
-      message: `Successfully created checklist with ${validTestCases.length} alt text/aria label test case(s) assigned to ${args.testExecutorAssigneeIds.length} executor(s)` 
+      message: `Successfully created checklist and bug list with ${validTestCases.length} alt text/aria label test case(s) assigned to ${args.testExecutorAssigneeIds.length} executor(s)` 
     };
   },
 });
@@ -3388,7 +3428,7 @@ export const getChecklistItems = query({
   },
 });
 
-// Update checklist item execution status
+// ✅ NEW: Update the bug creation logic to also update bug list statistics
 export const updateChecklistItemStatus = mutation({
   args: {
     itemId: v.id("checklistItems"),
@@ -3423,13 +3463,19 @@ export const updateChecklistItemStatus = mutation({
       throw new Error("Item not found");
     }
 
-    // ======================================================
-    // ✅ START: NEW BUG TRACKING LOGIC
-    // ======================================================
-
     const checklist = await ctx.db.get(item.checklistId);
     if (!checklist) {
       throw new Error("Checklist not found");
+    }
+
+    // ✅ NEW: Get the bug list for this checklist
+    const bugList = await ctx.db
+      .query("bugLists")
+      .withIndex("by_checklist", (q) => q.eq("checklistId", item.checklistId))
+      .unique();
+
+    if (!bugList) {
+      throw new Error("Bug list not found for this checklist");
     }
 
     // Find any existing bug for this item
@@ -3449,11 +3495,21 @@ export const updateChecklistItemStatus = mutation({
           actualResults: bugActualResults,
           updatedAt: now,
         });
+
+        // ✅ Update bug list: Increment open bugs if it was previously closed
+        if (existingBug.status === "Closed") {
+          await ctx.db.patch(bugList._id, {
+            openBugs: bugList.openBugs + 1,
+            resolvedBugs: Math.max(0, bugList.resolvedBugs - 1),
+            updatedAt: now,
+          });
+        }
       } else {
         // 1b. It failed for the first time. Create a NEW bug.
         const newBugId = await ctx.db.insert("bugs", {
           checklistItemId: args.itemId,
           checklistId: item.checklistId,
+          bugListId: bugList._id,  // ✅ Link to bug list
           sheetId: checklist.sheetId,
           originalTestCaseId: item.originalTestCaseId,
           title: item.title,
@@ -3466,7 +3522,14 @@ export const updateChecklistItemStatus = mutation({
           updatedAt: now,
         });
 
-        // Optional: Link bug ID back to the item's `defectsFound` array
+        // ✅ Update bug list statistics
+        await ctx.db.patch(bugList._id, {
+          totalBugs: bugList.totalBugs + 1,
+          openBugs: bugList.openBugs + 1,
+          updatedAt: now,
+        });
+
+        // Link bug ID back to the item's defectsFound array
         const currentDefects = item.defectsFound || [];
         currentDefects.push(newBugId.toString());
         await ctx.db.patch(item._id, { defectsFound: currentDefects });
@@ -3480,13 +3543,17 @@ export const updateChecklistItemStatus = mutation({
           status: "Closed",
           updatedAt: now,
         });
+
+        // ✅ Update bug list statistics
+        await ctx.db.patch(bugList._id, {
+          openBugs: Math.max(0, bugList.openBugs - 1),
+          resolvedBugs: bugList.resolvedBugs + 1,
+          updatedAt: now,
+        });
       }
     }
-    // ======================================================
-    // 🔚 END: NEW BUG TRACKING LOGIC
-    // ======================================================
 
-    // 3. Update parent checklist progress (this logic is unchanged)
+    // 3. Update parent checklist progress
     const allItems = await ctx.db
       .query("checklistItems")
       .withIndex("by_checklist", (q) => q.eq("checklistId", item.checklistId))
@@ -3504,6 +3571,7 @@ export const updateChecklistItemStatus = mutation({
     return { success: true };
   },
 });
+
 
 /**
  * Fetches the execution status history for a specific checklist item
@@ -4258,5 +4326,75 @@ export const getSheetMembers = query({
     );
 
     return members;
+  },
+});
+
+// ✅ NEW: Query to get bug list by checklist ID
+export const getBugListByChecklistId = query({
+  args: {
+    checklistId: v.id("checklists"),
+  },
+  handler: async (ctx, args) => {
+    const bugList = await ctx.db
+      .query("bugLists")
+      .withIndex("by_checklist", (q) => q.eq("checklistId", args.checklistId))
+      .unique();
+
+    if (!bugList) {
+      return null;
+    }
+
+    // Get lead assignee info
+    const leadAssignee = await ctx.db.get(bugList.leadAssigneeId);
+
+    // Get additional assignees info
+    const additionalAssignees = bugList.additionalAssignees
+      ? await Promise.all(
+          bugList.additionalAssignees.map(async (id) => {
+            const user = await ctx.db.get(id);
+            return {
+              id,
+              name: user?.name || user?.email || "Unknown",
+              email: user?.email || "N/A",
+            };
+          })
+        )
+      : [];
+
+    return {
+      ...bugList,
+      leadAssigneeName: leadAssignee?.email || "Unknown",
+      additionalAssignees,
+    };
+  },
+});
+
+// ✅ NEW: Query to get all bugs in a bug list
+export const getBugsByBugListId = query({
+  args: {
+    bugListId: v.id("bugLists"),
+  },
+  handler: async (ctx, args) => {
+    const bugs = await ctx.db
+      .query("bugs")
+      .withIndex("by_bugList", (q) => q.eq("bugListId", args.bugListId))
+      .order("desc")
+      .collect();
+
+    // Enhance with user details
+    const bugsWithDetails = await Promise.all(
+      bugs.map(async (bug) => {
+        const reporter = await ctx.db.get(bug.reportedBy);
+        const assignee = bug.assignedTo ? await ctx.db.get(bug.assignedTo) : null;
+
+        return {
+          ...bug,
+          reporterName: reporter?.email || "Unknown",
+          assigneeName: assignee?.email || "Unassigned",
+        };
+      })
+    );
+
+    return bugsWithDetails;
   },
 });
