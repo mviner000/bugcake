@@ -1,16 +1,26 @@
-// src/components/buglist/BugDetailPage.tsx
+// src/components/buglist/BugDetailPage.tsx - UPDATED VERSION
 
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Bug, User, Calendar, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useState } from "react";
+import { toast } from "sonner";
 
 export function BugDetailPage() {
   const { checklistId, bugId } = useParams<{ checklistId: string; bugId: string }>();
   const navigate = useNavigate();
+  const [isAssigning, setIsAssigning] = useState(false);
 
   // Fetch the bug details
   const bug = useQuery(
@@ -24,12 +34,49 @@ export function BugDetailPage() {
     checklistId ? { checklistId: checklistId as Id<"checklists"> } : "skip"
   );
 
+  // Fetch assignable users
+  const assignableUsers = useQuery(
+    api.myFunctions.getAssignableUsersForBug,
+    bugId ? { bugId: bugId as Id<"bugs"> } : "skip"
+  );
+
+  // Mutation to update assignee
+  const updateAssignee = useMutation(api.myFunctions.updateBugAssignee);
+
   const handleBack = () => {
     navigate(`/checklist/${checklistId}/bugs`);
   };
 
+  const handleAssigneeChange = async (userId: string) => {
+    if (!bugId) return;
+
+    setIsAssigning(true);
+    try {
+      const result = await updateAssignee({
+        bugId: bugId as Id<"bugs">,
+        assignedToUserId: userId === "unassigned" ? undefined : (userId as Id<"users">),
+      });
+
+      if (userId === "unassigned") {
+        toast.success("Bug unassigned successfully");
+      } else {
+        if (result.statusChanged) {
+          toast.success(`Bug assigned successfully and moved to "${result.newStatus}"`);
+        } else {
+          toast.success("Bug assigned successfully");
+        }
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update assignee"
+      );
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
   // Loading state
-  if (bug === undefined || checklist === undefined) {
+  if (bug === undefined || checklist === undefined || assignableUsers === undefined) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
@@ -60,13 +107,16 @@ export function BugDetailPage() {
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      "New": "bg-red-100 text-red-700",
+      "Open": "bg-red-100 text-red-700",
+      "Under Review": "bg-orange-100 text-orange-700",
       "Assigned": "bg-blue-100 text-blue-700",
       "In Progress": "bg-blue-100 text-blue-700",
       "Fixed": "bg-yellow-100 text-yellow-700",
-      "Ready for Retest": "bg-purple-100 text-purple-700",
-      "Closed": "bg-green-100 text-green-700",
+      "Waiting for QA": "bg-purple-100 text-purple-700",
+      "Passed": "bg-green-100 text-green-700",
       "Reopened": "bg-orange-100 text-orange-700",
+      "Closed": "bg-green-100 text-green-700",
+      "Won't Fix": "bg-gray-100 text-gray-700",
     };
     return colors[status] || "bg-gray-100 text-gray-700";
   };
@@ -149,9 +199,40 @@ export function BugDetailPage() {
 
               <div className="flex items-start gap-3">
                 <User className="w-5 h-5 text-gray-400 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Assigned To</p>
-                  <p className="text-sm text-gray-900 mt-1">{bug.assigneeName}</p>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-500 mb-2">Assigned To</p>
+                  <Select
+                    value={bug.assignedTo || "unassigned"}
+                    onValueChange={handleAssigneeChange}
+                    disabled={isAssigning}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Unassigned" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">
+                        <span className="text-gray-500">Unassigned</span>
+                      </SelectItem>
+                      {assignableUsers.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          <div className="flex items-center gap-2">
+                            {user.image ? (
+                              <img
+                                src={user.image}
+                                alt={user.name}
+                                className="w-5 h-5 rounded-full"
+                              />
+                            ) : (
+                              <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center text-xs font-medium text-blue-600">
+                                {user.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <span>{user.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

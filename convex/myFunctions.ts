@@ -4449,3 +4449,127 @@ export const getBugById = query({
     };
   },
 });
+
+/**
+ * Updates the assigned user for a bug
+ */
+export const updateBugAssignee = mutation({
+  args: {
+    bugId: v.id("bugs"),
+    assignedToUserId: v.optional(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Authentication required");
+    }
+
+    const bug = await ctx.db.get(args.bugId);
+    if (!bug) {
+      throw new Error("Bug not found");
+    }
+
+    // Authorization: Check if user has access to this bug's checklist
+    const checklist = await ctx.db.get(bug.checklistId);
+    if (!checklist) {
+      throw new Error("Parent checklist not found");
+    }
+
+    // Check if user is owner or has member access
+    const isOwner = checklist.createdBy === userId;
+    const member = await ctx.db
+      .query("checklistMembers")
+      .withIndex("by_checklist_and_user", (q) =>
+        q.eq("checklistId", bug.checklistId).eq("userId", userId)
+      )
+      .unique();
+
+    if (!isOwner && !member) {
+      throw new Error("You don't have permission to assign bugs in this checklist");
+    }
+
+    // Determine the new status based on assignment action
+    let newStatus = bug.status;
+    if (args.assignedToUserId && bug.status === "Open") {
+      // When assigning from Open status, move to Under Review
+      newStatus = "Under Review";
+    } else if (!args.assignedToUserId && bug.status === "Under Review") {
+      // When unassigning from Under Review, move back to Open
+      newStatus = "Open";
+    }
+
+    // Update the bug
+    await ctx.db.patch(args.bugId, {
+      assignedTo: args.assignedToUserId,
+      status: newStatus,
+      updatedAt: Date.now(),
+    });
+
+    return { 
+      success: true, 
+      newStatus,
+      statusChanged: newStatus !== bug.status 
+    };
+  },
+});
+
+/**
+ * Gets all users who can be assigned to bugs in a checklist
+ * (checklist members + sheet members)
+ */
+export const getAssignableUsersForBug = query({
+  args: {
+    bugId: v.id("bugs"),
+  },
+  handler: async (ctx, args) => {
+    const bug = await ctx.db.get(args.bugId);
+    if (!bug) {
+      return [];
+    }
+
+    // Get checklist to find associated sheet
+    const checklist = await ctx.db.get(bug.checklistId);
+    if (!checklist) {
+      return [];
+    }
+
+    // Collect all user IDs who can be assigned
+    const userIds = new Set<Id<"users">>();
+
+    // Add checklist owner
+    userIds.add(checklist.createdBy);
+
+    // Add checklist members
+    const checklistMembers = await ctx.db
+      .query("checklistMembers")
+      .withIndex("by_checklist", (q) => q.eq("checklistId", bug.checklistId))
+      .collect();
+    
+    checklistMembers.forEach(m => userIds.add(m.userId));
+
+    // Add sheet members (they have context about the test cases)
+    const sheetMembers = await ctx.db
+      .query("sheetPermissions")
+      .withIndex("by_sheet", (q) => q.eq("sheetId", bug.sheetId))
+      .collect();
+    
+    sheetMembers.forEach(m => userIds.add(m.userId));
+
+    // Fetch user details
+    const users = await Promise.all(
+      Array.from(userIds).map(async (userId) => {
+        const user = await ctx.db.get(userId);
+        if (!user) return null;
+
+        return {
+          id: userId,
+          name: user.name || user.email?.split("@")[0] || "Unknown",
+          email: user.email || "N/A",
+          image: user.image,
+        };
+      })
+    );
+
+    return users.filter((u): u is NonNullable<typeof u> => u !== null);
+  },
+});
